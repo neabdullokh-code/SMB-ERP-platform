@@ -1267,29 +1267,103 @@ function OcrScan({ go }) {
   const [applying, setApplying] = useStateS(false);
   const [applyError, setApplyError] = useStateS("");
   const [applyMessage, setApplyMessage] = useStateS("");
+  const [scanSource, setScanSource] = useStateS("sample");
+  const [scanFields, setScanFields] = useStateS([]);
+  const [scanItems, setScanItems] = useStateS([]);
+  const [selectedFileName, setSelectedFileName] = useStateS("WB-23887.pdf");
+  const fileInputRef = React.useRef(null);
 
-  const LINES = [
+  const SAMPLE_LINES = [
     { field: "Supplier", val: "Samarkand Oil Co.", conf: 98 },
     { field: "Document no.", val: "WB-23887", conf: 99 },
     { field: "Date", val: "18 March 2026", conf: 97 },
     { field: "Currency", val: "UZS", conf: 99 }
   ];
-  const ITEMS = [
+  const SAMPLE_ITEMS = [
     { sku: "KS-0102", name: "Cooking oil, sunflower 5L", qty: 120, price: 48_000, conf: 96 },
     { sku: "KS-0104", name: "Sugar refined 50kg bag", qty: 40, price: 310_000, conf: 92 },
     { sku: "KS-0210", name: "Rice, Devzira 25kg", qty: 80, price: 240_000, conf: 94 },
     { sku: "?", name: "Sunflower oil 10L (new SKU)", qty: 30, price: 115_000, conf: 74 }
   ];
 
-  const start = () => {
+  const runExtraction = (fields, items) => {
     setStage(1);
     setExtracted([]);
+    setScanFields(fields);
+    setScanItems(items);
     setTimeout(() => {
       setStage(2);
-      const all = [...LINES.map((line) => ({ type: "field", ...line })), ...ITEMS.map((item) => ({ type: "item", ...item }))];
+      const all = [...fields.map((line) => ({ type: "field", ...line })), ...items.map((item) => ({ type: "item", ...item }))];
       all.forEach((item, index) => setTimeout(() => setExtracted((prev) => [...prev, item]), 350 + index * 500));
       setTimeout(() => setStage(3), 350 + all.length * 500 + 200);
     }, 1200);
+  };
+
+  const startSample = () => {
+    setScanSource("sample");
+    setSelectedFileName("WB-23887.pdf");
+    setApplyError("");
+    setApplyMessage("");
+    runExtraction(SAMPLE_LINES, SAMPLE_ITEMS);
+  };
+
+  const handleChooseFile = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    event.target.value = "";
+    setScanSource("upload");
+    setSelectedFileName(file.name);
+    setApplyError("");
+    setApplyMessage("");
+
+    const lowerName = file.name.toLowerCase();
+    if (!(lowerName.endsWith(".csv") || lowerName.endsWith(".tsv") || lowerName.endsWith(".txt"))) {
+      setStage(0);
+      setScanFields([]);
+      setScanItems([]);
+      setExtracted([]);
+      setApplyError("Uploaded file selected. OCR parsing for PDF/image files is not enabled in this portal build yet, so no sample data was applied.");
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      const parsedRows = parseImportRows(text);
+      const rows = parsedRows
+        .map((row) => {
+          const sku = firstPresent(row, ["sku", "product_code", "code"]) || "?";
+          const name = firstPresent(row, ["name", "product_name", "product"]) || "Unnamed item";
+          const qty = Number.parseFloat(firstPresent(row, ["qty", "quantity", "count", "units"]) || "0");
+          const price = Number.parseFloat(firstPresent(row, ["unit_cost_uzs", "unit_cost", "cost", "price"]) || "0");
+          return {
+            sku,
+            name,
+            qty: Number.isFinite(qty) ? qty : 0,
+            price: Number.isFinite(price) ? price : 0,
+            conf: 95
+          };
+        })
+        .filter((item) => item.qty > 0 || item.price > 0 || item.name !== "Unnamed item");
+
+      if (rows.length === 0) {
+        throw new Error("No valid line items found in uploaded file.");
+      }
+
+      const fields = [
+        { field: "Supplier", val: firstPresent(parsedRows[0], ["supplier", "vendor"]) || "From uploaded file", conf: 92 },
+        { field: "Document no.", val: firstPresent(parsedRows[0], ["document_no", "doc_no", "invoice_no", "waybill_no"]) || file.name.replace(/\.[^.]+$/, ""), conf: 91 },
+        { field: "Date", val: firstPresent(parsedRows[0], ["date", "document_date", "invoice_date"]) || new Date().toISOString().slice(0, 10), conf: 90 },
+        { field: "Currency", val: firstPresent(parsedRows[0], ["currency"]) || "UZS", conf: 92 }
+      ];
+
+      runExtraction(fields, rows);
+    } catch (fileError) {
+      setStage(0);
+      setScanFields([]);
+      setScanItems([]);
+      setExtracted([]);
+      setApplyError(fileError instanceof Error ? fileError.message : "Unable to parse uploaded file.");
+    }
   };
 
   const fetchInventoryContext = async () => {
@@ -1321,6 +1395,9 @@ function OcrScan({ go }) {
     setApplyError("");
     setApplyMessage("");
     try {
+      if (scanItems.length === 0) {
+        throw new Error("No extracted line items to apply.");
+      }
       const context = await fetchInventoryContext();
       const warehouseId = context.warehouses?.[0]?.id;
       if (!warehouseId) {
@@ -1329,8 +1406,8 @@ function OcrScan({ go }) {
 
       let added = 0;
       let moved = 0;
-      for (let index = 0; index < ITEMS.length; index += 1) {
-        const extractedItem = ITEMS[index];
+      for (let index = 0; index < scanItems.length; index += 1) {
+        const extractedItem = scanItems[index];
         const sku = extractedItem.sku === "?" ? `WB-${String(index + 1).padStart(4, "0")}` : extractedItem.sku;
         let item = await findItemBySku(sku);
 
@@ -1364,7 +1441,7 @@ function OcrScan({ go }) {
             itemId: item.id,
             movementType: "inbound",
             quantity: String(extractedItem.qty),
-            reference: "WB-23887"
+            reference: scanFields.find((field) => field.field === "Document no.")?.val || selectedFileName
           })
         });
         const movementBody = await movementResponse.json();
@@ -1396,10 +1473,10 @@ function OcrScan({ go }) {
           <div className="sub">Drop a supplier document and we'll extract supplier, dates, line items, and prices into your inventory.</div>
         </div>
         <span className="sp" />
-        {stage === 0 && <Button variant="primary" onClick={start} icon={<Icon.Play size={13} />}>Use sample waybill</Button>}
+        {stage === 0 && <Button variant="primary" onClick={startSample} icon={<Icon.Play size={13} />}>Use sample waybill</Button>}
         {stage === 3 && (
           <>
-            <Button variant="ghost" onClick={() => { setStage(0); setExtracted([]); }}>Scan another</Button>
+            <Button variant="ghost" onClick={() => { setStage(0); setExtracted([]); setScanFields([]); setScanItems([]); }}>Scan another</Button>
             <Button variant="primary" icon={<Icon.Check size={13} />} onClick={confirmAndAdd} disabled={applying}>
               {applying ? "Applying..." : "Confirm & add to inventory"}
             </Button>
@@ -1422,7 +1499,7 @@ function OcrScan({ go }) {
           <div className="panel-title">
             Document preview
             <span className="sp" />
-            {stage > 0 && <span className="mono muted" style={{ fontSize: 10 }}>WB-23887.pdf · 1 of 1</span>}
+            {stage > 0 && <span className="mono muted" style={{ fontSize: 10 }}>{selectedFileName} · 1 of 1</span>}
           </div>
           {stage === 0 ? (
             <div style={{ flex: 1, display: "grid", placeItems: "center", padding: 24 }}>
@@ -1432,60 +1509,76 @@ function OcrScan({ go }) {
                 </div>
                 <div style={{ fontWeight: 500, color: "var(--ink)" }}>Drop an invoice or waybill</div>
                 <div className="muted mt-4" style={{ fontSize: 12 }}>PDF, JPG, PNG, HEIC · up to 20 MB</div>
-                <Button className="mt-12" variant="primary" onClick={start}>Choose file</Button>
+                <Button className="mt-12" variant="primary" onClick={() => fileInputRef.current?.click()}>Choose file</Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,.heic,.csv,.tsv,.txt"
+                  style={{ display: "none" }}
+                  onChange={handleChooseFile}
+                />
                 <div className="mt-16 mono muted" style={{ fontSize: 10, letterSpacing: "0.08em" }}>OR</div>
-                <Button className="mt-8" variant="ghost" onClick={start}>Use sample waybill from Samarkand Oil Co.</Button>
+                <Button className="mt-8" variant="ghost" onClick={startSample}>Use sample waybill from Samarkand Oil Co.</Button>
               </div>
             </div>
           ) : (
             <div style={{ flex: 1, padding: 18, position: "relative", background: "var(--surface-2)" }}>
               <div className="hairline" style={{ background: "var(--surface)", padding: 20, minHeight: 500, borderRadius: 4, fontFamily: "var(--mono)", fontSize: 11, position: "relative", overflow: "hidden" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--line)", paddingBottom: 8, marginBottom: 10 }}>
-                  <div>
-                    <div style={{ fontWeight: 600, color: "var(--ink)", fontSize: 14, fontFamily: "var(--sans)" }}>Samarkand Oil Co.</div>
-                    <div>TIN 302 101 554 · Samarkand, UZ</div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontWeight: 600, color: "var(--ink)" }}>WAYBILL / ТТН</div>
-                    <div>No. WB-23887 · 18.03.2026</div>
-                  </div>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
-                  <div>From: Samarkand Oil Co., Samarkand</div>
-                  <div>To: Kamolot Savdo LLC, Tashkent</div>
-                </div>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
-                  <thead>
-                    <tr style={{ borderBottom: "1px solid var(--line)" }}>
-                      <th style={{ textAlign: "left", padding: "6px 4px" }}>Item</th>
-                      <th style={{ textAlign: "right", padding: "6px 4px" }}>Qty</th>
-                      <th style={{ textAlign: "right", padding: "6px 4px" }}>Price</th>
-                      <th style={{ textAlign: "right", padding: "6px 4px" }}>Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {["Cooking oil 5L ·120 · 48 000 · 5 760 000", "Sugar refined 50kg ·40 · 310 000 · 12 400 000", "Rice Devzira 25kg ·80 · 240 000 · 19 200 000", "Sunflower oil 10L ·30 · 115 000 · 3 450 000"].map((row, index) => {
-                      const parts = row.split("·");
-                      return (
-                        <tr key={index} style={{ borderBottom: "1px solid var(--line-2)" }}>
-                          <td style={{ padding: "5px 4px" }}>{parts[0]}</td>
-                          <td style={{ padding: "5px 4px", textAlign: "right" }}>{parts[1]}</td>
-                          <td style={{ padding: "5px 4px", textAlign: "right" }}>{parts[2]}</td>
-                          <td style={{ padding: "5px 4px", textAlign: "right" }}>{parts[3]}</td>
+                {scanSource === "sample" ? (
+                  <>
+                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--line)", paddingBottom: 8, marginBottom: 10 }}>
+                      <div>
+                        <div style={{ fontWeight: 600, color: "var(--ink)", fontSize: 14, fontFamily: "var(--sans)" }}>Samarkand Oil Co.</div>
+                        <div>TIN 302 101 554 · Samarkand, UZ</div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontWeight: 600, color: "var(--ink)" }}>WAYBILL / ТТН</div>
+                        <div>No. WB-23887 · 18.03.2026</div>
+                      </div>
+                    </div>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
+                      <thead>
+                        <tr style={{ borderBottom: "1px solid var(--line)" }}>
+                          <th style={{ textAlign: "left", padding: "6px 4px" }}>Item</th>
+                          <th style={{ textAlign: "right", padding: "6px 4px" }}>Qty</th>
+                          <th style={{ textAlign: "right", padding: "6px 4px" }}>Price</th>
+                          <th style={{ textAlign: "right", padding: "6px 4px" }}>Total</th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                <div style={{ marginTop: 18, textAlign: "right" }}>
-                  <div>Subtotal: 40 810 000 UZS</div>
-                  <div>VAT 12%: 4 897 200 UZS</div>
-                  <div style={{ fontWeight: 600, color: "var(--ink)" }}>Total: 45 707 200 UZS</div>
-                </div>
-                <div style={{ marginTop: 30, color: "var(--muted)" }}>
-                  Delivered by: Oybek Rakhimov ______________<br />
-                  Received by: Bekzod Yusupov ______________
-                </div>
+                      </thead>
+                      <tbody>
+                        {scanItems.map((item, index) => (
+                          <tr key={index} style={{ borderBottom: "1px solid var(--line-2)" }}>
+                            <td style={{ padding: "5px 4px" }}>{item.name}</td>
+                            <td style={{ padding: "5px 4px", textAlign: "right" }}>{item.qty}</td>
+                            <td style={{ padding: "5px 4px", textAlign: "right" }}>{fmtUZS(item.price)}</td>
+                            <td style={{ padding: "5px 4px", textAlign: "right" }}>{fmtUZS(item.qty * item.price)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </>
+                ) : (
+                  <div className="col gap-12">
+                    <div style={{ fontWeight: 600, color: "var(--ink)", fontFamily: "var(--sans)", fontSize: 14 }}>Uploaded document</div>
+                    <div className="mono muted">{selectedFileName}</div>
+                    <div className="muted" style={{ fontSize: 12 }}>
+                      Parsed using file rows only. No mock waybill data is injected.
+                    </div>
+                    <table className="tbl compact">
+                      <thead><tr><th>SKU</th><th>Name</th><th className="tr">Qty</th><th className="tr">Unit</th></tr></thead>
+                      <tbody>
+                        {scanItems.map((item, index) => (
+                          <tr key={index}>
+                            <td className="id">{item.sku}</td>
+                            <td>{item.name}</td>
+                            <td className="num">{item.qty}</td>
+                            <td className="num">{fmtUZS(item.price)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
                 {stage === 1 && (
                   <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
                     <div style={{ position: "absolute", left: 0, right: 0, height: 2, background: "var(--ai)", boxShadow: "0 0 14px var(--ai)", top: "50%", animation: "scanline 1.2s ease-in-out infinite" }} />
@@ -1530,7 +1623,7 @@ function OcrScan({ go }) {
             <div style={{ padding: 12, flex: 1, overflowY: "auto" }}>
               <div className="eyebrow mb-8">Header</div>
               <div className="grid grid-2" style={{ gap: 8 }}>
-                {LINES.map((line) => {
+                {scanFields.map((line) => {
                   const done = extracted.some((entry) => entry.type === "field" && entry.field === line.field);
                   return (
                     <div key={line.field} className="hairline" style={{ padding: 10, borderRadius: 6, background: done ? "var(--surface)" : "var(--surface-2)", opacity: done ? 1 : 0.5, transition: "opacity 200ms" }}>
@@ -1547,7 +1640,7 @@ function OcrScan({ go }) {
               <table className="tbl compact">
                 <thead><tr><th>SKU</th><th>Product</th><th className="tr">Qty</th><th className="tr">Unit</th><th className="tr">Conf</th></tr></thead>
                 <tbody>
-                  {ITEMS.map((item, index) => {
+                  {scanItems.map((item, index) => {
                     const done = extracted.some((entry) => entry.type === "item" && entry.name === item.name);
                     const warn = item.conf < 80;
                     return (
@@ -1562,9 +1655,9 @@ function OcrScan({ go }) {
                   })}
                 </tbody>
               </table>
-              {stage === 3 && (
+              {stage === 3 && scanItems.some((item) => item.conf < 80 || item.sku === "?") && (
                 <Banner tone="warn" title="1 item needs review" action={<Button size="sm" variant="ghost">Review</Button>}>
-                  "Sunflower oil 10L" doesn't match an existing SKU. Create a new SKU or map to existing.
+                  At least one extracted line has low confidence or missing SKU. Review before posting.
                 </Banner>
               )}
             </div>
@@ -1573,7 +1666,9 @@ function OcrScan({ go }) {
             <div className="modal-foot">
               <Button variant="ghost">Edit fields</Button>
               <span className="sp" />
-              <div className="mono muted" style={{ fontSize: 11, alignSelf: "center" }}>270 units · 45 707 200 UZS total</div>
+              <div className="mono muted" style={{ fontSize: 11, alignSelf: "center" }}>
+                {scanItems.reduce((sum, item) => sum + Number(item.qty || 0), 0)} units · {fmtUZS(scanItems.reduce((sum, item) => sum + Number(item.qty || 0) * Number(item.price || 0), 0))} UZS total
+              </div>
               <Button variant="primary" icon={<Icon.Check size={13} />} onClick={confirmAndAdd} disabled={applying}>
                 {applying ? "Applying..." : "Add to inventory"}
               </Button>

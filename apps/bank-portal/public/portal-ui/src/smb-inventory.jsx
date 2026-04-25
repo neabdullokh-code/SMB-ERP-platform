@@ -158,6 +158,8 @@ function OcrScan({ go }) {
   const [stage, setStage] = useStateS(0); // 0 drop, 1 scanning, 2 extracting, 3 done
   const [extracted, setExtracted] = useStateS([]);
   const [jobId, setJobId] = useStateS(null);
+  const [scanError, setScanError] = useStateS("");
+  const fileInputRef = React.useRef(null);
 
   const LINES = [
     { field:"Supplier",     val:"Samarkand Oil Co.", conf:98 },
@@ -173,6 +175,7 @@ function OcrScan({ go }) {
   ];
 
   const start = () => {
+    setScanError("");
     setStage(1); 
     setExtracted([]);
     setJobId("ocr_req_" + Math.random().toString(36).substring(7));
@@ -183,6 +186,17 @@ function OcrScan({ go }) {
       all.forEach((it, i) => setTimeout(() => setExtracted(prev => [...prev, it]), 350 + i*500));
       setTimeout(() => setStage(3), 350 + all.length*500 + 200);
     }, 1500);
+  };
+
+  const chooseFile = () => {
+    fileInputRef.current?.click();
+  };
+
+  const onFileSelected = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setScanError("Uploaded file selected. Live OCR parsing for uploads is not wired in this surface yet, so sample data was not applied.");
   };
 
   return (
@@ -206,6 +220,11 @@ function OcrScan({ go }) {
           </>
         )}
       </div>
+      {scanError && (
+        <Banner tone="warn" title="Scan not started">
+          {scanError}
+        </Banner>
+      )}
 
       <div className="grid" style={{gridTemplateColumns:"1fr 1fr", gap:12, alignItems:"stretch"}}>
         {/* Left: document */}
@@ -223,7 +242,14 @@ function OcrScan({ go }) {
                 </div>
                 <div style={{fontWeight:500, color:"var(--ink)"}}>Drop an invoice or waybill</div>
                 <div className="muted mt-4" style={{fontSize:12}}>PDF, JPG, PNG, HEIC · up to 20 MB</div>
-                <Button className="mt-12" variant="primary" onClick={start}>Choose file</Button>
+                <Button className="mt-12" variant="primary" onClick={chooseFile}>Choose file</Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,.heic,.csv,.tsv,.txt"
+                  style={{display:"none"}}
+                  onChange={onFileSelected}
+                />
                 <div className="mt-16 mono muted" style={{fontSize:10, letterSpacing:"0.08em"}}>OR</div>
                 <Button className="mt-8" variant="ghost" onClick={start}>Use sample waybill from Samarkand Oil Co.</Button>
               </div>
