@@ -34,6 +34,14 @@ const COMPANY_ROUTE_TO_PATH: Record<string, string> = {
   "/smb/finance/reports": "/app/finance/reports",
   "/smb/finance/counterparties": "/app/finance/counterparties",
   "/smb/finance/payments": "/app/finance/payments",
+  "/smb/documents/goods-receipts": "/app/documents/goods-receipts",
+  "/smb/documents/goods-receipts/new": "/app/documents/goods-receipts/new",
+  "/smb/documents/goods-issues": "/app/documents/goods-issues",
+  "/smb/documents/goods-issues/new": "/app/documents/goods-issues/new",
+  "/smb/documents/inventory-transfers": "/app/documents/inventory-transfers",
+  "/smb/documents/inventory-transfers/new": "/app/documents/inventory-transfers/new",
+  "/smb/documents/production-orders": "/app/documents/production-orders",
+  "/smb/documents/production-orders/new": "/app/documents/production-orders/new",
   "/smb/reports": "/app/reports",
   "/smb/credit": "/app/credit",
   "/smb/loan": "/app/loan",
@@ -49,6 +57,7 @@ export const COMPANY_PUBLIC_PROTOTYPE_PATHS = new Set([
   "/terms",
   "/onboarding"
 ]);
+
 export const COMPANY_PROTECTED_PROTOTYPE_PATHS = new Set([
   "/bank/home",
   "/bank/alerts",
@@ -64,6 +73,13 @@ export const COMPANY_PROTECTED_PROTOTYPE_PATHS = new Set([
   "/search",
   "/app/dashboard",
   "/app/copilot",
+  "/app/inventory",
+  "/app/inventory/detail",
+  "/app/inventory/scan",
+  "/app/production",
+  "/app/production/order",
+  "/app/service-orders",
+  "/app/service-orders/work-order",
   "/app/finance",
   "/app/finance/ledger",
   "/app/finance/invoices",
@@ -73,6 +89,14 @@ export const COMPANY_PROTECTED_PROTOTYPE_PATHS = new Set([
   "/app/finance/reports",
   "/app/finance/counterparties",
   "/app/finance/payments",
+  "/app/documents/goods-receipts",
+  "/app/documents/goods-receipts/new",
+  "/app/documents/goods-issues",
+  "/app/documents/goods-issues/new",
+  "/app/documents/inventory-transfers",
+  "/app/documents/inventory-transfers/new",
+  "/app/documents/production-orders",
+  "/app/documents/production-orders/new",
   "/app/reports",
   "/app/credit",
   "/app/loan",
@@ -81,14 +105,10 @@ export const COMPANY_PROTECTED_PROTOTYPE_PATHS = new Set([
   "/app/notifications"
 ]);
 
-// Paths served by real Next.js pages (not the legacy prototype).
-// Middleware validates the session and then lets Next.js routing take over.
-export const COMPANY_NEXTJS_APP_PATHS = new Set([
-  "/app/inventory",
-  "/app/inventory/detail",
-  "/app/production",
-  "/app/service-orders",
-]);
+// No Next.js pages in the company portal — everything is served by the
+// orange warm-ochre prototype. Kept as an empty set so middleware keeps
+// compiling until we remove the reference.
+export const COMPANY_NEXTJS_APP_PATHS = new Set<string>();
 
 function normalizePath(path?: string | null) {
   if (!path) {

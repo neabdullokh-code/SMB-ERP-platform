@@ -2,7 +2,7 @@ import { proxyToPlatformApi } from "@/lib/platform-proxy";
 
 async function proxy(request: Request, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params;
-  return proxyToPlatformApi(request, path, "documents");
+  return proxyToPlatformApi(request, path, "production");
 }
 
 export const GET = proxy;
