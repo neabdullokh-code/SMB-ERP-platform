@@ -14,10 +14,14 @@
     "dev:bank": "npm run dev --workspace @sqb/bank-portal",
     "dev:api": "npm run dev --workspace @sqb/platform-api",
     "dev:worker": "npm run dev --workspace @sqb/worker",
+    "e2e": "playwright test",
+    "e2e:headed": "playwright test --headed",
+    "e2e:ui": "playwright test --ui",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {
+    "@playwright/test": "^1.51.1",
     "concurrently": "^9.2.1",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.5.15",
