@@ -1,6 +1,6 @@
 # SQB Business OS — Developer Guide
 
-> **Last updated**: 2026-04-25 (database connectivity update)
+> **Last updated**: 2026-04-26 (portal-ui reliability + auth stability updates)
 > **Team size**: 5 developers (D1–D5)
 > **Runtime**: Node.js 20+ · TypeScript 5.7+ (platform-api currently 6.x) · PostgreSQL 16 / Supabase Postgres / self-hosted Postgres · Redis 7 · MinIO
 
@@ -26,9 +26,9 @@
 
 ```mermaid
 graph TB
-    subgraph Clients["Frontend Apps — Next.js 15"]
-        CP["Company Portal<br/>apps/company-portal"]
-        BP["Bank Portal<br/>apps/bank-portal"]
+    subgraph Clients["Portal Shells + Prototype Runtime"]
+        CP["Company Portal<br/>Next shell + public/portal-ui"]
+        BP["Bank Portal<br/>Next shell + public/portal-ui"]
     end
 
     subgraph API["Modular Monolith — Fastify 5"]
@@ -67,14 +67,16 @@ graph TB
 
 **Why a modular monolith?** Simpler deployment for the hackathon; modules are isolated enough to extract into microservices later if needed. Each module registers its own Fastify routes via a plugin function and owns its own `store.ts` for DB persistence.
 
+**Frontend contract:** both portals are portal-ui-first. `public/portal-ui/` is the primary authenticated UI. `app/` is only the Next.js host layer for auth pages, middleware, route protection, global bootstrapping, and `app/api/*` BFF routes that call `services/platform-api`.
+
 ---
 
 ## Workspace Layout
 
 | Path | Purpose | Package |
 |------|---------|---------|
-| `apps/company-portal/` | SMB-facing Next.js portal (Company Admin, Employee) | `@sqb/company-portal` |
-| `apps/bank-portal/` | Bank-facing Next.js portal (Super Admin, Bank Admin) | `@sqb/bank-portal` |
+| `apps/company-portal/` | SMB portal shell plus portal UI runtime; `app/` hosts auth/BFF, `public/portal-ui/` owns authenticated UI | `@sqb/company-portal` |
+| `apps/bank-portal/` | Bank portal shell plus portal UI runtime; `app/` hosts auth/BFF, `public/portal-ui/` owns authenticated UI | `@sqb/bank-portal` |
 | `services/platform-api/` | Fastify modular monolith — all tenant-aware APIs | `@sqb/platform-api` |
 | `services/worker/` | Background jobs (OTP, notifications, projections) | `@sqb/worker` |
 | `packages/domain-types/` | Shared TypeScript interfaces and enums | `@sqb/domain-types` |
@@ -84,6 +86,14 @@ graph TB
 | `db/migrations/` | Sequential SQL migrations (001–015, including two `014_*` files) | — |
 | `db/seeds/` | Seed data for local development | — |
 | `infra/docker/` | Docker Compose (Redis 7 + optional local Postgres 16 for self-hosted dev) | — |
+
+### Portal folder rules
+
+- `app/(auth)/*` is for login, OTP, terms, forgot-password, and other public auth screens.
+- `app/api/*` is the portal-local BFF layer; browser code should use these routes instead of calling `services/platform-api` directly.
+- `public/portal-ui/` is the main product UI for authenticated portal routes.
+- `src/lib/*` contains middleware, routing, session, and navigation helpers.
+- `src/features/auth/*` may exist for auth-only composition, but product screens should not be rebuilt under `src/features/*` or `app/app/*` when a portal-UI-owned route already exists.
 
 ---
 
@@ -139,6 +149,37 @@ All mutation endpoints must use **Zod schemas** (see `services/platform-api/src/
 ### Database Access
 
 Use `withDb()` from `services/platform-api/src/lib/db.ts`. It handles connection pooling, supports Supabase pooler/direct DSNs or standard Postgres DSNs, and can fall back to in-memory stubs when `ALLOW_DEMO_AUTH=true` and PostgreSQL is unavailable.
+
+---
+
+## Recent Updates (2026-04-26)
+
+### Auth/session stability on route changes
+
+- Fixed forced logout behavior when switching sections during transient auth API failures.
+- `/api/auth/session` 5xx/network failures are treated as transient on the portal UI side.
+- Middleware refresh failures now return `unavailable` on 5xx/network failures instead of invalidating auth state.
+- Updated files:
+  - `apps/company-portal/public/portal-ui/src/auth.jsx`
+  - `apps/company-portal/public/portal-ui/index.html`
+  - `apps/company-portal/middleware.ts`
+  - `apps/bank-portal/public/portal-ui/src/auth.jsx`
+  - `apps/bank-portal/public/portal-ui/index.html`
+  - `apps/bank-portal/middleware.ts`
+
+### Finance surface reliability
+
+- Cash flow view now always normalizes to 6 monthly buckets (zero-filled gaps) to avoid one-bar stretch and unstable KPI presentation.
+- General ledger mock fallback balances were removed; ledger now renders only live data with explicit loading/empty states.
+- Updated file:
+  - `apps/company-portal/public/portal-ui/src/smb-rest.jsx`
+
+### Dashboard actionability
+
+- `Activity` and `Needs attention` panels now use live backend data with explicit `actionPath` and clickable row routing.
+- Updated files:
+  - `apps/company-portal/app/api/dashboard/overview/route.ts`
+  - `apps/company-portal/public/portal-ui/src/smb-hero.jsx`
 
 ---
 
@@ -210,7 +251,7 @@ D2 covers the "physical" side of the business: inventory, production, BOM, and t
 | DB schema: `service_orders`, `approvals` | `db/migrations/001_initial_schema.sql` (L161-188) |
 | RLS policies for all operations tables | `db/migrations/001_initial_schema.sql` (L200-227) |
 | API route stubs (read-only, fixture-backed) | `services/platform-api/src/modules/inventory/`, `production/`, `service-orders/` |
-| Frontend page shells | `apps/company-portal/src/features/inventory/`, `production/`, `service-orders/` |
+| Portal UI surfaces | `apps/company-portal/public/portal-ui/src/` plus company `app/api/*` BFF routes |
 
 ### 🔲 What's Remaining
 
@@ -264,7 +305,7 @@ D3 is the most technically precise module. Double-entry ledger logic requires ca
 | Standardized response envelope | `services/platform-api/src/lib/envelope.ts` | — |
 | Domain types: complete finance contracts | `packages/domain-types/src/finance.ts` (221 LOC) | — |
 | Role-based access control (company write, bank read-only) | Route-level guards in `finance/index.ts` | — |
-| Frontend finance pages (Dashboard, Invoices, Bills, Ledger, Cash Flow, Counterparties, Payments, Reports) | `apps/company-portal/src/features/finance/` | — |
+| Finance portal UI surface + BFF routes | `apps/company-portal/public/portal-ui/src/`, `apps/company-portal/app/api/` | — |
 
 ### 🔲 What's Remaining
 
@@ -301,7 +342,7 @@ D4 owns the entire bank-facing interface on the backend. The audit log is best i
 | Finance snapshot for bank view | `GET /finance/snapshot/:tenantId` (built by D3) |
 | Worker projection refresh job populating tenant health read model | `services/worker/src/jobs/projection-job.ts` |
 | Bank portal proxy routes for audit, analytics, portfolio, and credit queue data | `apps/bank-portal/app/api/` |
-| Frontend: bank dashboard, tenants, credit queue, audit wired to live APIs | `apps/bank-portal/src/features/` |
+| Bank portal UI surface + BFF routes wired to live APIs | `apps/bank-portal/public/portal-ui/src/`, `apps/bank-portal/app/api/` |
 | Domain types: audit, bank analytics, credit queue contracts | `packages/domain-types/src/platform.ts`, `packages/domain-types/src/bank.ts` |
 
 ### 🔲 What's Remaining
@@ -403,7 +444,7 @@ graph LR
 | Phase | Days | Focus |
 |-------|------|-------|
 | **Phase 1** | Days 1–2 | D1 ships JWT tokens, refresh rotation, rate limiting. D5 sets up WebSocket + BullMQ infra. All 5 devs agree on response envelope + error codes |
-| **Phase 2** | Days 2–5 | D2, D3, D4 run in parallel. D2 builds inventory/production CRUD. D3 finishes frontend finance pages + multi-currency. D4 builds risk engine + audit triggers |
+| **Phase 2** | Days 2–5 | D2, D3, D4 run in parallel. D2 builds inventory/production CRUD. D3 finishes finance APIs and portal UI integration. D4 builds risk engine + audit triggers |
 | **Phase 3** | Days 5–7 | D5 integrates real-time events from D2/D3/D4. Copilot backend with surface-aware prompts. All tracks do integration testing |
 
 ---
@@ -463,9 +504,9 @@ packages/domain-types/src/inventory.ts
 packages/domain-types/src/production.ts
 packages/domain-types/src/service-orders.ts
 db/migrations/001_initial_schema.sql  (warehouse/inventory/production tables)
-apps/company-portal/src/features/inventory/
-apps/company-portal/src/features/production/
-apps/company-portal/src/features/service-orders/
+apps/company-portal/public/portal-ui/src/
+apps/company-portal/app/api/
+apps/company-portal/middleware.ts
 ```
 
 ### D3 — Finance Suite
@@ -479,8 +520,8 @@ services/platform-api/src/modules/finance/validation.ts
 packages/domain-types/src/finance.ts
 db/migrations/007_finance_core.sql
 db/migrations/008_finance_rls.sql
-apps/company-portal/src/features/finance/
-apps/company-portal/app/app/finance/
+apps/company-portal/public/portal-ui/src/
+apps/company-portal/app/api/
 ```
 
 ### D4 — Credit & Bank Surface
@@ -490,10 +531,9 @@ services/platform-api/src/modules/bank-monitoring/index.ts
 services/platform-api/src/modules/audit/index.ts
 packages/domain-types/src/bank.ts
 db/migrations/001_initial_schema.sql  (audit_events, bank_tenant_health tables)
-apps/bank-portal/src/features/dashboard/
-apps/bank-portal/src/features/tenants/
-apps/bank-portal/src/features/credit-queue/
-apps/bank-portal/src/features/audit/
+apps/bank-portal/public/portal-ui/src/
+apps/bank-portal/app/api/
+apps/bank-portal/middleware.ts
 ```
 
 ### D5 — AI & Real-time

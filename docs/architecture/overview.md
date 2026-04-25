@@ -21,8 +21,18 @@
 
 ## Frontend shape
 
-- Company portal groups features under `src/features/*`
-- Bank portal does the same, but only for bank-safe experiences
+- `apps/company-portal/public/portal-ui/` is the main authenticated SMB UI
+- `apps/bank-portal/public/portal-ui/` is the main authenticated bank UI
+- `app/` in each portal is a thin Next.js shell for auth pages, middleware, layouts, and `app/api/*` proxy routes
+- `src/lib/*` contains shell, routing, and session helpers; it is not the main page surface
+- `src/features/auth/*` is kept only for auth experience code shared by `app/(auth)` pages
 - Shared visual primitives live in `packages/ui`
 - Shared contracts and fixtures live in `packages/domain-types`
+
+## Operational reliability updates (2026-04-26)
+
+- Route-switch auth validation is now fail-soft for transient session endpoint outages.
+- Middleware treats refresh endpoint 5xx/network failures as service unavailability, not session invalidation.
+- SMB finance UI removed ledger mock fallback balances and now shows explicit loading/empty states.
+- SMB cash flow charts are normalized to last 6 monthly buckets to prevent distorted single-bucket rendering.
 

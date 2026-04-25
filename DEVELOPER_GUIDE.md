@@ -1,6 +1,6 @@
 # SQB Business OS — Developer Guide
 
-> **Last updated**: 2026-04-22
+> **Last updated**: 2026-04-26
 > **Team size**: 5 developers (D1–D5)
 > **Runtime**: Node.js 20+ · TypeScript 5.7 · PostgreSQL 16 · Redis 7
 
@@ -139,6 +139,38 @@ All mutation endpoints must use **Zod schemas** (see `services/platform-api/src/
 ### Database Access
 
 Use `withDb()` from `services/platform-api/src/lib/db.ts`. It handles connection pooling and gracefully falls back to in-memory stubs when `ALLOW_DEMO_AUTH=true` and PostgreSQL is unavailable.
+
+---
+
+## Recent Updates (2026-04-26)
+
+### Auth/session stability on section switches
+
+- Fixed route-switch logout regression in both portals by handling transient `/api/auth/session` failures as non-terminal.
+- Added client-side cached-session fail-soft behavior so temporary 5xx/network blips do not force immediate redirect to `/login`.
+- Updated middleware refresh behavior to return `unavailable` on refresh endpoint 5xx/network failure instead of clearing auth state as invalid.
+- Updated files:
+  - `apps/company-portal/public/portal-ui/src/auth.jsx`
+  - `apps/company-portal/public/portal-ui/index.html`
+  - `apps/company-portal/middleware.ts`
+  - `apps/bank-portal/public/portal-ui/src/auth.jsx`
+  - `apps/bank-portal/public/portal-ui/index.html`
+  - `apps/bank-portal/middleware.ts`
+
+### Finance UI data integrity improvements
+
+- Cash flow page now renders a stable 6-month bucketed dataset (zero-filled missing months) to prevent single-bucket stretch and KPI jitter.
+- General ledger no longer uses hardcoded fallback account balances; it now shows live data with explicit loading/empty states.
+- Updated file:
+  - `apps/company-portal/public/portal-ui/src/smb-rest.jsx`
+
+### Dashboard actionability
+
+- Dashboard `Activity` and `Needs attention` cards are now sourced from live backend data with explicit `actionPath` routing.
+- Rows are clickable and navigate to the relevant operational screens.
+- Updated files:
+  - `apps/company-portal/app/api/dashboard/overview/route.ts`
+  - `apps/company-portal/public/portal-ui/src/smb-hero.jsx`
 
 ---
 
