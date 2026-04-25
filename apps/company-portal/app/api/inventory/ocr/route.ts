@@ -1,10 +1,26 @@
+import { execFile } from "node:child_process";
+import fs from "node:fs";
+import fsp from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { promisify } from "node:util";
 import { NextResponse } from "next/server";
 import { createWorker } from "tesseract.js";
 
 export const runtime = "nodejs";
 
+const execFileAsync = promisify(execFile);
 const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"]);
 const IMAGE_MIME_PREFIX = "image/";
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+const TESSERACT_CACHE_DIR = path.join(os.tmpdir(), "smb-erp-tesseract-cache");
+const OCR_CONCURRENCY = 1;
+
+type TesseractWorker = Awaited<ReturnType<typeof createWorker>>;
+
+let workerPromise: Promise<TesseractWorker> | null = null;
+let inFlight = 0;
+const waiters: Array<() => void> = [];
 
 type OcrField = {
   field: string;
@@ -19,6 +35,39 @@ type OcrItem = {
   price: number;
   conf: number;
 };
+
+type OcrExtractResult = {
+  text: string;
+  confidence: number;
+  warnings: string[];
+};
+
+class OcrInputError extends Error {
+  status: number;
+
+  constructor(message: string, status = 422) {
+    super(message);
+    this.name = "OcrInputError";
+    this.status = status;
+  }
+}
+
+function resolveTesseractNodeWorker() {
+  const rel = path.join("node_modules", "tesseract.js", "src", "worker-script", "node", "index.js");
+  let current = process.cwd();
+
+  for (let i = 0; i < 6; i += 1) {
+    const candidate = path.resolve(current, rel);
+    if (fs.existsSync(candidate)) return candidate;
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+
+  throw new Error("Unable to locate tesseract.js node worker script.");
+}
+
+const TESSERACT_NODE_WORKER = resolveTesseractNodeWorker();
 
 function fileExtension(name: string) {
   const idx = name.lastIndexOf(".");
@@ -98,7 +147,7 @@ function extractItems(text: string, confidence: number): OcrItem[] {
     const numberChunks = line.match(/-?\d[\d\s.,]*/g) ?? [];
     if (numberChunks.length < 2) continue;
 
-    const qty = parseQtyLike(numberChunks[0]);
+    const qty = parseQtyLike(numberChunks[0] ?? "");
     const priceChunk = numberChunks[numberChunks.length >= 3 ? 1 : numberChunks.length - 1] ?? "";
     const price = parseMoneyLike(priceChunk);
     if (qty <= 0 || price <= 0) continue;
@@ -123,28 +172,148 @@ function extractItems(text: string, confidence: number): OcrItem[] {
   return items;
 }
 
-async function extractTextFromPdf(fileBuffer: Buffer): Promise<string> {
-  const module = await import("pdf-parse");
-  const parser = new module.PDFParse({ data: fileBuffer });
+async function withOcrQueue<T>(job: () => Promise<T>) {
+  if (inFlight >= OCR_CONCURRENCY) {
+    await new Promise<void>((resolve) => waiters.push(resolve));
+  }
+
+  inFlight += 1;
   try {
-    const result = await parser.getText();
-    return normalizeText(result.text || "");
+    return await job();
   } finally {
-    await parser.destroy();
+    inFlight -= 1;
+    const next = waiters.shift();
+    if (next) next();
   }
 }
 
-async function extractTextFromImage(fileBuffer: Buffer): Promise<{ text: string; confidence: number }> {
-  const worker = await createWorker("eng+rus");
-  try {
-    const result = await worker.recognize(fileBuffer);
-    return {
-      text: normalizeText(result.data.text || ""),
-      confidence: Number.isFinite(result.data.confidence) ? result.data.confidence : 85
-    };
-  } finally {
-    await worker.terminate();
+async function getWorker() {
+  if (!workerPromise) {
+    workerPromise = createWorker("eng+rus", undefined, {
+      workerPath: TESSERACT_NODE_WORKER,
+      workerBlobURL: false,
+      cachePath: TESSERACT_CACHE_DIR
+    });
   }
+
+  return workerPromise;
+}
+
+async function resetWorker() {
+  if (!workerPromise) return;
+  const current = workerPromise;
+  workerPromise = null;
+  try {
+    const worker = await current;
+    await worker.terminate();
+  } catch {
+    // Ignore termination failures while resetting bad worker state.
+  }
+}
+
+function isCorruptImageError(error: unknown) {
+  if (!(error instanceof Error)) return false;
+  const msg = error.message.toLowerCase();
+  return msg.includes("image file /input cannot be read") || msg.includes("error attempting to read image");
+}
+
+async function recognizeWithRetry(fileBuffer: Buffer): Promise<{ text: string; confidence: number }> {
+  let lastError: unknown = null;
+  const psmModes = ["6", "11"] as const;
+
+  for (const psm of psmModes) {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const worker = await getWorker();
+        await worker.setParameters({ tessedit_pageseg_mode: psm as never });
+        const result = await worker.recognize(fileBuffer);
+        const text = normalizeText(result.data.text || "");
+        const confidence = Number.isFinite(result.data.confidence) ? result.data.confidence : 85;
+        return { text, confidence };
+      } catch (error) {
+        lastError = error;
+        await resetWorker();
+      }
+    }
+  }
+
+  if (isCorruptImageError(lastError)) {
+    throw new OcrInputError("Uploaded image appears corrupted or unsupported. Please upload a clear PNG/JPG/PDF.");
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Unable to run OCR recognition.");
+}
+
+async function extractTextFromImage(fileBuffer: Buffer): Promise<OcrExtractResult> {
+  return withOcrQueue(async () => {
+    const result = await recognizeWithRetry(fileBuffer);
+    return {
+      text: result.text,
+      confidence: result.confidence,
+      warnings: []
+    };
+  });
+}
+
+async function rasterizePdfFirstPage(fileBuffer: Buffer): Promise<Buffer | null> {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), "smb-ocr-pdf-"));
+  const inPdf = path.join(tmpDir, "input.pdf");
+  const outPrefix = path.join(tmpDir, "page");
+  const outPng = `${outPrefix}.png`;
+
+  try {
+    await fsp.writeFile(inPdf, fileBuffer);
+
+    try {
+      await execFileAsync("pdftoppm", ["-f", "1", "-singlefile", "-png", inPdf, outPrefix], { windowsHide: true });
+      if (fs.existsSync(outPng)) return await fsp.readFile(outPng);
+    } catch {
+      // Fallback to ImageMagick if available.
+    }
+
+    try {
+      await execFileAsync("magick", ["-density", "220", `${inPdf}[0]`, outPng], { windowsHide: true });
+      if (fs.existsSync(outPng)) return await fsp.readFile(outPng);
+    } catch {
+      // Keep null fallback.
+    }
+  } finally {
+    await fsp.rm(tmpDir, { recursive: true, force: true });
+  }
+
+  return null;
+}
+
+async function extractTextFromPdf(fileBuffer: Buffer): Promise<OcrExtractResult> {
+  const module = await import("pdf-parse");
+  const parser = new module.PDFParse({ data: fileBuffer });
+
+  try {
+    const parsed = await parser.getText();
+    const text = normalizeText(parsed.text || "");
+    if (text.length >= 40) {
+      return {
+        text,
+        confidence: 82,
+        warnings: []
+      };
+    }
+  } finally {
+    await parser.destroy();
+  }
+
+  const pageImage = await rasterizePdfFirstPage(fileBuffer);
+  if (!pageImage) {
+    throw new OcrInputError(
+      "Scanned PDF detected. Install Poppler (pdftoppm) or ImageMagick on server for OCR fallback, or upload as image."
+    );
+  }
+
+  const imageResult = await extractTextFromImage(pageImage);
+  return {
+    ...imageResult,
+    warnings: ["PDF had no embedded text; OCR was run on rendered page image."]
+  };
 }
 
 export async function POST(request: Request) {
@@ -155,47 +324,54 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "File is required." }, { status: 400 });
     }
 
+    if (file.size > MAX_UPLOAD_BYTES) {
+      return NextResponse.json(
+        { message: `File is too large. Max upload is ${Math.floor(MAX_UPLOAD_BYTES / (1024 * 1024))}MB.` },
+        { status: 413 }
+      );
+    }
+
     const filename = file.name || "upload";
     const ext = fileExtension(filename);
     const mime = file.type || "";
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    let text = "";
-    let confidence = 85;
-
+    let result: OcrExtractResult;
     if (mime.startsWith(IMAGE_MIME_PREFIX) || IMAGE_EXTENSIONS.has(ext)) {
-      const result = await extractTextFromImage(buffer);
-      text = result.text;
-      confidence = result.confidence;
+      result = await extractTextFromImage(buffer);
     } else if (ext === ".pdf" || mime === "application/pdf") {
-      text = await extractTextFromPdf(buffer);
-      confidence = 82;
+      result = await extractTextFromPdf(buffer);
     } else {
       return NextResponse.json(
-        { message: "Unsupported file type for OCR. Use PDF, JPG, PNG, WEBP, or TIFF." },
+        { message: "Unsupported file type for OCR. Use PDF, JPG, PNG, WEBP, TIFF, or BMP." },
         { status: 400 }
       );
     }
 
-    if (!text) {
+    if (!result.text) {
       return NextResponse.json(
         { message: "No readable text extracted from document." },
         { status: 422 }
       );
     }
 
-    const fields = extractFields(text, confidence, filename);
-    const items = extractItems(text, confidence);
+    const fields = extractFields(result.text, result.confidence, filename);
+    const items = extractItems(result.text, result.confidence);
 
     return NextResponse.json({
       data: {
         fields,
         items,
-        textPreview: text.slice(0, 2000)
+        textPreview: result.text.slice(0, 2000),
+        warnings: result.warnings
       }
     });
   } catch (error) {
+    if (error instanceof OcrInputError) {
+      return NextResponse.json({ message: error.message }, { status: error.status });
+    }
+
     return NextResponse.json(
       { message: error instanceof Error ? error.message : "Unable to process OCR request." },
       { status: 500 }
