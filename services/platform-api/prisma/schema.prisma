@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model LoanApplication {
+  id          String   @id @default(cuid())
+  tenantId    String
+  step        Int      @default(1)
+  status      String   @default("draft")
+  step1Json   Json?    @map("step1")
+  step2Json   Json?    @map("step2")
+  step3Json   Json?    @map("step3")
+  riskScore   Int?
+  riskBand    String?
+  submittedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  documents LoanDocument[]
+  decisions CreditDecision[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@map("loan_applications")
+}
+
+model LoanDocument {
+  id            String   @id @default(cuid())
+  applicationId String
+  filename      String
+  mimeType      String
+  storageKey    String
+  sizeBytes     Int
+  uploadedBy    String
+  uploadedAt    DateTime @default(now())
+
+  application LoanApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@map("loan_documents")
+}
+
+model CreditDecision {
+  id            String   @id @default(cuid())
+  applicationId String
+  decision      String
+  decidedBy     String
+  reason        String
+  decidedAt     DateTime @default(now())
+
+  application LoanApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@map("credit_decisions")
+}
+
+model RiskScore {
+  id          String   @id @default(cuid())
+  tenantId    String
+  score       Int
+  band        String
+  factorsJson Json     @map("factors")
+  computedAt  DateTime @default(now())
+
+  @@index([tenantId])
+  @@map("risk_scores")
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  actorUserId  String
+  actorRole    String
+  tenantId     String?
+  category     String
+  action       String
+  resourceType String
+  resourceId   String
+  occurredAt   DateTime @default(now())
+  metadata     Json     @default("{}")
+
+  @@index([tenantId])
+  @@index([category])
+  @@index([occurredAt])
+  @@map("audit_logs")
+}

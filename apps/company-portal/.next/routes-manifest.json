@@ -1,0 +1,188 @@
+{
+  "version": 3,
+  "pages404": true,
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/api/tenants/invites/[inviteId]/revoke",
+      "regex": "^/api/tenants/invites/([^/]+?)/revoke(?:/)?$",
+      "routeKeys": {
+        "nxtPinviteId": "nxtPinviteId"
+      },
+      "namedRegex": "^/api/tenants/invites/(?<nxtPinviteId>[^/]+?)/revoke(?:/)?$"
+    },
+    {
+      "page": "/api/tenants/members/[userId]",
+      "regex": "^/api/tenants/members/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPuserId": "nxtPuserId"
+      },
+      "namedRegex": "^/api/tenants/members/(?<nxtPuserId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/app/finance/bills/[id]",
+      "regex": "^/app/finance/bills/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/app/finance/bills/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/app/finance/invoices/[id]",
+      "regex": "^/app/finance/invoices/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/app/finance/invoices/(?<nxtPid>[^/]+?)(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/app/finance",
+      "regex": "^/app/finance(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/finance(?:/)?$"
+    },
+    {
+      "page": "/app/finance/accounts",
+      "regex": "^/app/finance/accounts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/finance/accounts(?:/)?$"
+    },
+    {
+      "page": "/app/finance/bills",
+      "regex": "^/app/finance/bills(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/finance/bills(?:/)?$"
+    },
+    {
+      "page": "/app/finance/cash",
+      "regex": "^/app/finance/cash(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/finance/cash(?:/)?$"
+    },
+    {
+      "page": "/app/finance/counterparties",
+      "regex": "^/app/finance/counterparties(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/finance/counterparties(?:/)?$"
+    },
+    {
+      "page": "/app/finance/invoices",
+      "regex": "^/app/finance/invoices(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/finance/invoices(?:/)?$"
+    },
+    {
+      "page": "/app/finance/ledger",
+      "regex": "^/app/finance/ledger(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/finance/ledger(?:/)?$"
+    },
+    {
+      "page": "/app/finance/payments",
+      "regex": "^/app/finance/payments(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/finance/payments(?:/)?$"
+    },
+    {
+      "page": "/app/finance/reports",
+      "regex": "^/app/finance/reports(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/finance/reports(?:/)?$"
+    },
+    {
+      "page": "/app/inventory",
+      "regex": "^/app/inventory(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/inventory(?:/)?$"
+    },
+    {
+      "page": "/app/production",
+      "regex": "^/app/production(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/production(?:/)?$"
+    },
+    {
+      "page": "/app/service-orders",
+      "regex": "^/app/service\\-orders(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/service\\-orders(?:/)?$"
+    },
+    {
+      "page": "/forgot",
+      "regex": "^/forgot(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/forgot(?:/)?$"
+    },
+    {
+      "page": "/login",
+      "regex": "^/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/login(?:/)?$"
+    },
+    {
+      "page": "/onboarding",
+      "regex": "^/onboarding(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/onboarding(?:/)?$"
+    },
+    {
+      "page": "/otp",
+      "regex": "^/otp(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/otp(?:/)?$"
+    },
+    {
+      "page": "/terms",
+      "regex": "^/terms(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/terms(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSuffix": ".prefetch.rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments"
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

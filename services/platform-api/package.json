@@ -1,0 +1,37 @@
+{
+  "name": "@sqb/platform-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc --project tsconfig.json",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "db:generate": "prisma generate --schema=prisma/schema.prisma",
+    "db:migrate": "prisma migrate deploy --schema=prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.0.0",
+    "@fastify/multipart": "^9.0.0",
+    "@fastify/rate-limit": "^10.3.0",
+    "@prisma/client": "^6.2.0",
+    "@sqb/config": "0.1.0",
+    "@sqb/domain-types": "0.1.0",
+    "@types/pdfkit": "^0.17.6",
+    "@types/pg": "^8.20.0",
+    "bullmq": "^5.76.2",
+    "decimal.js": "^10.6.0",
+    "fastify": "^5.2.1",
+    "jose": "^6.2.2",
+    "minio": "^8.0.4",
+    "pdfkit": "^0.18.0",
+    "pg": "^8.20.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "prisma": "^6.2.0",
+    "tsx": "^4.19.3",
+    "typescript": "^6.0.3"
+  }
+}

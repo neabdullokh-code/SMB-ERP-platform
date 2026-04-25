@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=1440, initial-scale=1"/>
+<title>SQB Business OS — Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="styles/app.css"/>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+  // Tweak defaults
+  const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+    "theme": "light",
+    "accent": "warm-ochre",
+    "density": "comfortable",
+    "showCopilotDot": true,
+    "sidebarCollapsed": false
+  }/*EDITMODE-END*/;
+  window.__TWEAKS = { ...TWEAK_DEFAULTS };
+</script>
+
+<script type="text/babel" src="src/kit.jsx"></script>
+<script type="text/babel" src="src/data.jsx"></script>
+<script type="text/babel" src="src/shell.jsx"></script>
+<script type="text/babel" src="src/auth.jsx"></script>
+<script type="text/babel" src="src/smb-hero.jsx"></script>
+<script type="text/babel" src="src/smb-inventory.jsx"></script>
+<script type="text/babel" src="src/smb-rest.jsx"></script>
+<script type="text/babel" src="src/smb-credit.jsx"></script>
+<script type="text/babel" src="src/bank-hero.jsx"></script>
+<script type="text/babel" src="src/bank-credit.jsx"></script>
+<script type="text/babel" src="src/bank-rest.jsx"></script>
+
+<script type="text/babel">
+  const { useState, useEffect, useMemo } = React;
+
+  /* ---- Route table ---- */
+  const ROUTES = {
+    // auth
+    "/login":          { surface: null,   crumbs: ["Sign in"],                comp: () => <LoginPage go={go}/> },
+    "/otp":            { surface: null,   crumbs: ["Verify"],                 comp: () => <OtpPage go={go}/> },
+    "/forgot":         { surface: null,   crumbs: ["Reset password"],         comp: () => <ForgotPage go={go}/> },
+    "/terms":          { surface: null,   crumbs: ["Terms"],                  comp: () => <TermsPage go={go}/> },
+    "/onboarding":     { surface: null,   crumbs: ["Workspace setup"],        comp: () => <OnboardingPage go={go}/> },
+
+    // SMB
+    "/smb/home":       { surface: "smb",  crumbs: ["Kamolot", "Dashboard"],   comp: () => <SMBDashboard go={go}/> },
+    "/smb/copilot":    { surface: "smb",  crumbs: ["Kamolot", "AI Copilot"],  comp: () => <CopilotPage go={go}/> },
+    "/smb/inventory":  { surface: "smb",  crumbs: ["Kamolot", "Inventory"],   comp: () => <InventoryList go={go}/> },
+    "/smb/inventory/detail":{ surface:"smb",crumbs:["Kamolot","Inventory","SKU KS-0102"], comp:() => <InventoryDetail go={go}/> },
+    "/smb/inventory/scan": { surface:"smb", crumbs:["Kamolot","Inventory","Scan waybill"], comp:() => <OcrScan go={go}/> },
+    "/smb/production": { surface: "smb",  crumbs: ["Kamolot", "Production"],  comp: () => <ProductionBOMs go={go}/> },
+    "/smb/production/order":{ surface:"smb",crumbs:["Kamolot","Production","PO-0451"], comp:() => <ProductionOrder go={go}/> },
+    "/smb/services":   { surface: "smb",  crumbs: ["Kamolot", "Services"],    comp: () => <ServicesKanban go={go}/> },
+    "/smb/services/wo":{ surface: "smb",  crumbs: ["Kamolot", "Services","WO-1041"], comp:() => <ServiceOrderDetail/> },
+    "/smb/finance/ledger":   { surface:"smb", crumbs:["Kamolot","Finance","Ledger"],    comp:() => <FinancePage kind="ledger"/> },
+    "/smb/finance/invoices": { surface:"smb", crumbs:["Kamolot","Finance","Invoices"],  comp:() => <FinancePage kind="invoices"/> },
+    "/smb/finance/bills":    { surface:"smb", crumbs:["Kamolot","Finance","Bills"],     comp:() => <FinancePage kind="bills"/> },
+    "/smb/finance/cash":     { surface:"smb", crumbs:["Kamolot","Finance","Cash flow"], comp:() => <FinancePage kind="cash"/> },
+    "/smb/reports":    { surface: "smb",  crumbs: ["Kamolot", "Reports"],     comp: () => <ReportsPage/> },
+    "/smb/credit":     { surface: "smb",  crumbs: ["Kamolot", "Credit"],      comp: () => <SmbCredit go={go}/> },
+    "/smb/loan":       { surface: "smb",  crumbs: ["Kamolot", "Credit", "Loan application"], comp: () => <LoanApplication go={go}/> },
+    "/smb/team":       { surface: "smb",  crumbs: ["Kamolot", "Team"],        comp: () => <TeamPage/> },
+    "/smb/settings":   { surface: "smb",  crumbs: ["Kamolot", "Settings"],    comp: () => <SmbSettings/> },
+    "/smb/notifications":{ surface:"smb", crumbs:["Kamolot","Notifications"], comp: () => <NotificationsPage go={go}/> },
+
+    // Bank
+    "/bank/home":      { surface: "bank", crumbs: ["SQB Platform","Portfolio"],        comp: () => <BankDashboard go={go}/> },
+    "/bank/alerts":    { surface: "bank", crumbs: ["SQB Platform","Alerts"],           comp: () => <AlertsPage go={go}/> },
+    "/bank/tenants":   { surface: "bank", crumbs: ["SQB Platform","All tenants"],      comp: () => <BankTenants go={go}/> },
+    "/bank/tenant":    { surface: "bank", crumbs: ["SQB Platform","Tenants","Kamolot"],comp: () => <TenantDetail go={go}/> },
+    "/bank/tenant-mgmt":{ surface: "bank", crumbs: ["SQB Platform","Tenant mgmt"],     comp: () => <RiskPage/> },
+    "/bank/credit-queue":{ surface: "bank", crumbs: ["SQB Platform","Credit queue"],   comp: () => <CreditQueue go={go}/> },
+    "/bank/cross-sell":{ surface: "bank", crumbs: ["SQB Platform","Cross-sell"],       comp: () => <AlertsPage go={go}/> },
+    "/bank/reports":   { surface: "bank", crumbs: ["SQB Platform","Reports"],          comp: () => <ReportsPage/> },
+    "/bank/team":      { surface: "bank", crumbs: ["SQB Platform","Team"],             comp: () => <BankTeam/> },
+    "/bank/settings":  { surface: "bank", crumbs: ["SQB Platform","Platform"],         comp: () => <BankSettings/> },
+    "/bank/audit":     { surface: "bank", crumbs: ["SQB Platform","Audit log"],        comp: () => <BankSettings/> },
+
+    // shared
+    "/search":         { surface: "smb",  crumbs: ["Search"], comp: () => <SearchPage/> },
+  };
+
+  let _goRef = null;
+  const go = (p) => _goRef && _goRef(p);
+
+  function Tweaks({ open, onClose, state, setState }) {
+    if (!open) return null;
+    const update = (k, v) => {
+      const next = { ...state, [k]: v };
+      setState(next);
+      window.parent && window.parent.postMessage({ type:"__edit_mode_set_keys", edits:{ [k]: v } }, "*");
+    };
+    return (
+      <div className="tweaks-panel">
+        <div className="tweaks-head">
+          <Icon.Sparkle size={13}/>
+          <strong>Tweaks</strong>
+          <span className="sp"/>
+          <button className="icon-btn" onClick={onClose}><Icon.X size={14}/></button>
+        </div>
+        <div className="tweaks-body">
+          <div className="eyebrow">Theme</div>
+          <div className="tweaks-row">
+            {["light","dark"].map(t => (
+              <button key={t} className={`chip ${state.theme===t?"active":""}`}
+                style={state.theme===t ? {background:"var(--ink)", color:"var(--surface)", borderColor:"var(--ink)"} : null}
+                onClick={()=>update("theme", t)}>{t}</button>
+            ))}
+          </div>
+          <div className="eyebrow mt-12">Accent</div>
+          <div className="tweaks-row">
+            {[
+              ["warm-ochre","#D18A2B"],
+              ["royal-indigo","#3B4CCA"],
+              ["emerald","#1F7A4D"],
+              ["cobalt","#1E6BBE"],
+              ["plum","#7A3E80"],
+            ].map(([k,c]) => (
+              <button key={k} className="swatch" onClick={()=>update("accent", k)}
+                style={{background:c, outline: state.accent===k?"2px solid var(--ink)":"none", outlineOffset:2}}
+                title={k}/>
+            ))}
+          </div>
+          <div className="eyebrow mt-12">Density</div>
+          <div className="tweaks-row">
+            {["compact","comfortable"].map(d => (
+              <button key={d} className="chip"
+                style={state.density===d ? {background:"var(--ink)", color:"var(--surface)", borderColor:"var(--ink)"} : null}
+                onClick={()=>update("density", d)}>{d}</button>
+            ))}
+          </div>
+          <div className="mt-12 row">
+            <span style={{fontSize:12}}>Show Copilot pulse</span><span className="sp"/>
+            <Toggle on={state.showCopilotDot} onChange={v=>update("showCopilotDot", v)}/>
+          </div>
+          <div className="mt-12 row">
+            <span style={{fontSize:12}}>Collapse sidebar</span><span className="sp"/>
+            <Toggle on={state.sidebarCollapsed} onChange={v=>update("sidebarCollapsed", v)}/>
+          </div>
+          <div className="divider"/>
+          <div className="eyebrow mb-4">Jump to key screens</div>
+          <div className="col gap-4">
+            <button className="chip block" onClick={()=>go("/smb/home")}>SMB · Dashboard</button>
+            <button className="chip block" onClick={()=>go("/smb/copilot")}>SMB · AI Copilot</button>
+            <button className="chip block" onClick={()=>go("/smb/inventory/scan")}>SMB · OCR Scan</button>
+            <button className="chip block" onClick={()=>go("/smb/credit")}>SMB · Credit & Financing</button>
+            <button className="chip block" onClick={()=>go("/smb/loan")}>SMB · Loan application</button>
+            <button className="chip block" onClick={()=>go("/bank/home")}>Bank · Portfolio</button>
+            <button className="chip block" onClick={()=>go("/bank/credit-queue")}>Bank · Credit queue ★</button>
+            <button className="chip block" onClick={()=>go("/bank/tenants")}>Bank · All tenants</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function App() {
+    const [path, setPath] = useState(() => (window.location.hash || "#/login").replace(/^#/,""));
+    const [surface, setSurface] = useState("smb");
+    const [tweakState, setTweakState] = useState(window.__TWEAKS);
+    const [tweakOpen, setTweakOpen] = useState(false);
+
+    _goRef = (p) => { window.location.hash = p; };
+
+    useEffect(() => {
+      const h = () => setPath((window.location.hash || "#/login").replace(/^#/,""));
+      window.addEventListener("hashchange", h);
+      return () => window.removeEventListener("hashchange", h);
+    }, []);
+
+    useEffect(() => {
+      let cancelled = false;
+      const syncSession = async () => {
+        const auth = window.AuthRuntime;
+        if (!auth) return;
+        const isPublic = auth.AUTH_PUBLIC_ROUTES.has(path);
+        const sessionState = await auth.fetchSession();
+        if (cancelled) return;
+
+        if (!sessionState.authenticated) {
+          if (!isPublic) go("/login");
+          return;
+        }
+
+        const nextSurface = sessionState.session.role === "bank_admin" || sessionState.session.role === "super_admin" ? "bank" : "smb";
+        setSurface(nextSurface);
+        const authenticatedPath = sessionState.session.requiresTermsAcceptance ? "/terms" : sessionState.session.redirectPath;
+
+        if (isPublic) {
+          if (auth.redirectToSurface(authenticatedPath)) return;
+          if (authenticatedPath !== path) go(authenticatedPath);
+          return;
+        }
+
+        if (sessionState.session.requiresTermsAcceptance && path !== "/terms") {
+          go("/terms");
+          return;
+        }
+
+        const allowed = auth.allowedRoute(path, sessionState.session);
+        if (auth.redirectToSurface(allowed)) return;
+        if (allowed !== path) go(allowed);
+      };
+
+      syncSession();
+      return () => { cancelled = true; };
+    }, [path]);
+
+    // apply tweaks to root
+    useEffect(() => {
+      const root = document.documentElement;
+      root.setAttribute("data-theme", tweakState.theme);
+      root.setAttribute("data-density", tweakState.density);
+      const accents = {
+        "warm-ochre":   { ai:"#D18A2B", bg:"#FBF3E3", line:"#ECD8A8" },
+        "royal-indigo": { ai:"#3B4CCA", bg:"#E6E9FA", line:"#BEC4F0" },
+        "emerald":      { ai:"#1F7A4D", bg:"#E3F0E9", line:"#B5D8C3" },
+        "cobalt":       { ai:"#1E6BBE", bg:"#E0ECF8", line:"#B3CDE8" },
+        "plum":         { ai:"#7A3E80", bg:"#F0E5F2", line:"#D5B8DB" },
+      };
+      const a = accents[tweakState.accent] || accents["warm-ochre"];
+      root.style.setProperty("--ai", a.ai);
+      root.style.setProperty("--ai-bg", a.bg);
+      root.style.setProperty("--ai-line", a.line);
+      root.classList.toggle("sidebar-collapsed", tweakState.sidebarCollapsed);
+      root.classList.toggle("hide-copilot-dot", !tweakState.showCopilotDot);
+    }, [tweakState]);
+
+    // edit-mode protocol
+    useEffect(() => {
+      const handler = (e) => {
+        if (!e.data) return;
+        if (e.data.type === "__activate_edit_mode") setTweakOpen(true);
+        if (e.data.type === "__deactivate_edit_mode") setTweakOpen(false);
+      };
+      window.addEventListener("message", handler);
+      window.parent && window.parent.postMessage({type:"__edit_mode_available"}, "*");
+      return () => window.removeEventListener("message", handler);
+    }, []);
+
+    const route = ROUTES[path] || { surface:"smb", crumbs:["Not found"], comp: () => <NotFound/> };
+    const Comp = route.comp;
+
+    // Auth screens — no shell
+    if (route.surface === null) {
+      return <>{Comp()}<Tweaks open={tweakOpen} onClose={()=>setTweakOpen(false)} state={tweakState} setState={setTweakState}/></>;
+    }
+
+    // Effective surface follows route if it has one
+    const effSurface = route.surface || surface;
+
+    return (
+      <>
+        <AppShell surface={effSurface} setSurface={setSurface} path={path} go={_goRef} crumbs={route.crumbs}>
+          {Comp()}
+        </AppShell>
+        <Tweaks open={tweakOpen} onClose={()=>setTweakOpen(false)} state={tweakState} setState={setTweakState}/>
+      </>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

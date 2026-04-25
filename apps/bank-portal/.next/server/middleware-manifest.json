@@ -1,0 +1,56 @@
+{
+  "version": 3,
+  "middleware": {
+    "/": {
+      "files": [
+        "server/edge-runtime-webpack.js",
+        "server/middleware.js"
+      ],
+      "name": "middleware",
+      "page": "/",
+      "matchers": [
+        {
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?(?:\\/(\\/?index|\\/?index\\.json))?[\\/#\\?]?$",
+          "originalSource": "/"
+        },
+        {
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/login(\\.json)?[\\/#\\?]?$",
+          "originalSource": "/login"
+        },
+        {
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/otp(\\.json)?[\\/#\\?]?$",
+          "originalSource": "/otp"
+        },
+        {
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/forgot(\\.json)?[\\/#\\?]?$",
+          "originalSource": "/forgot"
+        },
+        {
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/terms(\\.json)?[\\/#\\?]?$",
+          "originalSource": "/terms"
+        },
+        {
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/onboarding(\\.json)?[\\/#\\?]?$",
+          "originalSource": "/onboarding"
+        },
+        {
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/app(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?(\\.json)?[\\/#\\?]?$",
+          "originalSource": "/app/:path*"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "ke5uWq-TIjEEdgoG1FbXI",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "/OpeQ3+EeUdD0wSK9p1tZDIU8L4Pf+AI9kPFhIIe0to=",
+        "__NEXT_PREVIEW_MODE_ID": "4782d48b4195b6776b2257e2aaee2c99",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "a9e3c9199b6426af1af47b46ae28b1e544f255597eac5a89add2f09a99e960bf",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "c1af1bba1ebdeb2e57a72c1e8003a2f3267002bf07d1372f5e57e52fd654e28c"
+      }
+    }
+  },
+  "functions": {},
+  "sortedMiddleware": [
+    "/"
+  ]
+}

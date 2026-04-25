@@ -1,0 +1,9 @@
+{
+  "extends": "../../packages/tsconfig/base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "ignoreDeprecations": "6.0",
+    "outDir": "dist"
+  },
+  "include": ["src/**/*"]
+}

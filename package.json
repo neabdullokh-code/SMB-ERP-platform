@@ -1,0 +1,26 @@
+{
+  "name": "sqb-business-os",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "dev": "concurrently --kill-others-on-fail \"npm run dev:api\" \"npm run dev:company\" \"npm run dev:bank\" \"npm run dev:worker\"",
+    "dev:company": "npm run dev --workspace @sqb/company-portal",
+    "dev:bank": "npm run dev --workspace @sqb/bank-portal",
+    "dev:api": "npm run dev --workspace @sqb/platform-api",
+    "dev:worker": "npm run dev --workspace @sqb/worker",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^15.5.15",
+    "typescript": "^5.7.3"
+  }
+}
