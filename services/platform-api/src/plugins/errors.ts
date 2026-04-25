@@ -1,7 +1,8 @@
 import type { FastifyInstance } from "fastify";
+import fp from "fastify-plugin";
 import { fail, isDocumentPostingError } from "../lib/envelope.js";
 
-export async function errorHandlingPlugin(fastify: FastifyInstance) {
+async function errorHandlingPluginImpl(fastify: FastifyInstance) {
   fastify.setErrorHandler((error, request, reply) => {
     if (isDocumentPostingError(error)) {
       request.log.warn(
@@ -19,3 +20,5 @@ export async function errorHandlingPlugin(fastify: FastifyInstance) {
     });
   });
 }
+
+export const errorHandlingPlugin = fp(errorHandlingPluginImpl, { name: "error-handling" });

@@ -43,5 +43,11 @@ export class DocumentPostingError extends Error {
 }
 
 export function isDocumentPostingError(value: unknown): value is DocumentPostingError {
-    return value instanceof DocumentPostingError;
+    if (value instanceof DocumentPostingError) return true;
+    if (!value || typeof value !== "object") return false;
+    const e = value as Record<string, unknown>;
+    return e.name === "DocumentPostingError"
+        && typeof e.errorCode === "string"
+        && typeof e.httpStatus === "number"
+        && typeof e.message === "string";
 }

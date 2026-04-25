@@ -127,7 +127,12 @@ function DocumentJournal({ go, kind }) {
     });
   }, [config.apiPath]);
 
-  const total = rows.reduce((acc, r) => acc + Number(r.totalAmountUzs || 0), 0);
+  function rowTotal(r) {
+    if (r.totalAmountUzs != null && Number(r.totalAmountUzs) > 0) return Number(r.totalAmountUzs);
+    const lines = Array.isArray(r.lines) ? r.lines : [];
+    return lines.reduce((a, l) => a + Number(l.lineTotalUzs || l.quantity * l.unitCostUzs || 0), 0);
+  }
+  const total = rows.reduce((acc, r) => acc + rowTotal(r), 0);
   const postedCount = rows.filter((r) => r.status === "POSTED").length;
   const draftCount = rows.filter((r) => r.status === "DRAFT").length;
 
@@ -214,7 +219,7 @@ function DocumentJournal({ go, kind }) {
                     <td className="dim">{r.counterpartyId ? r.counterpartyId.slice(0, 8) : "—"}</td>
                   )}
                   {config.isProduction && <td className="num">{r.plannedUnits || "—"}</td>}
-                  <td className="num">{fmtUZS(Number(r.totalAmountUzs || 0))}</td>
+                  <td className="num">{fmtUZS(rowTotal(r))}</td>
                   <td>
                     <Pill tone={statusTone(r.status)}>{statusLabel(r.status)}</Pill>
                   </td>
@@ -365,12 +370,15 @@ function InventoryDocumentForm({ go, kind }) {
         .filter((l) => l.itemId && Number(l.quantity) > 0)
         .map((l) => {
           const item = itemById.get(l.itemId);
+          const qty = Number(l.quantity);
+          const rawCost = l.unitCostUzs !== "" && l.unitCostUzs != null
+            ? l.unitCostUzs
+            : (item ? item.unitCost : 0);
+          const cost = Number(rawCost);
           return {
             itemId: l.itemId,
-            quantity: Number(l.quantity),
-            unitCostUzs: config.showUnitCost
-              ? Number(l.unitCostUzs || (item ? item.unitCost : 0))
-              : Number(l.unitCostUzs || (item ? item.unitCost : 0))
+            quantity: qty.toFixed(4),
+            unitCostUzs: cost.toFixed(2)
           };
         })
     };
@@ -707,14 +715,18 @@ function ProductionOrderFormPage({ go }) {
     [catalog.boms, bomId]
   );
 
-  const collectPayload = () => ({
-    documentDate,
-    documentNumber: documentNumber || undefined,
-    warehouseId,
-    bomId,
-    plannedUnits: Number(plannedUnits),
-    notes: notes || undefined
-  });
+  const collectPayload = () => {
+    const pu = Number(plannedUnits) || 0;
+    return {
+      documentDate,
+      documentNumber: documentNumber || undefined,
+      warehouseId,
+      bomId,
+      outputItemId: selectedBom ? selectedBom.outputItemId : undefined,
+      plannedUnits: pu.toFixed(4),
+      notes: notes || undefined
+    };
+  };
 
   async function saveOrUpdateDraft() {
     const payload = collectPayload();
