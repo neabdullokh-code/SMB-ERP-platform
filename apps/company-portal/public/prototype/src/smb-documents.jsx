@@ -264,8 +264,10 @@ function useCatalog() {
       setItems(itList.map((i) => ({
         id: i.id, sku: i.sku, name: i.name, unitCost: Number(i.unitCostUzs || 0)
       })));
+      const skuToId = new Map(itList.map((i) => [i.sku, i.id]));
       setBoms(bmList.map((b) => ({
-        id: b.id, code: b.code, version: b.version, outputItemId: b.outputItemId
+        id: b.id, code: b.code, version: b.version,
+        outputItemId: b.outputItemId || skuToId.get(b.outputSku)
       })));
       setLoaded(true);
     });
@@ -383,19 +385,28 @@ function InventoryDocumentForm({ go, kind }) {
         })
     };
     if (config.showTransferWarehouses) {
-      return { ...base, fromWarehouseId, toWarehouseId };
+      return {
+        ...base,
+        sourceWarehouseId: fromWarehouseId,
+        destinationWarehouseId: toWarehouseId
+      };
     }
     return { ...base, warehouseId, counterpartyId: counterpartyId || undefined };
   }
 
   async function saveOrUpdateDraft() {
+    // Backend does not expose PATCH on document drafts; void the old draft
+    // (if any) and always create a fresh one so user edits between failed
+    // attempts are picked up.
     const payload = collectPayload();
     if (draftId) {
-      const res = await apiFetch(`${config.apiPath}/${draftId}`, {
-        method: "PATCH",
-        body: JSON.stringify(payload)
-      });
-      return res;
+      try {
+        await apiFetch(`${config.apiPath}/${draftId}/void`, {
+          method: "POST",
+          body: JSON.stringify({})
+        });
+      } catch (e) { /* ignore */ }
+      setDraftId(null);
     }
     const res = await apiFetch(config.apiPath, {
       method: "POST",
@@ -729,12 +740,18 @@ function ProductionOrderFormPage({ go }) {
   };
 
   async function saveOrUpdateDraft() {
+    // Backend does not expose PATCH on production-order drafts; void the
+    // old draft (if any) and create a fresh one so user edits between
+    // failed attempts are picked up.
     const payload = collectPayload();
     if (draftId) {
-      return apiFetch(`${config.apiPath}/${draftId}`, {
-        method: "PATCH",
-        body: JSON.stringify(payload)
-      });
+      try {
+        await apiFetch(`${config.apiPath}/${draftId}/void`, {
+          method: "POST",
+          body: JSON.stringify({})
+        });
+      } catch (e) { /* ignore */ }
+      setDraftId(null);
     }
     const res = await apiFetch(config.apiPath, {
       method: "POST",
