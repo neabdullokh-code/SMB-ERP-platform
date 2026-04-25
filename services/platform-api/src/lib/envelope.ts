@@ -6,6 +6,42 @@ export function paginated<T>(data: T[], page: number, pageSize: number, total: n
     return { data, meta: { page, pageSize, total }, error: null };
 }
 
-export function fail(message: string, errorCode?: string) {
-    return { data: null, meta: null, error: { message, errorCode: errorCode ?? null } };
+export function fail(message: string, errorCode?: string, details?: unknown) {
+    return {
+        data: null,
+        meta: null,
+        error: {
+            message,
+            errorCode: errorCode ?? null,
+            details: details ?? null
+        }
+    };
+}
+
+/**
+ * Structured document-posting error. Thrown from posting services when business
+ * rules (such as insufficient stock) reject a document. Carries per-line detail
+ * so the UI can highlight individual rows.
+ */
+export class DocumentPostingError extends Error {
+    readonly httpStatus: number;
+    readonly errorCode: string;
+    readonly details: unknown;
+
+    constructor(params: {
+        message: string;
+        errorCode: string;
+        httpStatus?: number;
+        details?: unknown;
+    }) {
+        super(params.message);
+        this.name = "DocumentPostingError";
+        this.errorCode = params.errorCode;
+        this.httpStatus = params.httpStatus ?? 400;
+        this.details = params.details ?? null;
+    }
+}
+
+export function isDocumentPostingError(value: unknown): value is DocumentPostingError {
+    return value instanceof DocumentPostingError;
 }

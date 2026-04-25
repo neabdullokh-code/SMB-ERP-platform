@@ -32,7 +32,7 @@ export async function requireTenantPermission(
   request: FastifyRequest,
   reply: FastifyReply,
   permission: Permission,
-  message: string
+  message: string = "You do not have permission to perform this action."
 ) {
   const auth = await resolveRequestAuth(request);
 
