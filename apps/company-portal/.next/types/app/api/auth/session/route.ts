@@ -1,4 +1,4 @@
-// File: /Users/user/ERP-Platform/apps/company-portal/app/api/auth/session/route.ts
+// File: /Users/user/SMB-ERP-platform/apps/company-portal/app/api/auth/session/route.ts
 import * as entry from '../../../../../../app/api/auth/session/route.js'
 import type { NextRequest } from 'next/server.js'
 

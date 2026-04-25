@@ -13,7 +13,6 @@ import { notificationsModule } from "./modules/notifications/index.js";
 import { productionModule } from "./modules/production/index.js";
 import { serviceOrdersModule } from "./modules/service-orders/index.js";
 import { tenancyModule } from "./modules/tenancy/index.js";
-import { workflowModule } from "./modules/workflow/index.js";
 import { requestContextPlugin } from "./plugins/context.js";
 import { errorHandlingPlugin } from "./plugins/errors.js";
 
@@ -59,7 +58,6 @@ export function buildApp() {
   app.register(inventoryModule);
   app.register(productionModule);
   app.register(serviceOrdersModule);
-  app.register(workflowModule);
   app.register(bankMonitoringModule);
   app.register(creditModule);
   app.register(auditModule);

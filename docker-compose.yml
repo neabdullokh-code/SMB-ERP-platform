@@ -4,8 +4,8 @@ services:
     restart: always
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=erp_platform
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=sqb_erp
     ports:
       - '5432:5432'
     volumes:
