@@ -873,8 +873,10 @@ function CopilotPage({ go, lang }) {
         <div className="avatar" style={{ background: "var(--ai-bg)", color: "var(--ai)", width: 28, height: 28 }}>
           <Icon.Sparkle size={13}/>
         </div>
-        <div className="ai-card" style={{ padding: 16, position: "relative" }}>
-          <span className="ai-tag"><Icon.Sparkle size={10}/> {t.modelTag}</span>
+        <div className="ai-card" style={{ padding: "10px 14px 14px", position: "relative" }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
+            <span className="ai-tag" style={{ position: "static" }}><Icon.Sparkle size={10}/> {t.modelTag}</span>
+          </div>
           <div style={{ fontSize: 14, lineHeight: 1.55, color: "var(--fg)", whiteSpace: "pre-wrap" }}>
             {m.content || (m.pending ? "" : "")}
             {m.pending && <span className="caret"/>}
