@@ -40,12 +40,6 @@ function formatEntityCode(value, prefix) {
 }
 
 function ProductionBOMs() {
-  const fallbackBoms = [
-    { id:"BOM-01", n:"Sunflower oil 5L (repack)",   o:"120/day", c:"42 500 UZS", s:"Active" },
-    { id:"BOM-02", n:"Mixed pantry bundle",          o:"60/day",  c:"86 200 UZS", s:"Active" },
-    { id:"BOM-03", n:"Rice 5kg from bulk Devzira",   o:"200/day", c:"58 000 UZS", s:"Active" },
-    { id:"BOM-04", n:"Snack mixed box, 12 items",    o:"25/day",  c:"124 000 UZS", s:"Paused" },
-  ];
   const [overview, setOverview] = useStateS(null);
   const [loading, setLoading] = useStateS(true);
   const [error, setError] = useStateS("");
@@ -203,7 +197,7 @@ function ProductionBOMs() {
     }));
   };
 
-  const boms = overview?.boms || fallbackBoms;
+  const boms = overview?.boms || [];
   const orders = overview?.orders || [];
   const scrap = overview?.scrap || [];
   const totalProduced = orders.reduce((sum, order) => sum + Number(order.producedUnits || 0), 0);
@@ -227,7 +221,7 @@ function ProductionBOMs() {
       </>}>
       {error && (
         <Banner tone="warn" title="Live production unavailable">
-          Showing fallback production data. {error}
+          {error}
         </Banner>
       )}
       <div className="card card-pad-0">
@@ -238,15 +232,24 @@ function ProductionBOMs() {
         </div>
         <table className="tbl">
           <thead><tr><th>Code</th><th>Output SKU</th><th>Version</th><th>Materials</th><th>Status</th><th/></tr></thead>
-          <tbody>{boms.map(b =>
-            <tr key={b.id}>
-              <td className="id">{b.code || formatEntityCode(b.id, "BOM")}</td>
-              <td style={{color:"var(--ink)", fontWeight:500}}>{b.outputSku || b.n || "—"}</td>
-              <td className="mono">{b.version || b.o || "—"}</td>
-              <td className="num">{Array.isArray(b.materials) ? b.materials.length : "—"}</td>
-              <td><Pill tone="good">Live</Pill></td>
-              <td className="row-actions"><Icon.ChevRight size={13} className="muted"/></td>
-            </tr>)}</tbody>
+          <tbody>
+            {loading && boms.length === 0 && (
+              <tr><td colSpan="6" className="dim mono">Loading BOMs…</td></tr>
+            )}
+            {!loading && boms.length === 0 && (
+              <tr><td colSpan="6" className="dim mono">No BOMs found.</td></tr>
+            )}
+            {boms.map((b) => (
+              <tr key={b.id}>
+                <td className="id">{b.code || formatEntityCode(b.id, "BOM")}</td>
+                <td style={{color:"var(--ink)", fontWeight:500}}>{b.outputSku || "—"}</td>
+                <td className="mono">{b.version || "—"}</td>
+                <td className="num">{Array.isArray(b.materials) ? b.materials.length : "—"}</td>
+                <td><Pill tone="good">Live</Pill></td>
+                <td className="row-actions"><Icon.ChevRight size={13} className="muted"/></td>
+              </tr>
+            ))}
+          </tbody>
         </table>
       </div>
       <div className="grid" style={{gridTemplateColumns:"1fr 1fr", gap:12, marginTop:12}}>
@@ -782,7 +785,6 @@ function FinancePage({ kind }) {
 
   const hasLiveCashBuckets = cashFlow.some((bucket) => parseMoney(bucket.inflow) !== 0 || parseMoney(bucket.outflow) !== 0 || parseMoney(bucket.net) !== 0);
   const effectiveCashFlow = (() => {
-    if (hasLiveCashBuckets || payments.length === 0) return cashFlow;
     const monthKeys = [];
     const byMonth = new Map();
     for (let index = 5; index >= 0; index -= 1) {
@@ -791,16 +793,36 @@ function FinancePage({ kind }) {
       date.setUTCMonth(date.getUTCMonth() - index);
       const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
       monthKeys.push(key);
-      byMonth.set(key, { periodLabel: date.toLocaleString("en-US", { month: "short" }), inflow: 0, outflow: 0, net: 0 });
+      byMonth.set(key, {
+        periodStart: `${key}-01`,
+        periodLabel: date.toLocaleString("en-US", { month: "short" }),
+        periodLongLabel: date.toLocaleString("en-US", { month: "long" }),
+        inflow: 0,
+        outflow: 0,
+        net: 0
+      });
     }
+
+    if (hasLiveCashBuckets) {
+      cashFlow.forEach((bucket) => {
+        const key = String(bucket.periodStart || "").slice(0, 7);
+        const row = byMonth.get(key);
+        if (!row) return;
+        row.inflow += parseMoney(bucket.inflow);
+        row.outflow += parseMoney(bucket.outflow);
+        row.net = row.inflow - row.outflow;
+      });
+      return monthKeys.map((key) => byMonth.get(key));
+    }
+
     payments.forEach((payment) => {
       const key = String(payment.paymentDate || "").slice(0, 7);
-      const bucket = byMonth.get(key);
-      if (!bucket) return;
+      const row = byMonth.get(key);
+      if (!row) return;
       const amount = parseMoney(payment.amount);
-      if (payment.direction === "outgoing") bucket.outflow += amount;
-      else bucket.inflow += amount;
-      bucket.net = bucket.inflow - bucket.outflow;
+      if (payment.direction === "outgoing") row.outflow += amount;
+      else row.inflow += amount;
+      row.net = row.inflow - row.outflow;
     });
     return monthKeys.map((key) => byMonth.get(key));
   })();
@@ -822,6 +844,7 @@ function FinancePage({ kind }) {
     });
   }
 
+  const shouldShowLedgerFallback = !loading && !overview && Boolean(error);
   const ACCT = ledgerAccounts.length > 0
     ? ledgerAccounts.map((account) => {
         let balance = parseMoney(account.balance);
@@ -833,7 +856,7 @@ function FinancePage({ kind }) {
         }
         return { id: account.id, c: account.code, n: account.name, b: balance };
       })
-    : [
+    : shouldShowLedgerFallback ? [
         { id: "1001", c: "1001", n: "Cash · SQB current", b: 64_200_000 },
         { id: "1100", c: "1100", n: "Accounts receivable", b: 86_400_000 },
         { id: "1200", c: "1200", n: "Inventory", b: 412_700_000 },
@@ -842,7 +865,7 @@ function FinancePage({ kind }) {
         { id: "3001", c: "3001", n: "Retained earnings", b: -402_800_000 },
         { id: "4000", c: "4000", n: "Sales revenue", b: -278_400_000 },
         { id: "5000", c: "5000", n: "Cost of goods sold", b: 192_100_000 }
-      ];
+      ] : [];
 
   const openReminder = (invoice) => {
     const subject = encodeURIComponent(`Payment reminder: ${invoice.number}`);
@@ -1083,8 +1106,8 @@ function FinancePage({ kind }) {
           <div className="panel-title">Monthly net cash flow · last 6 months</div>
           <div style={{padding:8}}>
             <StackedBar width={900} height={240}
-              data={effectiveCashFlow.length > 0 ? effectiveCashFlow.map((bucket) => [parseMoney(bucket.inflow), parseMoney(bucket.outflow)]) : [[155,120],[180,140],[199,170],[172,185],[220,190],[248,212]]}
-              categories={effectiveCashFlow.length > 0 ? effectiveCashFlow.map((bucket) => bucket.periodLabel) : REVENUE_LABELS}
+              data={effectiveCashFlow.map((bucket) => [parseMoney(bucket.inflow), parseMoney(bucket.outflow)])}
+              categories={effectiveCashFlow.map((bucket) => bucket.periodLabel)}
               colors={["var(--ink)","var(--ai)"]}/>
             <div className="row gap-16 mono muted" style={{fontSize:10, padding:"6px 16px"}}>
               <span><span style={{display:"inline-block", width:8, height:8, background:"var(--ink)", marginRight:6}}/>Inflow</span>
@@ -1313,12 +1336,21 @@ function FinancePage({ kind }) {
       <div className="card card-pad-0">
         <table className="tbl">
           <thead><tr><th>Code</th><th>Account</th><th className="tr">Balance</th></tr></thead>
-          <tbody>{ACCT.map(a =>
-            <tr key={a.c}>
-              <td className="id">{a.c}</td>
-              <td style={{color:"var(--ink)"}}>{a.n}</td>
-              <td className="num" style={{color: a.b < 0 ? "var(--bad)" : "var(--ink)"}}>{fmtUZS(a.b)} UZS</td>
-            </tr>)}</tbody>
+          <tbody>
+            {loading && ACCT.length === 0 ? (
+              <tr><td colSpan="3" className="dim mono">Loading ledger accounts…</td></tr>
+            ) : null}
+            {!loading && ACCT.length === 0 ? (
+              <tr><td colSpan="3" className="dim mono">No ledger accounts available.</td></tr>
+            ) : null}
+            {ACCT.map((a) => (
+              <tr key={a.c}>
+                <td className="id">{a.c}</td>
+                <td style={{color:"var(--ink)"}}>{a.n}</td>
+                <td className="num" style={{color: a.b < 0 ? "var(--bad)" : "var(--ink)"}}>{fmtUZS(a.b)} UZS</td>
+              </tr>
+            ))}
+          </tbody>
         </table>
       </div>
       <div className="card card-pad-0" style={{marginTop:12}}>
@@ -1326,6 +1358,12 @@ function FinancePage({ kind }) {
         <table className="tbl">
           <thead><tr><th>Account</th><th>Memo</th><th>Side</th><th className="tr">Amount</th></tr></thead>
           <tbody>
+            {loading ? (
+              <tr><td colSpan="4" className="dim mono">Loading ledger entries…</td></tr>
+            ) : null}
+            {!loading && (!ledgerRows.slice || ledgerRows.length === 0) ? (
+              <tr><td colSpan="4" className="dim mono">No ledger entries available.</td></tr>
+            ) : null}
             {(ledgerRows.slice ? ledgerRows.slice(0, 8) : []).map((line) => (
               <tr key={line.id}>
                 <td className="id">{line.accountCode}</td>
