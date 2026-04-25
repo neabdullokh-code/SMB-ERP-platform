@@ -119,7 +119,8 @@ function DocumentJournal({ go, kind }) {
         );
         setRows([]);
       } else {
-        const docs = (res.body && res.body.documents) || [];
+        const data = (res.body && res.body.data) || {};
+        const docs = data.documents || (res.body && res.body.documents) || [];
         setRows(docs);
       }
       setLoading(false);
@@ -248,13 +249,17 @@ function useCatalog() {
       apiFetch("/api/production/boms", { method: "GET" })
     ]).then(([wh, it, bm]) => {
       if (cancelled) return;
-      setWarehouses(((wh.body && wh.body.warehouses) || []).map((w) => ({
+      const whList = (wh.body && wh.body.data && wh.body.data.warehouses) || (wh.body && wh.body.warehouses) || [];
+      const itList = (it.body && it.body.data && it.body.data.items) || (it.body && it.body.items) || [];
+      const bmRaw = (bm.body && bm.body.data) || bm.body || {};
+      const bmList = Array.isArray(bmRaw) ? bmRaw : (bmRaw.boms || []);
+      setWarehouses(whList.map((w) => ({
         id: w.id, code: w.code, name: w.name
       })));
-      setItems(((it.body && it.body.items) || []).map((i) => ({
+      setItems(itList.map((i) => ({
         id: i.id, sku: i.sku, name: i.name, unitCost: Number(i.unitCostUzs || 0)
       })));
-      setBoms(((bm.body && bm.body.boms) || []).map((b) => ({
+      setBoms(bmList.map((b) => ({
         id: b.id, code: b.code, version: b.version, outputItemId: b.outputItemId
       })));
       setLoaded(true);
@@ -388,8 +393,9 @@ function InventoryDocumentForm({ go, kind }) {
       method: "POST",
       body: JSON.stringify(payload)
     });
-    if (res.ok && res.body && res.body.document) {
-      setDraftId(res.body.document.id);
+    const docBody = (res.body && res.body.data && res.body.data.document) || (res.body && res.body.document);
+    if (res.ok && docBody) {
+      setDraftId(docBody.id);
     }
     return res;
   }
@@ -415,7 +421,8 @@ function InventoryDocumentForm({ go, kind }) {
       setError((draftRes.body && draftRes.body.error && draftRes.body.error.message) || "Failed to save draft");
       return;
     }
-    const id = (draftRes.body && draftRes.body.document && draftRes.body.document.id) || draftId;
+    const draftDoc = (draftRes.body && draftRes.body.data && draftRes.body.data.document) || (draftRes.body && draftRes.body.document);
+    const id = (draftDoc && draftDoc.id) || draftId;
     const postRes = await apiFetch(`${config.apiPath}/${id}/post`, {
       method: "POST",
       body: JSON.stringify({})
@@ -721,8 +728,9 @@ function ProductionOrderFormPage({ go }) {
       method: "POST",
       body: JSON.stringify(payload)
     });
-    if (res.ok && res.body && res.body.document) {
-      setDraftId(res.body.document.id);
+    const docBody = (res.body && res.body.data && res.body.data.document) || (res.body && res.body.document);
+    if (res.ok && docBody) {
+      setDraftId(docBody.id);
     }
     return res;
   }
@@ -748,7 +756,8 @@ function ProductionOrderFormPage({ go }) {
       setError((draftRes.body && draftRes.body.error && draftRes.body.error.message) || "Failed to save draft");
       return;
     }
-    const id = (draftRes.body && draftRes.body.document && draftRes.body.document.id) || draftId;
+    const draftDoc = (draftRes.body && draftRes.body.data && draftRes.body.data.document) || (draftRes.body && draftRes.body.document);
+    const id = (draftDoc && draftDoc.id) || draftId;
     const postRes = await apiFetch(`${config.apiPath}/${id}/post`, {
       method: "POST",
       body: JSON.stringify({})

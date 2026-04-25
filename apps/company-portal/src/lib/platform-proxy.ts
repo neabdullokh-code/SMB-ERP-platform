@@ -45,7 +45,10 @@ export async function proxyToPlatformApi(
     const body = await request.text();
     if (body) {
       init.body = body;
-      headers["content-type"] = "application/json";
+      const incomingContentType = request.headers.get("content-type");
+      headers["content-type"] = incomingContentType && incomingContentType.length > 0
+        ? incomingContentType
+        : "application/json";
     }
   }
 
