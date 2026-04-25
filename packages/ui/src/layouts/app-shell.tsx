@@ -5,17 +5,32 @@ export interface NavItem {
   label: string;
 }
 
+export interface NavGroup {
+  label: string;
+  icon?: string;
+  items: NavItem[];
+}
+
 export function AppShell({
   title,
   subtitle,
   navItems,
+  navGroups,
   children
 }: {
   title: string;
   subtitle: string;
-  navItems: NavItem[];
+  navItems?: NavItem[];
+  navGroups?: NavGroup[];
   children: ReactNode;
 }) {
+  const groups: NavGroup[] = navGroups ?? [
+    {
+      label: "Workspace",
+      items: navItems ?? []
+    }
+  ];
+
   return (
     <div
       style={{
@@ -30,29 +45,53 @@ export function AppShell({
             borderRight: "1px solid #dbe5ef",
             padding: "1.5rem 1.25rem",
             background: "rgba(255,255,255,0.7)",
-            backdropFilter: "blur(12px)"
+            backdropFilter: "blur(12px)",
+            overflowY: "auto"
           }}
         >
           <div style={{ marginBottom: "2rem" }}>
             <div style={{ fontWeight: 800, fontSize: "1.1rem" }}>SQB Business OS</div>
             <p style={{ margin: "0.35rem 0 0", color: "#5f7083" }}>{subtitle}</p>
           </div>
-          <nav style={{ display: "grid", gap: "0.5rem" }}>
-            {navItems.map((item) => (
-              <a
-                key={item.href}
-                href={item.href}
-                style={{
-                  padding: "0.8rem 0.9rem",
-                  borderRadius: "0.85rem",
-                  color: "#10243d",
-                  textDecoration: "none",
-                  background: "#ffffff",
-                  border: "1px solid #dde6f0"
-                }}
-              >
-                {item.label}
-              </a>
+          <nav style={{ display: "grid", gap: "1.25rem" }}>
+            {groups.map((group) => (
+              <div key={group.label} style={{ display: "grid", gap: "0.4rem" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    padding: "0 0.25rem",
+                    color: "#5f7083",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em"
+                  }}
+                >
+                  {group.icon ? <span aria-hidden="true">{group.icon}</span> : null}
+                  <span>{group.label}</span>
+                </div>
+                <div style={{ display: "grid", gap: "0.35rem" }}>
+                  {group.items.map((item) => (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      style={{
+                        padding: "0.65rem 0.85rem",
+                        borderRadius: "0.75rem",
+                        color: "#10243d",
+                        textDecoration: "none",
+                        background: "#ffffff",
+                        border: "1px solid #dde6f0",
+                        fontSize: "0.9rem"
+                      }}
+                    >
+                      {item.label}
+                    </a>
+                  ))}
+                </div>
+              </div>
             ))}
           </nav>
         </aside>
@@ -76,4 +115,3 @@ export function AppShell({
     </div>
   );
 }
-
