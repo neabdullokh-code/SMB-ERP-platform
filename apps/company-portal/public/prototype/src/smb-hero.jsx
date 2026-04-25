@@ -490,384 +490,490 @@ function SMBDashboard({ go, lang }) {
         </div>
       </div>
 
-      <button
-        onClick={() => go("/smb/copilot")}
-        style={{
-          position:"fixed", right:24, bottom:24, zIndex: 30,
-          background: "var(--ink)", color:"var(--surface)",
-          padding:"10px 16px", borderRadius: 999, border:"1px solid var(--ink)",
-          boxShadow:"var(--shadow-3)", display:"flex", alignItems:"center", gap:10, cursor:"pointer",
-          fontFamily:"var(--sans)", fontSize:13, fontWeight:500,
-        }}>
-        <span style={{color:"var(--ai)"}}><Icon.Sparkle size={14}/></span>
-        {t.askCopilot}
-        <span className="kbd" style={{background:"rgba(255,255,255,0.15)", color:"rgba(255,255,255,0.7)", borderColor:"transparent"}}>⌘J</span>
-      </button>
+      <AskCopilotFAB go={go} lang={lang}/>
     </div>
   );
 }
 
-/* ---------------- AI Copilot (streaming) ---------------- */
+
+/* ---------------- AI Copilot ---------------- */
 const COPILOT_I18N = {
   ru: {
+    copilotName: "SQB Copilot",
     newChat: "Новый чат",
     today: "Сегодня",
-    cashFlowThisMonth: "Денежный поток в этом месяце",
-    topSkuMargin: "Топ-10 SKU по марже",
     lastWeek: "Прошлая неделя",
-    lastWeekItems: [
-      "Прогноз спроса на Рамадан",
-      "Риск концентрации клиентов",
-      "Помощь по сверке НДС",
-      "Пороги пополнения запасов"
-    ],
+    older: "Ранее",
+    noThreads: "Чатов пока нет",
     groundedInErp: "ОСНОВАНО НА ВАШИХ ДАННЫХ ERP · UZ · RU · EN",
     export: "Экспорт",
-    aiGroundedTag: "AI · ОБОСНОВАНО",
-    suggestedAction: "Рекомендованное действие",
-    exploreFinancing: "Посмотреть финансирование",
-    sources: "Источники:",
-    sourcesValue: "ERP · 12 счетов · 2 расхода · 1 PO",
-    followUps: "Предлагаемые вопросы",
     composerPlaceholder: "Спросите про денежный поток, клиентов, запасы или что угодно в вашей ERP...",
     attach: "Прикрепить",
     erpData: "Данные ERP",
     send: "Отправить",
-    groundedNote: "Ответы основаны на ваших ERP-данных за последние 18 месяцев. Проверяйте важные решения.",
+    stop: "Остановить",
+    modelTag: "SQB AI · обосновано",
+    groundedNote: "Ответы основаны на ваших ERP-данных. Проверяйте важные решения.",
     suggestions: [
+      "Почему в этом месяце не хватает денег?",
       "Какие клиенты несут наибольшие риски для денежного потока?",
-      "Спрогнозируй выручку на следующий месяц",
       "Какие SKU стоит прекратить заказывать?",
-      "Оцени мой налог за Q1"
+      "Имею ли я право на кредит?",
     ],
-    thread: [
-      { role: "user", text: "Почему в этом месяце не хватает денег?" },
-      { role: "ai", streaming: true, answer: {
-        summary: "Три фактора вместе объясняют напряженность с денежным потоком в марте — по каждому есть подтверждение в ERP:",
-        points: [
-          {
-            title: "Рост дебиторки",
-            body: "Средний срок оплаты вырос с 22 до 34 дней. Сейчас 86.4M UZS просрочено, в основном из-за 2 крупных клиентов.",
-            refs: [{ l: "12 неоплаченных счетов", p: "/smb/finance/invoices" }, { l: "Retail Centre · 18д просрочки", p: "/smb/finance/invoices" }],
-          },
-          {
-            title: "Накопление запасов",
-            body: "Вы увеличили запасы на 18% в ожидании роста спроса в Рамадан. 62M UZS заморожено в сахаре, рисе и напитках, которые оборачиваются медленнее, чем в прошлом году.",
-            refs: [{ l: "Сахар · 86 ед., оборач. 4.2x", p: "/smb/inventory" }, { l: "Отчет по категории напитков", p: "/smb/reports" }],
-          },
-          {
-            title: "Предоплата поставщику",
-            body: "42M UZS предоплачены Samarkand Oil Co. 3 марта за поставку на Q2. Средства вернутся в марже с середины апреля.",
-            refs: [{ l: "Платеж PO-0445", p: "/smb/finance/bills" }],
-          },
-        ],
-        recommendation: "С учетом вашего кредитного профиля вам предварительно доступна краткосрочная линия на 120M UZS — решение за 24 часа.",
-      }},
-    ]
+    emptyTitle: "Чем сегодня помочь?",
+    emptyHint: "Я вижу ваши данные по запасам, финансам, заказам и кредиту. Спросите что-нибудь.",
+    errorOffline: "Copilot сейчас недоступен. Проверьте, что GEMINI_API_KEY настроен, и попробуйте снова.",
+    errorAuth: "Сессия истекла. Войдите заново.",
+    deleteThread: "Удалить",
+    confirmDelete: "Удалить этот чат?",
   },
   en: {
+    copilotName: "SQB Copilot",
     newChat: "New chat",
     today: "Today",
-    cashFlowThisMonth: "Cash flow this month",
-    topSkuMargin: "Top 10 SKUs margin",
     lastWeek: "Last week",
-    lastWeekItems: [
-      "Ramadan demand forecast",
-      "Customer concentration risk",
-      "VAT reconciliation help",
-      "Restock thresholds"
-    ],
+    older: "Older",
+    noThreads: "No chats yet",
     groundedInErp: "GROUNDED IN YOUR ERP · UZ · RU · EN",
     export: "Export",
-    aiGroundedTag: "AI · GROUNDED",
-    suggestedAction: "Suggested action",
-    exploreFinancing: "Explore financing",
-    sources: "Sources:",
-    sourcesValue: "ERP · 12 invoices · 2 bills · 1 PO",
-    followUps: "Suggested follow-ups",
     composerPlaceholder: "Ask about your cash flow, customers, stock, or anything in your ERP...",
     attach: "Attach",
     erpData: "ERP data",
     send: "Send",
-    groundedNote: "{t.groundedNote}",
+    stop: "Stop",
+    modelTag: "SQB AI · grounded",
+    groundedNote: "Answers are grounded in your live ERP data. Verify before acting on important decisions.",
     suggestions: [
+      "Why is my cash tight this month?",
       "Which customers are my biggest cash-flow risks?",
-      "Forecast next month's revenue",
       "Which SKUs should I stop ordering?",
-      "Estimate my tax liability for Q1"
+      "Am I eligible for a loan?",
     ],
-    thread: [
-      { role: "user", text: "Why is my cash tight this month?" },
-      { role: "ai", streaming: true, answer: {
-        summary: "Three factors together explain your March cash tightness — each with direct ERP evidence:",
-        points: [
-          {
-            title: "Receivables stretched",
-            body: "Average payment days moved from 22 to 34. UZS 86.4M is currently unpaid past terms, driven mostly by 2 large customers.",
-            refs: [{ l: "12 invoices outstanding", p: "/smb/finance/invoices" }, { l: "Retail Centre · 18d overdue", p: "/smb/finance/invoices" }],
-          },
-          {
-            title: "Inventory build-up",
-            body: "You grew stock by 18% to meet an expected Ramadan spike. UZS 62M is tied up in sugar, rice, and beverages that are turning more slowly than last year.",
-            refs: [{ l: "Sugar · 86u, turn 4.2x", p: "/smb/inventory" }, { l: "Beverage category report", p: "/smb/reports" }],
-          },
-          {
-            title: "Supplier prepayment",
-            body: "UZS 42M prepaid to Samarkand Oil Co. on 3 March for a Q2 delivery. The cash will return as margin starting mid-April.",
-            refs: [{ l: "Payment PO-0445", p: "/smb/finance/bills" }],
-          },
-        ],
-        recommendation: "Based on your credit profile you pre-qualify for a UZS 120M short-term working-capital line — decision in 24 hours.",
-      }},
-    ]
+    emptyTitle: "How can I help today?",
+    emptyHint: "I can see your inventory, finance, orders, and credit data. Ask me anything.",
+    errorOffline: "Copilot is offline. Make sure GEMINI_API_KEY is configured and try again.",
+    errorAuth: "Your session expired. Please sign in again.",
+    deleteThread: "Delete",
+    confirmDelete: "Delete this chat?",
   },
   uz: {
+    copilotName: "SQB Copilot",
     newChat: "Yangi chat",
     today: "Bugun",
-    cashFlowThisMonth: "Bu oy pul oqimi",
-    topSkuMargin: "Marja bo'yicha TOP 10 SKU",
     lastWeek: "O'tgan hafta",
-    lastWeekItems: [
-      "Ramazon talabi prognozi",
-      "Mijozlar konsentratsiyasi xatari",
-      "QQS solishtiruvi bo'yicha yordam",
-      "Qayta to'ldirish chegaralari"
-    ],
+    older: "Avvalroq",
+    noThreads: "Chatlar hali yo'q",
     groundedInErp: "ERP MA'LUMOTLARINGIZGA ASOSLANGAN · UZ · RU · EN",
     export: "Eksport",
-    aiGroundedTag: "AI · ASOSLANGAN",
-    suggestedAction: "Tavsiya etilgan amal",
-    exploreFinancing: "Moliyalashtirishni ko'rish",
-    sources: "Manbalar:",
-    sourcesValue: "ERP · 12 hisob · 2 xarajat · 1 PO",
-    followUps: "Tavsiya etilgan keyingi savollar",
     composerPlaceholder: "Pul oqimi, mijozlar, zaxira yoki ERP tizimingizdagi istalgan narsa haqida so'rang...",
     attach: "Biriktirish",
     erpData: "ERP ma'lumotlari",
     send: "Yuborish",
-    groundedNote: "Javoblar oxirgi 18 oy ERP ma'lumotlariga asoslangan. Muhim qarorlarni tekshirib oling.",
+    stop: "To'xtatish",
+    modelTag: "SQB AI · asoslangan",
+    groundedNote: "Javoblar ERP ma'lumotlaringizga asoslangan. Muhim qarorlardan oldin tekshirib oling.",
     suggestions: [
-      "Qaysi mijozlar pul oqimi uchun eng katta xavf tug'diradi?",
-      "Keyingi oy tushumini prognoz qil",
+      "Nega bu oy pul oqimim siqilib qoldi?",
+      "Qaysi mijozlar pul oqimi uchun eng katta xavf?",
       "Qaysi SKUlarni buyurtma qilishni to'xtatish kerak?",
-      "Q1 bo'yicha soliq majburiyatimni bahola"
+      "Kreditga loyiqmanmi?",
     ],
-    thread: [
-      { role: "user", text: "Nega bu oy pul oqimim siqilib qoldi?" },
-      { role: "ai", streaming: true, answer: {
-        summary: "Mart oyidagi pul oqimi bosimini uchta omil tushuntiradi — har biri ERP ma'lumotlari bilan tasdiqlangan:",
-        points: [
-          {
-            title: "Debitor qarzdorlik oshdi",
-            body: "O'rtacha to'lov muddati 22 kundan 34 kunga chiqdi. Hozir 86.4M UZS muddati o'tgan, asosan 2 ta yirik mijoz sabab.",
-            refs: [{ l: "12 ta to'lanmagan hisob", p: "/smb/finance/invoices" }, { l: "Retail Centre · 18 kun kechikish", p: "/smb/finance/invoices" }],
-          },
-          {
-            title: "Zaxira ortib ketgan",
-            body: "Ramazon davrida talab oshishini kutib, zaxirani 18% ga ko'paytirdingiz. 62M UZS shakar, guruch va ichimliklarda band bo'lib qolgan.",
-            refs: [{ l: "Shakar · 86 dona, aylanish 4.2x", p: "/smb/inventory" }, { l: "Ichimliklar kategoriyasi hisoboti", p: "/smb/reports" }],
-          },
-          {
-            title: "Yetkazib beruvchiga oldindan to'lov",
-            body: "3 mart kuni Samarkand Oil Co.ga Q2 yetkazib berish uchun 42M UZS oldindan to'landi. Mablag' aprel o'rtasidan marja sifatida qaytadi.",
-            refs: [{ l: "PO-0445 to'lovi", p: "/smb/finance/bills" }],
-          },
-        ],
-        recommendation: "Kredit profilingizga ko'ra sizga 120M UZS qisqa muddatli aylanma mablag' liniyasi oldindan mos — qaror 24 soatda.",
-      }},
-    ]
+    emptyTitle: "Bugun nimada yordam beray?",
+    emptyHint: "Sizning zaxira, moliya, buyurtma va kredit ma'lumotlaringizni ko'ra olaman. So'rang.",
+    errorOffline: "Copilot hozir ishlamayapti. GEMINI_API_KEY sozlangani ishonch hosil qiling.",
+    errorAuth: "Sessiya muddati tugagan. Qayta kiring.",
+    deleteThread: "O'chirish",
+    confirmDelete: "Ushbu chatni o'chirilsinmi?",
   }
 };
 
-function CopilotPage({ go, lang }) {
-  const t = COPILOT_I18N[lang] || COPILOT_I18N.ru;
-  const [thread, setThread] = useStateS(() => t.thread);
-  const [prompt, setPrompt] = useStateS("");
-  const [streamIdx, setStreamIdx] = useStateS(0);
-  const [pointIdx, setPointIdx] = useStateS(0);
-  const boxRef = useRef();
+const COPILOT_LS_VERSION = 1;
+const COPILOT_MAX_THREADS = 50;
+const COPILOT_MAX_MESSAGES = 200;
 
-  // Character-by-character stream for the AI message
-  useEffectS(() => {
-    const ai = thread[thread.length-1];
-    if (!ai || ai.role !== "ai" || !ai.streaming) return;
-    const total = ai.answer.summary.length + ai.answer.points.reduce((a,p) => a + p.title.length + p.body.length + 2, 0) + ai.answer.recommendation.length;
-    if (streamIdx < total) {
-      const id = setTimeout(() => setStreamIdx(s => Math.min(s+6, total)), 14);
-      return () => clearTimeout(id);
+function copilotLsKey(tenantId) {
+  return `sqb.copilot.threads.${tenantId || "default"}`;
+}
+
+function copilotLoadStore(tenantId) {
+  try {
+    const raw = window.localStorage.getItem(copilotLsKey(tenantId));
+    if (!raw) return { threads: [], activeThreadId: null };
+    const data = JSON.parse(raw);
+    if (!data || data.version !== COPILOT_LS_VERSION) return { threads: [], activeThreadId: null };
+    const threads = Array.isArray(data.threads) ? data.threads : [];
+    return { threads, activeThreadId: data.activeThreadId || null };
+  } catch (e) {
+    return { threads: [], activeThreadId: null };
+  }
+}
+
+function copilotSaveStore(tenantId, store) {
+  try {
+    const trimmed = {
+      version: COPILOT_LS_VERSION,
+      activeThreadId: store.activeThreadId,
+      threads: store.threads.slice(0, COPILOT_MAX_THREADS).map((t) => ({
+        ...t,
+        messages: t.messages.slice(-COPILOT_MAX_MESSAGES),
+      })),
+    };
+    window.localStorage.setItem(copilotLsKey(tenantId), JSON.stringify(trimmed));
+  } catch (e) {
+    /* quota exceeded — drop silently */
+  }
+}
+
+function copilotMakeThread() {
+  return {
+    id: "t_" + Math.random().toString(36).slice(2, 10) + "_" + Date.now().toString(36),
+    title: "",
+    messages: [],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+}
+
+function copilotGroupThreads(threads) {
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const sevenDaysAgo = startOfToday - 6 * 86400000;
+  const today = [];
+  const lastWeek = [];
+  const older = [];
+  for (const t of [...threads].sort((a, b) => b.updatedAt - a.updatedAt)) {
+    if (t.updatedAt >= startOfToday) today.push(t);
+    else if (t.updatedAt >= sevenDaysAgo) lastWeek.push(t);
+    else older.push(t);
+  }
+  return { today, lastWeek, older };
+}
+
+function copilotThreadTitle(thread, fallback) {
+  if (thread.title) return thread.title;
+  const firstUser = thread.messages.find((m) => m.role === "user");
+  if (firstUser && firstUser.content) {
+    const trimmed = firstUser.content.trim().replace(/\s+/g, " ");
+    return trimmed.length > 40 ? trimmed.slice(0, 40) + "…" : trimmed;
+  }
+  return fallback;
+}
+
+async function copilotStream({ messages, context, locale, signal, onToken, onDone, onError }) {
+  try {
+    const res = await fetch("/api/copilot/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages, context, locale }),
+      signal,
+    });
+    if (res.status === 401) { onError({ kind: "auth" }); return; }
+    if (!res.ok) {
+      let detail = "";
+      try { detail = await res.text(); } catch (e) {}
+      let parsed = null;
+      try { parsed = JSON.parse(detail); } catch (e) {}
+      onError({ kind: "http", status: res.status, detail: parsed?.message || detail });
+      return;
     }
-  }, [streamIdx, thread]);
+    if (!res.body) { onError({ kind: "no-stream" }); return; }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      if (chunk) onToken(chunk);
+    }
+    onDone();
+  } catch (e) {
+    if (e && e.name === "AbortError") { onDone(); return; }
+    onError({ kind: "network", message: e && e.message });
+  }
+}
 
-  const lastAI = thread[thread.length-1];
-  const streaming = lastAI?.role === "ai" && lastAI?.streaming;
-  const done = streaming && streamIdx >= (
-    lastAI.answer.summary.length + lastAI.answer.points.reduce((a,p) => a + p.title.length + p.body.length + 2, 0) + lastAI.answer.recommendation.length
-  );
+function CopilotPage({ go, lang }) {
+  const t = COPILOT_I18N[lang] || COPILOT_I18N.en;
+  const tenantId = (window.AuthRuntime && window.AuthRuntime.getCachedSession && window.AuthRuntime.getCachedSession()?.tenantId) || "default";
 
-  // Compute partial text based on streamIdx
-  const partial = (() => {
-    if (!streaming) return null;
-    let left = streamIdx;
-    const ans = lastAI.answer;
-    const summary = ans.summary.slice(0, Math.max(0, left)); left -= ans.summary.length;
-    const points = ans.points.map(p => {
-      if (left <= 0) return null;
-      const t = p.title.slice(0, Math.max(0, left)); left -= p.title.length;
-      if (left <= 0) return { ...p, title:t, body:"" , partial:true};
-      const b = p.body.slice(0, Math.max(0, left)); left -= p.body.length;
-      return { ...p, title:t, body:b, partial: left < 0 };
-    }).filter(Boolean);
-    const rec = left > 0 ? ans.recommendation.slice(0, left) : "";
-    return { summary, points, rec };
-  })();
+  const [store, setStore] = useStateS(() => copilotLoadStore(tenantId));
+  const [draft, setDraft] = useStateS("");
+  const [streaming, setStreaming] = useStateS(false);
+  const [errorKey, setErrorKey] = useStateS(null);
+  const abortRef = useRef(null);
+  const scrollRef = useRef(null);
+  const textareaRef = useRef(null);
 
-  const suggestions = t.suggestions;
+  const { threads, activeThreadId } = store;
+  const activeThread = threads.find((x) => x.id === activeThreadId) || null;
+  const grouped = copilotGroupThreads(threads);
 
+  // Persist on every change
   useEffectS(() => {
-    setThread(t.thread);
-    setPrompt("");
-    setStreamIdx(0);
-  }, [lang]);
+    copilotSaveStore(tenantId, store);
+  }, [tenantId, store]);
+
+  // Auto-scroll to bottom on new messages / token chunks
+  useEffectS(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [activeThreadId, activeThread && activeThread.messages.length, activeThread && activeThread.messages[activeThread.messages.length - 1]?.content]);
+
+  // Cancel any in-flight stream when leaving page
+  useEffectS(() => () => {
+    if (abortRef.current) {
+      try { abortRef.current.abort(); } catch (e) {}
+    }
+  }, []);
+
+  function startNewChat() {
+    if (streaming && abortRef.current) { try { abortRef.current.abort(); } catch (e) {} }
+    const fresh = copilotMakeThread();
+    setStore({ threads: [fresh, ...threads], activeThreadId: fresh.id });
+    setDraft("");
+    setErrorKey(null);
+    setTimeout(() => textareaRef.current && textareaRef.current.focus(), 0);
+  }
+
+  function selectThread(id) {
+    if (streaming) return;
+    setStore({ threads, activeThreadId: id });
+    setErrorKey(null);
+  }
+
+  function deleteThread(id, e) {
+    if (e) { e.stopPropagation(); }
+    if (!window.confirm(t.confirmDelete)) return;
+    const next = threads.filter((x) => x.id !== id);
+    const nextActive = activeThreadId === id ? (next[0]?.id || null) : activeThreadId;
+    setStore({ threads: next, activeThreadId: nextActive });
+  }
+
+  async function send(promptOverride) {
+    const text = (promptOverride != null ? promptOverride : draft).trim();
+    if (!text || streaming) return;
+
+    let thread = activeThread;
+    let baseThreads = threads;
+    if (!thread) {
+      thread = copilotMakeThread();
+      baseThreads = [thread, ...threads];
+    }
+
+    const userMsg = { role: "user", content: text, ts: Date.now() };
+    const assistantMsg = { role: "assistant", content: "", ts: Date.now(), pending: true };
+    const updated = {
+      ...thread,
+      title: thread.messages.length === 0 ? (text.length > 40 ? text.slice(0, 40) + "…" : text) : thread.title,
+      messages: [...thread.messages, userMsg, assistantMsg],
+      updatedAt: Date.now(),
+    };
+    const nextThreads = baseThreads.map((x) => (x.id === thread.id ? updated : x));
+    setStore({ threads: nextThreads, activeThreadId: thread.id });
+    setDraft("");
+    setStreaming(true);
+    setErrorKey(null);
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const apiMessages = updated.messages.slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
+    const ctx = (typeof window.buildCopilotContext === "function") ? window.buildCopilotContext() : {};
+
+    let acc = "";
+    const updateAssistant = (content, done) => {
+      setStore((prev) => {
+        const updatedThreads = prev.threads.map((x) => {
+          if (x.id !== thread.id) return x;
+          const msgs = x.messages.slice();
+          const last = msgs[msgs.length - 1];
+          if (!last || last.role !== "assistant") return x;
+          msgs[msgs.length - 1] = { ...last, content, pending: !done };
+          return { ...x, messages: msgs, updatedAt: Date.now() };
+        });
+        return { threads: updatedThreads, activeThreadId: prev.activeThreadId };
+      });
+    };
+
+    await copilotStream({
+      messages: apiMessages,
+      context: ctx,
+      locale: lang,
+      signal: controller.signal,
+      onToken: (chunk) => { acc += chunk; updateAssistant(acc, false); },
+      onDone: () => {
+        updateAssistant(acc, true);
+        setStreaming(false);
+        abortRef.current = null;
+      },
+      onError: (err) => {
+        const isAuth = err && err.kind === "auth";
+        const serverMsg = err && err.detail ? err.detail : null;
+        const fallback = isAuth ? t.errorAuth : (serverMsg || t.errorOffline);
+        updateAssistant(acc || fallback, true);
+        setErrorKey(isAuth ? "auth" : "offline");
+        setStreaming(false);
+        abortRef.current = null;
+        if (isAuth) setTimeout(() => typeof go === "function" && go("/login"), 1200);
+      },
+    });
+  }
+
+  function stopStream() {
+    if (abortRef.current) { try { abortRef.current.abort(); } catch (e) {} }
+  }
+
+  function onComposerKey(e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
+  }
+
+  const renderThreadRow = (th) => {
+    const title = copilotThreadTitle(th, t.newChat);
+    const isActive = th.id === activeThreadId;
+    return (
+      <div
+        key={th.id}
+        className={`nav-item ${isActive ? "active" : ""}`}
+        style={{ fontSize: 12.5, gap: 8, position: "relative", paddingRight: 26 }}
+        onClick={() => selectThread(th.id)}
+        title={title}
+      >
+        <span className="ico">
+          {isActive ? <Icon.Sparkle size={12} style={{ color: "var(--ai)" }}/> : <Icon.Hash size={12}/>}
+        </span>
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{title}</span>
+        <button
+          className="icon-btn"
+          aria-label={t.deleteThread}
+          onClick={(e) => deleteThread(th.id, e)}
+          style={{ position: "absolute", right: 4, top: "50%", transform: "translateY(-50%)", padding: 2 }}
+        >
+          <Icon.Trash size={11}/>
+        </button>
+      </div>
+    );
+  };
+
+  const renderMessage = (m, i) => {
+    if (m.role === "user") {
+      return (
+        <div key={i} className="row" style={{ justifyContent: "flex-end", marginBottom: 16 }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "14px 14px 2px 14px", padding: "10px 14px", maxWidth: 520, whiteSpace: "pre-wrap" }}>
+            {m.content}
+          </div>
+          <div className="avatar warm" style={{ width: 28, height: 28, marginLeft: 10 }}>JA</div>
+        </div>
+      );
+    }
+    return (
+      <div key={i} style={{ display: "grid", gridTemplateColumns: "28px 1fr", gap: 10, marginBottom: 16 }}>
+        <div className="avatar" style={{ background: "var(--ai-bg)", color: "var(--ai)", width: 28, height: 28 }}>
+          <Icon.Sparkle size={13}/>
+        </div>
+        <div className="ai-card" style={{ padding: 16, position: "relative" }}>
+          <span className="ai-tag"><Icon.Sparkle size={10}/> {t.modelTag}</span>
+          <div style={{ fontSize: 14, lineHeight: 1.55, color: "var(--fg)", whiteSpace: "pre-wrap" }}>
+            {m.content || (m.pending ? "" : "")}
+            {m.pending && <span className="caret"/>}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const isEmpty = !activeThread || activeThread.messages.length === 0;
 
   return (
-    <div style={{display:"grid", gridTemplateColumns:"260px 1fr", height:"calc(100vh - var(--topbar-h))"}}>
-      {/* threads sidebar */}
-      <div className="hairline-r" style={{padding:12, overflowY:"auto", background:"var(--surface-2)"}}>
+    <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", height: "calc(100vh - var(--topbar-h))" }}>
+      <div className="hairline-r" style={{ padding: 12, overflowY: "auto", background: "var(--surface-2)" }}>
         <div className="row mb-12">
-          <Button variant="primary" size="sm" className="block" icon={<Icon.Plus size={12}/>}>{t.newChat}</Button>
+          <Button variant="primary" size="sm" className="block" icon={<Icon.Plus size={12}/>} onClick={startNewChat}>
+            {t.newChat}
+          </Button>
         </div>
-        <div className="eyebrow mb-4">{t.today}</div>
-        <div className="nav-item active" style={{fontSize:12.5}}>
-          <Icon.Sparkle size={12} style={{color:"var(--ai)"}}/>
-          <span>{t.cashFlowThisMonth}</span>
-        </div>
-        <div className="nav-item" style={{fontSize:12.5}}>
-          <span className="ico"><Icon.Hash size={12}/></span>
-          <span>{t.topSkuMargin}</span>
-        </div>
-        <div className="eyebrow mt-12 mb-4">{t.lastWeek}</div>
-        {t.lastWeekItems.map((x,i) => (
-          <div key={i} className="nav-item" style={{fontSize:12.5}}>
-            <span className="ico"><Icon.Hash size={12}/></span>
-            <span style={{overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{x}</span>
-          </div>
-        ))}
+
+        {threads.length === 0 ? (
+          <div className="muted" style={{ fontSize: 12, padding: "12px 6px" }}>{t.noThreads}</div>
+        ) : (
+          <>
+            {grouped.today.length > 0 && (<><div className="eyebrow mb-4">{t.today}</div>{grouped.today.map(renderThreadRow)}</>)}
+            {grouped.lastWeek.length > 0 && (<><div className="eyebrow mt-12 mb-4">{t.lastWeek}</div>{grouped.lastWeek.map(renderThreadRow)}</>)}
+            {grouped.older.length > 0 && (<><div className="eyebrow mt-12 mb-4">{t.older}</div>{grouped.older.map(renderThreadRow)}</>)}
+          </>
+        )}
       </div>
 
-      <div style={{display:"flex", flexDirection:"column", minWidth:0, background:"var(--bg)"}}>
-        <div className="hairline-b" style={{padding:"10px 20px", background:"var(--surface)", display:"flex", alignItems:"center", gap:10}}>
-          <div className="avatar" style={{background:"var(--ai-bg)", color:"var(--ai)", width:26, height:26}}><Icon.Sparkle size={14}/></div>
+      <div style={{ display: "flex", flexDirection: "column", minWidth: 0, background: "var(--bg)" }}>
+        <div className="hairline-b" style={{ padding: "10px 20px", background: "var(--surface)", display: "flex", alignItems: "center", gap: 10 }}>
+          <div className="avatar" style={{ background: "var(--ai-bg)", color: "var(--ai)", width: 26, height: 26 }}>
+            <Icon.Sparkle size={14}/>
+          </div>
           <div>
-            <div style={{fontSize:13, fontWeight:500, color:"var(--ink)"}}>SQB Copilot <AIChip/></div>
-            <div className="mono muted" style={{fontSize:10}}>{t.groundedInErp}</div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>{t.copilotName} <AIChip/></div>
+            <div className="mono muted" style={{ fontSize: 10 }}>{t.groundedInErp}</div>
           </div>
           <span className="sp"/>
           <Button variant="ghost" size="sm" icon={<Icon.Download size={12}/>}>{t.export}</Button>
         </div>
 
-        <div ref={boxRef} style={{flex:1, overflowY:"auto", padding:"24px 20px 120px", maxWidth: 880, margin:"0 auto", width:"100%"}}>
-          {/* User message */}
-          <div className="row" style={{justifyContent:"flex-end", marginBottom:24}}>
-            <div style={{background:"var(--surface)", border:"1px solid var(--line)", borderRadius:"14px 14px 2px 14px", padding:"10px 14px", maxWidth:520}}>
-              {thread[0].text}
-            </div>
-            <div className="avatar warm" style={{width:28, height:28, marginLeft:10}}>JA</div>
-          </div>
-
-          {/* AI message */}
-          <div style={{display:"grid", gridTemplateColumns:"28px 1fr", gap:10}}>
-            <div className="avatar" style={{background:"var(--ai-bg)", color:"var(--ai)", width:28, height:28}}>
-              <Icon.Sparkle size={13}/>
-            </div>
-            <div className="ai-card" style={{padding:18, position:"relative"}}>
-              <span className="ai-tag"><Icon.Sparkle size={10}/> {t.aiGroundedTag}</span>
-              <div style={{fontSize:14, lineHeight:1.55, color:"var(--fg)"}}>
-                {partial ? (
-                  <>
-                    <p style={{margin:"0 0 12px"}}>
-                      {partial.summary}{!partial.points.length && !done && <span className="caret"/>}
-                    </p>
-                    {partial.points.map((p, i) => (
-                      <div key={i} className="hairline" style={{padding:12, borderRadius:6, marginBottom:10, background:"var(--surface-2)"}}>
-                        <div className="row" style={{gap:10, alignItems:"flex-start"}}>
-                          <div className="mono" style={{minWidth:18, color:"var(--ai)", fontWeight:600}}>0{i+1}</div>
-                          <div style={{flex:1}}>
-                            <div style={{fontWeight:500, color:"var(--ink)"}}>
-                              {p.title}
-                              {p.partial && !p.body && <span className="caret"/>}
-                            </div>
-                            <div style={{marginTop:4, color:"var(--fg-2)", fontSize:13}}>
-                              {p.body}
-                              {p.partial && p.body && <span className="caret"/>}
-                            </div>
-                            {p.body.length === p.body.length && !p.partial && (
-                              <div className="row mt-8" style={{gap:6, flexWrap:"wrap"}}>
-                                {p.refs.map((r, ri) => (
-                                  <span key={ri} className="chip" style={{fontSize:11, background:"var(--surface)"}} onClick={() => go(r.p)}>
-                                    <Icon.Link size={10}/> {r.l}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {partial.rec && (
-                      <div className="banner ai mt-12">
-                        <span className="ico"><Icon.Bolt size={15}/></span>
-                        <div style={{flex:1, color:"var(--ink)"}}>
-                          <div className="title">{t.suggestedAction}</div>
-                          <div className="desc">{partial.rec}{!done && <span className="caret"/>}</div>
-                        </div>
-                        {done && <Button variant="ai" size="sm" onClick={() => go("/smb/credit")}>{t.exploreFinancing} <Icon.Arrow size={12}/></Button>}
-                      </div>
-                    )}
-                  </>
-                ) : null}
+        <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "24px 20px 24px", maxWidth: 880, margin: "0 auto", width: "100%" }}>
+          {isEmpty ? (
+            <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--muted)" }}>
+              <div style={{ width: 48, height: 48, borderRadius: 12, background: "var(--ai-bg)", color: "var(--ai)", display: "inline-grid", placeItems: "center", marginBottom: 14 }}>
+                <Icon.Sparkle size={22}/>
               </div>
-              {done && (
-                <div className="row mt-12" style={{gap:6, borderTop:"1px solid var(--line)", paddingTop:10}}>
-                  <span className="mono muted" style={{fontSize:10}}>{t.sources} <a style={{color:"var(--ai)"}}>{t.sourcesValue}</a></span>
-                  <span className="sp"/>
-                  <button className="icon-btn"><Icon.Copy size={13}/></button>
-                  <button className="icon-btn"><Icon.Refresh size={13}/></button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {done && (
-            <div className="mt-16">
-              <div className="eyebrow mb-8">{t.followUps}</div>
-              <div className="row" style={{flexWrap:"wrap", gap:6}}>
-                {suggestions.map((s, i) => (
-                  <button key={i} className="chip" style={{cursor:"pointer"}} onClick={() => setPrompt(s)}>
+              <div style={{ fontSize: 18, color: "var(--ink)", fontWeight: 500, marginBottom: 6 }}>{t.emptyTitle}</div>
+              <div style={{ fontSize: 13, marginBottom: 20 }}>{t.emptyHint}</div>
+              <div className="row" style={{ flexWrap: "wrap", gap: 8, justifyContent: "center", maxWidth: 640, margin: "0 auto" }}>
+                {t.suggestions.map((s, i) => (
+                  <button key={i} className="chip" style={{ cursor: "pointer", fontSize: 12.5 }} onClick={() => send(s)}>
                     {s} <Icon.Arrow size={10} className="muted"/>
                   </button>
                 ))}
               </div>
             </div>
+          ) : (
+            activeThread.messages.map(renderMessage)
           )}
         </div>
 
-        {/* composer */}
-        <div style={{position:"sticky", bottom:0, background:"var(--bg)", padding:"14px 20px 20px", borderTop:"1px solid var(--line)"}}>
-          <div className="hairline" style={{background:"var(--surface)", borderRadius:8, padding:10, maxWidth: 860, margin:"0 auto"}}>
-            <textarea className="input" value={prompt} onChange={e=>setPrompt(e.target.value)}
+        <div style={{ position: "sticky", bottom: 0, background: "var(--bg)", padding: "14px 20px 20px", borderTop: "1px solid var(--line)" }}>
+          {errorKey && (
+            <div className="banner bad" style={{ maxWidth: 860, margin: "0 auto 10px" }}>
+              <span className="ico"><Icon.Alert size={15}/></span>
+              <div style={{ flex: 1 }}>
+                <div className="desc">{errorKey === "auth" ? t.errorAuth : t.errorOffline}</div>
+              </div>
+            </div>
+          )}
+          <div className="hairline" style={{ background: "var(--surface)", borderRadius: 8, padding: 10, maxWidth: 860, margin: "0 auto" }}>
+            <textarea
+              ref={textareaRef}
+              className="input"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={onComposerKey}
               placeholder={t.composerPlaceholder}
-              rows={2} style={{border:0, boxShadow:"none", resize:"none"}}/>
-            <div className="row" style={{gap:8, borderTop:"1px solid var(--line-2)", paddingTop:8}}>
-              <Button variant="ghost" size="sm" icon={<Icon.Paperclip size={12}/>}>{t.attach}</Button>
-              <Button variant="ghost" size="sm" icon={<Icon.Database size={12}/>}>{t.erpData}</Button>
+              rows={2}
+              disabled={streaming}
+              style={{ border: 0, boxShadow: "none", resize: "none" }}
+            />
+            <div className="row" style={{ gap: 8, borderTop: "1px solid var(--line-2)", paddingTop: 8 }}>
+              <Button variant="ghost" size="sm" icon={<Icon.Paperclip size={12}/>} disabled>{t.attach}</Button>
+              <Button variant="ghost" size="sm" icon={<Icon.Database size={12}/>} disabled>{t.erpData}</Button>
               <span className="sp"/>
-              <span className="mono muted" style={{fontSize:10}}>Haiku 4.5 · grounded</span>
-              <Button variant="primary" size="sm" icon={<Icon.Arrow size={12}/>}>{t.send}</Button>
+              <span className="mono muted" style={{ fontSize: 10 }}>{t.modelTag}</span>
+              {streaming ? (
+                <Button variant="ghost" size="sm" icon={<Icon.X size={12}/>} onClick={stopStream}>{t.stop}</Button>
+              ) : (
+                <Button variant="primary" size="sm" icon={<Icon.Arrow size={12}/>} onClick={() => send()} disabled={!draft.trim()}>{t.send}</Button>
+              )}
             </div>
           </div>
-          <div className="mono muted tc mt-8" style={{fontSize:10}}>
-            {t.groundedNote}
-          </div>
+          <div className="mono muted tc mt-8" style={{ fontSize: 10 }}>{t.groundedNote}</div>
         </div>
       </div>
     </div>

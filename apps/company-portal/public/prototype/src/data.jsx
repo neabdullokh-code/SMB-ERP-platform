@@ -103,4 +103,83 @@ const LOAN_QUEUE = CREDIT_QUEUE.map((q, i) => ({
   factors: null,
 }));
 
-Object.assign(window, { SMB, PRODUCTS, REVENUE_6MO, REVENUE_LABELS, ACTIVITY, TENANTS, CREDIT_QUEUE, LOAN_QUEUE, ALERTS, NOTIFS });
+// Aggregate snapshot of the current SMB owner's ERP — fed to the Copilot LLM as
+// grounding context. When real APIs land, swap the body of this function for a
+// `fetch('/api/tenants/me/copilot-context')` call; the shape stays the same.
+function buildCopilotContext() {
+  const products = PRODUCTS.map((p) => ({
+    sku: p.sku,
+    name: p.name,
+    category: p.cat,
+    stock: p.stock,
+    minStock: p.min,
+    unitPriceUzs: p.price,
+    status: p.status,
+    lastMovement: p.mvmt,
+  }));
+  const lowStock = products.filter((p) => p.stock < p.minStock);
+  const inventoryValueUzs = products.reduce((sum, p) => sum + p.stock * p.unitPriceUzs, 0);
+
+  const revenueByMonth = REVENUE_LABELS.map((label, i) => ({
+    month: label,
+    revenueMUzs: REVENUE_6MO[i],
+  }));
+  const lastMonth = REVENUE_6MO[REVENUE_6MO.length - 1];
+  const prevMonth = REVENUE_6MO[REVENUE_6MO.length - 2] || lastMonth;
+  const monthOverMonthPct = ((lastMonth - prevMonth) / prevMonth) * 100;
+
+  return {
+    smb: {
+      name: SMB.name,
+      tagline: SMB.tagline,
+      tin: SMB.tin,
+      owner: SMB.owner,
+      region: SMB.region,
+      employees: SMB.employees,
+      plan: SMB.plan,
+      since: SMB.since,
+    },
+    finance: {
+      revenueByMonth,
+      revenueMonthMUzs: lastMonth,
+      revenueMomChangePct: Number(monthOverMonthPct.toFixed(1)),
+      cashOnHandMUzs: 64.2,
+      cashTrendVsLastWeekPct: -4.1,
+      pendingOrders: { total: 18, overdue: 3 },
+      arOverdueMUzs: 86.4,
+      avgPaymentDays: { current: 34, previous: 22 },
+      topOverdueInvoices: [
+        { id: "INV-1475", customer: "Retail Centre", overdueDays: 8 },
+      ],
+      supplierPrepayments: [
+        { vendor: "Samarkand Oil Co.", amountMUzs: 42, paymentRef: "PO-0445", returnsAround: "mid-April" },
+      ],
+    },
+    inventory: {
+      totalSkus: products.length,
+      inventoryValueUzs,
+      products,
+      lowStock,
+      slowMoving: ["Laundry detergent 6kg"],
+      ramadanBuildupMUzs: 62,
+      ramadanBuildupCategories: ["Sugar", "Rice", "Beverages"],
+    },
+    activity: ACTIVITY,
+    credit: {
+      score: 81,
+      strength: "Strong",
+      trendVsLastMonth: 2,
+      preQualifiedAmountMUzs: 240,
+      preQualifiedShortTermMUzs: 120,
+      decisionTimeHours: 24,
+    },
+    needsAttention: [
+      { kind: "stock", item: "Sugar refined 50kg", stock: 86, min: 120 },
+      { kind: "stock", item: "Laundry detergent 6kg", stock: 12, min: 40 },
+      { kind: "stock", item: "Mineral water 1.5L", stock: 0, min: 100, status: "out_of_stock" },
+      { kind: "invoice", id: "INV-1475", customer: "Retail Centre", overdueDays: 8 },
+    ],
+  };
+}
+
+Object.assign(window, { SMB, PRODUCTS, REVENUE_6MO, REVENUE_LABELS, ACTIVITY, TENANTS, CREDIT_QUEUE, LOAN_QUEUE, ALERTS, NOTIFS, buildCopilotContext });

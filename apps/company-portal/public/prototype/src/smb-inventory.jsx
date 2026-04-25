@@ -79,6 +79,7 @@ function InventoryList({ go }) {
           </table>
         </div>
       </div>
+      <AskCopilotFAB go={go} lang={lang}/>
     </div>
   );
 }
@@ -149,6 +150,7 @@ function InventoryDetail({ go }) {
           </div>
         </div>
       </div>
+      <AskCopilotFAB go={go} lang={lang}/>
     </div>
   );
 }
@@ -372,6 +374,7 @@ function OcrScan({ go }) {
           )}
         </div>
       </div>
+      <AskCopilotFAB go={go} lang={lang}/>
     </div>
   );
 }

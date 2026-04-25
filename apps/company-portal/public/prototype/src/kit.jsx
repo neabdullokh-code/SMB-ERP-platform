@@ -540,12 +540,59 @@ function useHashRoute() {
   return [route, go];
 }
 
+/* ---------------- Ask Copilot floating button ---------------- */
+const ASK_COPILOT_LABELS = {
+  en: "Ask Copilot",
+  ru: "Спросить Copilot",
+  uz: "Copilotdan so'rash",
+};
+
+function AskCopilotFAB({ go, lang = "en", target = "/smb/copilot", hidden = false }) {
+  const label = ASK_COPILOT_LABELS[lang] || ASK_COPILOT_LABELS.en;
+  const navigate = (p) => {
+    if (typeof go === "function") { go(p); return; }
+    if (window.PrototypeRouter && typeof window.PrototypeRouter.navigateToRoute === "function") {
+      window.PrototypeRouter.navigateToRoute(p);
+    }
+  };
+  useEffect(() => {
+    if (hidden) return;
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === "j" || e.key === "J")) {
+        const tag = (e.target && e.target.tagName) || "";
+        if (tag === "INPUT" || tag === "TEXTAREA" || (e.target && e.target.isContentEditable)) return;
+        e.preventDefault();
+        navigate(target);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [target, hidden]);
+  if (hidden) return null;
+  return (
+    <button
+      onClick={() => navigate(target)}
+      aria-label={label}
+      style={{
+        position: "fixed", right: 24, bottom: 24, zIndex: 30,
+        background: "var(--ink)", color: "var(--surface)",
+        padding: "10px 16px", borderRadius: 999, border: "1px solid var(--ink)",
+        boxShadow: "var(--shadow-3)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer",
+        fontFamily: "var(--sans)", fontSize: 13, fontWeight: 500,
+      }}>
+      <span style={{ color: "var(--ai)" }}><Icon.Sparkle size={14}/></span>
+      {label}
+      <span className="kbd" style={{ background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.7)", borderColor: "transparent" }}>⌘J</span>
+    </button>
+  );
+}
+
 /* expose */
 Object.assign(window, {
   I, Icon, fmtUZS, fmtShort,
   Button, Pill, ScorePill, AIChip, Toggle, Field, Banner,
   Sparkline, LineChart, BarChart, StackedBar, Donut, Kpi,
-  Modal, Drawer, Tabs, useHashRoute,
+  Modal, Drawer, Tabs, useHashRoute, AskCopilotFAB,
   PrototypeRouter: {
     cleanPathForRoute,
     hrefForRoute,

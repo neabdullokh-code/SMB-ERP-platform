@@ -1,6 +1,74 @@
 // SMB — secondary screens: production, services, finance, reports, team, settings
 
-function Placeholder({ title, kpis, children, headerActions }) {
+const SMB_REST_I18N = {
+  ru: {
+    export: "Экспорт",
+    create: "Новый",
+    servicesTitle: "Сервисы · Заказы на работы",
+    statuses: {
+      Requested: "Запрошено",
+      Approved: "Подтверждено",
+      "In progress": "В работе",
+      Completed: "Завершено"
+    },
+    taskTypes: {
+      "Delivery · Tashkent": "Доставка · Ташкент",
+      "Pickup": "Самовывоз",
+      "Cold chain delivery": "Доставка с холодовой цепью",
+      "Internal transfer": "Внутренний трансфер",
+      "Inventory audit": "Инвентаризационный аудит",
+      "Delivery": "Доставка"
+    },
+    nextStage: "Следующий этап"
+  },
+  en: {
+    export: "Export",
+    create: "New",
+    servicesTitle: "Services · Work orders",
+    statuses: {
+      Requested: "Requested",
+      Approved: "Approved",
+      "In progress": "In progress",
+      Completed: "Completed"
+    },
+    taskTypes: {
+      "Delivery · Tashkent": "Delivery · Tashkent",
+      "Pickup": "Pickup",
+      "Cold chain delivery": "Cold chain delivery",
+      "Internal transfer": "Internal transfer",
+      "Inventory audit": "Inventory audit",
+      "Delivery": "Delivery"
+    },
+    nextStage: "Next stage"
+  },
+  uz: {
+    export: "Eksport",
+    create: "Yangi",
+    servicesTitle: "Xizmatlar · Ish buyurtmalari",
+    statuses: {
+      Requested: "Yuborilgan",
+      Approved: "Tasdiqlangan",
+      "In progress": "Jarayonda",
+      Completed: "Yakunlangan"
+    },
+    taskTypes: {
+      "Delivery · Tashkent": "Yetkazib berish · Toshkent",
+      "Pickup": "Olib ketish",
+      "Cold chain delivery": "Sovuq zanjirli yetkazib berish",
+      "Internal transfer": "Ichki ko'chirish",
+      "Inventory audit": "Inventarizatsiya auditi",
+      "Delivery": "Yetkazib berish"
+    },
+    nextStage: "Keyingi bosqich"
+  }
+};
+
+function getSmbRestT(lang) {
+  return SMB_REST_I18N[lang] || SMB_REST_I18N.ru;
+}
+
+function Placeholder({ title, kpis, children, headerActions, lang = "ru" }) {
+  const t = getSmbRestT(lang);
   return (
     <div className="page">
       <div className="page-head">
@@ -8,18 +76,80 @@ function Placeholder({ title, kpis, children, headerActions }) {
         <span className="sp"/>
         {headerActions || (
           <>
-            <Button variant="ghost" icon={<Icon.Download size={13}/>}>Export</Button>
-            <Button variant="primary" icon={<Icon.Plus size={13}/>}>New</Button>
+            <Button variant="ghost" icon={<Icon.Download size={13}/>}>{t.export}</Button>
+            <Button variant="primary" icon={<Icon.Plus size={13}/>}>{t.create}</Button>
           </>
         )}
       </div>
       {kpis && <div className="grid grid-4 mb-16">{kpis}</div>}
       {children}
+      <AskCopilotFAB lang={lang}/>
     </div>
   );
 }
 
-function ProductionBOMs() {
+const PRODUCTION_BOMS_I18N = {
+  ru: {
+    title: "Производство · Спецификации",
+    export: "Экспорт",
+    create: "Новый",
+    activeBoms: "Активные спецификации",
+    outputToday: "Выпуск за сегодня",
+    units: "ед.",
+    scrapRate: "Процент брака",
+    materialCost: "Стоимость материалов",
+    searchBoms: "Поиск спецификаций",
+    filter: "Фильтр",
+    code: "Код",
+    recipe: "Рецептура",
+    output: "Выпуск",
+    unitCost: "Себестоимость",
+    status: "Статус",
+    active: "Активна",
+    paused: "Пауза"
+  },
+  en: {
+    title: "Production · Bills of materials",
+    export: "Export",
+    create: "New",
+    activeBoms: "Active BOMs",
+    outputToday: "Output today",
+    units: "units",
+    scrapRate: "Scrap rate",
+    materialCost: "Material cost",
+    searchBoms: "Search BOMs",
+    filter: "Filter",
+    code: "Code",
+    recipe: "Recipe",
+    output: "Output",
+    unitCost: "Unit cost",
+    status: "Status",
+    active: "Active",
+    paused: "Paused"
+  },
+  uz: {
+    title: "Ishlab chiqarish · Spetsifikatsiyalar",
+    export: "Eksport",
+    create: "Yangi",
+    activeBoms: "Faol spetsifikatsiyalar",
+    outputToday: "Bugungi ishlab chiqarish",
+    units: "dona",
+    scrapRate: "Brak darajasi",
+    materialCost: "Materiallar tannarxi",
+    searchBoms: "Spetsifikatsiyalarni qidirish",
+    filter: "Filtr",
+    code: "Kod",
+    recipe: "Retsept",
+    output: "Ishlab chiqarish",
+    unitCost: "Birlik tannarxi",
+    status: "Holat",
+    active: "Faol",
+    paused: "To'xtatilgan"
+  }
+};
+
+function ProductionBOMs({ lang = "ru" }) {
+  const t = PRODUCTION_BOMS_I18N[lang] || PRODUCTION_BOMS_I18N.ru;
   const BOMs = [
     { id:"BOM-01", n:"Sunflower oil 5L (repack)",   o:"120/day", c:"42 500 UZS", s:"Active" },
     { id:"BOM-02", n:"Mixed pantry bundle",          o:"60/day",  c:"86 200 UZS", s:"Active" },
@@ -27,28 +157,36 @@ function ProductionBOMs() {
     { id:"BOM-04", n:"Snack mixed box, 12 items",    o:"25/day",  c:"124 000 UZS", s:"Paused" },
   ];
   return (
-    <Placeholder title="Production · Bills of materials"
+    <Placeholder
+      title={t.title}
+      lang={lang}
+      headerActions={
+        <>
+          <Button variant="ghost" icon={<Icon.Download size={13}/>}>{t.export}</Button>
+          <Button variant="primary" icon={<Icon.Plus size={13}/>}>{t.create}</Button>
+        </>
+      }
       kpis={<>
-        <Kpi label="Active BOMs" value="14"/>
-        <Kpi label="Output today" value="412" unit="units"/>
-        <Kpi label="Scrap rate" value="1.8%" delta="−0.3" trend="up"/>
-        <Kpi label="Material cost" value="38.2" unit="M UZS"/>
+        <Kpi label={t.activeBoms} value="14"/>
+        <Kpi label={t.outputToday} value="412" unit={t.units}/>
+        <Kpi label={t.scrapRate} value="1.8%" delta="−0.3" trend="up"/>
+        <Kpi label={t.materialCost} value="38.2" unit="M UZS"/>
       </>}>
       <div className="card card-pad-0">
         <div className="tbl-toolbar">
-          <div className="input-wrap" style={{width:240}}><span className="prefix"><Icon.Search size={13}/></span><input className="input with-prefix" placeholder="Search BOMs"/></div>
+          <div className="input-wrap" style={{width:240}}><span className="prefix"><Icon.Search size={13}/></span><input className="input with-prefix" placeholder={t.searchBoms}/></div>
           <span className="sp"/>
-          <Button size="sm" variant="ghost" icon={<Icon.Filter size={12}/>}>Filter</Button>
+          <Button size="sm" variant="ghost" icon={<Icon.Filter size={12}/>}>{t.filter}</Button>
         </div>
         <table className="tbl">
-          <thead><tr><th>Code</th><th>Recipe</th><th>Output</th><th>Unit cost</th><th>Status</th><th/></tr></thead>
+          <thead><tr><th>{t.code}</th><th>{t.recipe}</th><th>{t.output}</th><th>{t.unitCost}</th><th>{t.status}</th><th/></tr></thead>
           <tbody>{BOMs.map(b =>
             <tr key={b.id}>
               <td className="id">{b.id}</td>
               <td style={{color:"var(--ink)", fontWeight:500}}>{b.n}</td>
               <td className="mono">{b.o}</td>
               <td className="num">{b.c}</td>
-              <td><Pill tone={b.s==="Active"?"good":"warn"}>{b.s}</Pill></td>
+              <td><Pill tone={b.s==="Active"?"good":"warn"}>{b.s === "Active" ? t.active : t.paused}</Pill></td>
               <td className="row-actions"><Icon.ChevRight size={13} className="muted"/></td>
             </tr>)}</tbody>
         </table>
@@ -57,7 +195,8 @@ function ProductionBOMs() {
   );
 }
 
-function ServicesKanban() {
+function ServicesKanban({ lang = "ru" }) {
+  const t = getSmbRestT(lang);
   const cols = [
     { n:"Requested",    tone:"info",  items:[{c:"Oriental Trade",   t:"Delivery · Tashkent", a:"JA"},{c:"Retail Centre", t:"Pickup", a:"BY"}]},
     { n:"Approved",     tone:"warn",  items:[{c:"Zamon Foods",      t:"Cold chain delivery", a:"MK"}]},
@@ -65,16 +204,16 @@ function ServicesKanban() {
     { n:"Completed",    tone:"good",  items:[{c:"Chorsu Market",    t:"Delivery", a:"BY"},{c:"Ferghana Agro",   t:"Pickup", a:"MK"}]},
   ];
   return (
-    <Placeholder title="Services · Work orders">
+    <Placeholder title={t.servicesTitle} lang={lang}>
       <div className="grid grid-4" style={{gap:12}}>
         {cols.map((col, i) => (
           <div key={i} className="card card-pad-0">
-            <div className="panel-title"><Pill tone={col.tone} dot={false}>{col.n}</Pill><span className="sp"/><span className="mono muted" style={{fontSize:11}}>{col.items.length}</span></div>
+            <div className="panel-title"><Pill tone={col.tone} dot={false}>{t.statuses[col.n] || col.n}</Pill><span className="sp"/><span className="mono muted" style={{fontSize:11}}>{col.items.length}</span></div>
             <div style={{padding:8}}>
               {col.items.map((w, j) => (
                 <div key={j} className="hairline" style={{padding:10, borderRadius:6, marginBottom:8}}>
                   <div style={{fontSize:12.5, color:"var(--ink)", fontWeight:500}}>{w.c}</div>
-                  <div className="muted" style={{fontSize:11, marginTop:2}}>{w.t}</div>
+                  <div className="muted" style={{fontSize:11, marginTop:2}}>{t.taskTypes[w.t] || w.t}</div>
                   <div className="row mt-8">
                     <div className="avatar sm green">{w.a}</div>
                     <span className="sp"/>
@@ -90,27 +229,221 @@ function ServicesKanban() {
   );
 }
 
-function FinancePage({ kind }) {
-  const titles = { ledger:"General ledger", invoices:"Invoices · Receivables", bills:"Bills · Payables", cash:"Cash flow" };
+const FINANCE_PAGE_I18N = {
+  ru: {
+    titles: {
+      ledger: "Главная книга",
+      invoices: "Счета к получению",
+      bills: "Счета к оплате",
+      cash: "Денежный поток"
+    },
+    cash: {
+      inflowMarch: "Приток · Март",
+      outflowMarch: "Отток · Март",
+      net: "Итог",
+      healthy: "Хорошая динамика",
+      daysCashOnHand: "Дней денежного запаса",
+      target45: "Цель: 45",
+      monthlyNetCashFlow: "Чистый денежный поток по месяцам · последние 6 месяцев",
+      inflow: "Приток",
+      outflow: "Отток"
+    },
+    invoices: {
+      all: "Все",
+      sent: "Отправлено",
+      overdue: "Просрочено",
+      paid: "Оплачено",
+      newInvoice: "Новый счет",
+      invoice: "Счет",
+      customer: "Клиент",
+      date: "Дата",
+      due: "Срок",
+      amount: "Сумма",
+      status: "Статус",
+      sendReminder: "Отправить напоминание"
+    },
+    bills: {
+      bill: "Счет",
+      vendor: "Поставщик",
+      date: "Дата",
+      due: "Срок",
+      amount: "Сумма",
+      status: "Статус",
+      markPaid: "Отметить как оплаченный"
+    },
+    ledger: {
+      code: "Код",
+      account: "Счет",
+      balance: "Остаток",
+      accounts: {
+        cashSqbCurrent: "Денежные средства · текущий счет SQB",
+        accountsReceivable: "Дебиторская задолженность",
+        inventory: "Запасы",
+        accountsPayable: "Кредиторская задолженность",
+        vatPayable: "НДС к уплате",
+        retainedEarnings: "Нераспределенная прибыль",
+        salesRevenue: "Выручка от продаж",
+        costOfGoodsSold: "Себестоимость продаж"
+      }
+    },
+    statuses: {
+      paid: "Оплачено",
+      sent: "Отправлено",
+      overdue: "Просрочено",
+      due: "К оплате"
+    }
+  },
+  en: {
+    titles: {
+      ledger: "General ledger",
+      invoices: "Invoices · Receivables",
+      bills: "Bills · Payables",
+      cash: "Cash flow"
+    },
+    cash: {
+      inflowMarch: "Inflow · March",
+      outflowMarch: "Outflow · March",
+      net: "Net",
+      healthy: "Healthy",
+      daysCashOnHand: "Days cash on hand",
+      target45: "Target: 45",
+      monthlyNetCashFlow: "Monthly net cash flow · last 6 months",
+      inflow: "Inflow",
+      outflow: "Outflow"
+    },
+    invoices: {
+      all: "All",
+      sent: "Sent",
+      overdue: "Overdue",
+      paid: "Paid",
+      newInvoice: "New invoice",
+      invoice: "Invoice",
+      customer: "Customer",
+      date: "Date",
+      due: "Due",
+      amount: "Amount",
+      status: "Status",
+      sendReminder: "Send reminder"
+    },
+    bills: {
+      bill: "Bill",
+      vendor: "Vendor",
+      date: "Date",
+      due: "Due",
+      amount: "Amount",
+      status: "Status",
+      markPaid: "Mark paid"
+    },
+    ledger: {
+      code: "Code",
+      account: "Account",
+      balance: "Balance",
+      accounts: {
+        cashSqbCurrent: "Cash · SQB current",
+        accountsReceivable: "Accounts receivable",
+        inventory: "Inventory",
+        accountsPayable: "Accounts payable",
+        vatPayable: "VAT payable",
+        retainedEarnings: "Retained earnings",
+        salesRevenue: "Sales revenue",
+        costOfGoodsSold: "Cost of goods sold"
+      }
+    },
+    statuses: {
+      paid: "Paid",
+      sent: "Sent",
+      overdue: "Overdue",
+      due: "Due"
+    }
+  },
+  uz: {
+    titles: {
+      ledger: "Bosh daftar",
+      invoices: "Hisob-fakturalar · Debitorlar",
+      bills: "To'lovlar · Kreditorlar",
+      cash: "Pul oqimi"
+    },
+    cash: {
+      inflowMarch: "Tushum · Mart",
+      outflowMarch: "Chiqim · Mart",
+      net: "Sof natija",
+      healthy: "Ijobiy holat",
+      daysCashOnHand: "Naqd zaxira kunlari",
+      target45: "Maqsad: 45",
+      monthlyNetCashFlow: "Oylik sof pul oqimi · oxirgi 6 oy",
+      inflow: "Tushum",
+      outflow: "Chiqim"
+    },
+    invoices: {
+      all: "Barchasi",
+      sent: "Yuborilgan",
+      overdue: "Muddati o'tgan",
+      paid: "To'langan",
+      newInvoice: "Yangi hisob-faktura",
+      invoice: "Hisob-faktura",
+      customer: "Mijoz",
+      date: "Sana",
+      due: "Muddat",
+      amount: "Summa",
+      status: "Holat",
+      sendReminder: "Eslatma yuborish"
+    },
+    bills: {
+      bill: "To'lov hujjati",
+      vendor: "Yetkazib beruvchi",
+      date: "Sana",
+      due: "Muddat",
+      amount: "Summa",
+      status: "Holat",
+      markPaid: "To'langan deb belgilash"
+    },
+    ledger: {
+      code: "Kod",
+      account: "Hisob",
+      balance: "Qoldiq",
+      accounts: {
+        cashSqbCurrent: "Naqd pul · SQB joriy hisob",
+        accountsReceivable: "Debitor qarz",
+        inventory: "Inventar",
+        accountsPayable: "Kreditor qarz",
+        vatPayable: "To'lanadigan QQS",
+        retainedEarnings: "Taqsimlanmagan foyda",
+        salesRevenue: "Savdo tushumi",
+        costOfGoodsSold: "Sotilgan mahsulot tannarxi"
+      }
+    },
+    statuses: {
+      paid: "To'langan",
+      sent: "Yuborilgan",
+      overdue: "Muddati o'tgan",
+      due: "To'lov muddati"
+    }
+  }
+};
+
+function FinancePage({ kind, lang = "ru" }) {
+  const t = FINANCE_PAGE_I18N[lang] || FINANCE_PAGE_I18N.ru;
+  const titles = t.titles;
+
   if (kind === "cash") {
     return (
-      <Placeholder title="Cash flow"
+      <Placeholder title={titles.cash} lang={lang}
         kpis={<>
-          <Kpi label="Inflow · March" value="312" unit="M UZS" delta="+18%" trend="up"/>
-          <Kpi label="Outflow · March" value="248" unit="M UZS" delta="+9%" trend="down"/>
-          <Kpi label="Net" value="+64" unit="M UZS" delta="Healthy" trend="up"/>
-          <Kpi label="Days cash on hand" value="38" delta="Target: 45" trend="down"/>
+          <Kpi label={t.cash.inflowMarch} value="312" unit="M UZS" delta="+18%" trend="up"/>
+          <Kpi label={t.cash.outflowMarch} value="248" unit="M UZS" delta="+9%" trend="down"/>
+          <Kpi label={t.cash.net} value="+64" unit="M UZS" delta={t.cash.healthy} trend="up"/>
+          <Kpi label={t.cash.daysCashOnHand} value="38" delta={t.cash.target45} trend="down"/>
         </>}>
         <div className="card card-pad-0">
-          <div className="panel-title">Monthly net cash flow · last 6 months</div>
+          <div className="panel-title">{t.cash.monthlyNetCashFlow}</div>
           <div style={{padding:8}}>
             <StackedBar width={900} height={240}
               data={[[155,120],[180,140],[199,170],[172,185],[220,190],[248,212]]}
               categories={REVENUE_LABELS}
               colors={["var(--ink)","var(--ai)"]}/>
             <div className="row gap-16 mono muted" style={{fontSize:10, padding:"6px 16px"}}>
-              <span><span style={{display:"inline-block", width:8, height:8, background:"var(--ink)", marginRight:6}}/>Inflow</span>
-              <span><span style={{display:"inline-block", width:8, height:8, background:"var(--ai)", marginRight:6}}/>Outflow</span>
+              <span><span style={{display:"inline-block", width:8, height:8, background:"var(--ink)", marginRight:6}}/>{t.cash.inflow}</span>
+              <span><span style={{display:"inline-block", width:8, height:8, background:"var(--ai)", marginRight:6}}/>{t.cash.outflow}</span>
             </div>
           </div>
         </div>
@@ -127,18 +460,18 @@ function FinancePage({ kind }) {
       { id:"INV-1477", c:"Ferghana Agro",      d:"04 Mar", due:"18 Mar", amt:32_500_000, s:"Overdue"},
     ];
     return (
-      <Placeholder title="Invoices · Receivables">
+      <Placeholder title={titles.invoices} lang={lang}>
         <div className="card card-pad-0">
           <div className="tbl-toolbar">
-            <span className="chip" style={{background:"var(--ink)", color:"var(--surface)", borderColor:"var(--ink)"}}>All <span className="mono" style={{opacity:0.7, marginLeft:4}}>24</span></span>
-            <span className="chip">Sent <span className="mono" style={{marginLeft:4}}>12</span></span>
-            <span className="chip">Overdue <span className="mono" style={{marginLeft:4, color:"var(--bad)"}}>3</span></span>
-            <span className="chip">Paid <span className="mono" style={{marginLeft:4}}>9</span></span>
+            <span className="chip" style={{background:"var(--ink)", color:"var(--surface)", borderColor:"var(--ink)"}}>{t.invoices.all} <span className="mono" style={{opacity:0.7, marginLeft:4}}>24</span></span>
+            <span className="chip">{t.invoices.sent} <span className="mono" style={{marginLeft:4}}>12</span></span>
+            <span className="chip">{t.invoices.overdue} <span className="mono" style={{marginLeft:4, color:"var(--bad)"}}>3</span></span>
+            <span className="chip">{t.invoices.paid} <span className="mono" style={{marginLeft:4}}>9</span></span>
             <span className="sp"/>
-            <Button size="sm" variant="primary" icon={<Icon.Plus size={12}/>}>New invoice</Button>
+            <Button size="sm" variant="primary" icon={<Icon.Plus size={12}/>}>{t.invoices.newInvoice}</Button>
           </div>
           <table className="tbl">
-            <thead><tr><th>Invoice</th><th>Customer</th><th>Date</th><th>Due</th><th className="tr">Amount</th><th>Status</th><th/></tr></thead>
+            <thead><tr><th>{t.invoices.invoice}</th><th>{t.invoices.customer}</th><th>{t.invoices.date}</th><th>{t.invoices.due}</th><th className="tr">{t.invoices.amount}</th><th>{t.invoices.status}</th><th/></tr></thead>
             <tbody>{INVS.map(i =>
               <tr key={i.id}>
                 <td className="id">{i.id}</td>
@@ -146,8 +479,8 @@ function FinancePage({ kind }) {
                 <td className="dim mono">{i.d}</td>
                 <td className="dim mono">{i.due}</td>
                 <td className="num">{fmtUZS(i.amt)}</td>
-                <td><Pill tone={i.s==="Paid"?"good":i.s==="Overdue"?"bad":"info"}>{i.s}</Pill></td>
-                <td className="row-actions">{i.s !== "Paid" && <Button size="sm" variant="ghost">Send reminder</Button>}</td>
+                <td><Pill tone={i.s==="Paid"?"good":i.s==="Overdue"?"bad":"info"}>{i.s === "Paid" ? t.statuses.paid : i.s === "Overdue" ? t.statuses.overdue : t.statuses.sent}</Pill></td>
+                <td className="row-actions">{i.s !== "Paid" && <Button size="sm" variant="ghost">{t.invoices.sendReminder}</Button>}</td>
               </tr>)}</tbody>
           </table>
         </div>
@@ -162,10 +495,10 @@ function FinancePage({ kind }) {
       { id:"BILL-0445", v:"Samarkand Oil Co.",  d:"03 Mar", due:"17 Mar", amt:42_000_000, s:"Paid"},
     ];
     return (
-      <Placeholder title="Bills · Payables">
+      <Placeholder title={titles.bills} lang={lang}>
         <div className="card card-pad-0">
           <table className="tbl">
-            <thead><tr><th>Bill</th><th>Vendor</th><th>Date</th><th>Due</th><th className="tr">Amount</th><th>Status</th><th/></tr></thead>
+            <thead><tr><th>{t.bills.bill}</th><th>{t.bills.vendor}</th><th>{t.bills.date}</th><th>{t.bills.due}</th><th className="tr">{t.bills.amount}</th><th>{t.bills.status}</th><th/></tr></thead>
             <tbody>{BILLS.map(i =>
               <tr key={i.id}>
                 <td className="id">{i.id}</td>
@@ -173,8 +506,8 @@ function FinancePage({ kind }) {
                 <td className="dim mono">{i.d}</td>
                 <td className="dim mono">{i.due}</td>
                 <td className="num">{fmtUZS(i.amt)}</td>
-                <td><Pill tone={i.s==="Paid"?"good":"warn"}>{i.s}</Pill></td>
-                <td className="row-actions">{i.s !== "Paid" && <Button size="sm" variant="primary">Mark paid</Button>}</td>
+                <td><Pill tone={i.s==="Paid"?"good":"warn"}>{i.s === "Paid" ? t.statuses.paid : t.statuses.due}</Pill></td>
+                <td className="row-actions">{i.s !== "Paid" && <Button size="sm" variant="primary">{t.bills.markPaid}</Button>}</td>
               </tr>)}</tbody>
           </table>
         </div>
@@ -183,20 +516,20 @@ function FinancePage({ kind }) {
   }
   // ledger
   const ACCT = [
-    { c:"1001", n:"Cash · SQB current", b:64_200_000 },
-    { c:"1100", n:"Accounts receivable", b:86_400_000 },
-    { c:"1200", n:"Inventory", b:412_700_000 },
-    { c:"2001", n:"Accounts payable", b:-78_200_000 },
-    { c:"2100", n:"VAT payable", b:-14_200_000 },
-    { c:"3001", n:"Retained earnings", b:-402_800_000 },
-    { c:"4000", n:"Sales revenue", b:-278_400_000 },
-    { c:"5000", n:"Cost of goods sold", b:192_100_000 },
+    { c:"1001", n:t.ledger.accounts.cashSqbCurrent, b:64_200_000 },
+    { c:"1100", n:t.ledger.accounts.accountsReceivable, b:86_400_000 },
+    { c:"1200", n:t.ledger.accounts.inventory, b:412_700_000 },
+    { c:"2001", n:t.ledger.accounts.accountsPayable, b:-78_200_000 },
+    { c:"2100", n:t.ledger.accounts.vatPayable, b:-14_200_000 },
+    { c:"3001", n:t.ledger.accounts.retainedEarnings, b:-402_800_000 },
+    { c:"4000", n:t.ledger.accounts.salesRevenue, b:-278_400_000 },
+    { c:"5000", n:t.ledger.accounts.costOfGoodsSold, b:192_100_000 },
   ];
   return (
-    <Placeholder title="General ledger">
+    <Placeholder title={titles.ledger} lang={lang}>
       <div className="card card-pad-0">
         <table className="tbl">
-          <thead><tr><th>Code</th><th>Account</th><th className="tr">Balance</th></tr></thead>
+          <thead><tr><th>{t.ledger.code}</th><th>{t.ledger.account}</th><th className="tr">{t.ledger.balance}</th></tr></thead>
           <tbody>{ACCT.map(a =>
             <tr key={a.c}>
               <td className="id">{a.c}</td>
@@ -209,26 +542,65 @@ function FinancePage({ kind }) {
   );
 }
 
-function ReportsPage() {
-  const REPORTS = [
-    { n:"Profit & Loss",       d:"Monthly P&L statement", i:"Chart" },
-    { n:"Balance sheet",       d:"Assets, liabilities, equity", i:"Ledger" },
-    { n:"Cash flow statement", d:"Direct and indirect view", i:"Coin" },
-    { n:"Inventory report",    d:"Valuation, turnover, aging", i:"Box" },
-    { n:"Tax return pack",     d:"VAT, CIT · STI ready", i:"Shield" },
-    { n:"Payroll summary",     d:"Monthly payroll register", i:"Users" },
-  ];
+const REPORTS_PAGE_I18N = {
+  ru: {
+    title: "Отчеты",
+    format: "PDF · XLSX",
+    preview: "Предпросмотр",
+    generate: "Сформировать",
+    cards: [
+      { n:"Прибыли и убытки", d:"Ежемесячный отчет P&L", i:"Chart" },
+      { n:"Баланс", d:"Активы, обязательства, капитал", i:"Ledger" },
+      { n:"Отчет о движении денежных средств", d:"Прямой и косвенный методы", i:"Coin" },
+      { n:"Отчет по запасам", d:"Оценка, оборачиваемость, aging", i:"Box" },
+      { n:"Пакет налоговой отчетности", d:"НДС, налог на прибыль · готово для ГНК", i:"Shield" },
+      { n:"Сводка по зарплате", d:"Ежемесячный реестр начислений", i:"Users" },
+    ]
+  },
+  en: {
+    title: "Reports",
+    format: "PDF · XLSX",
+    preview: "Preview",
+    generate: "Generate",
+    cards: [
+      { n:"Profit & Loss", d:"Monthly P&L statement", i:"Chart" },
+      { n:"Balance sheet", d:"Assets, liabilities, equity", i:"Ledger" },
+      { n:"Cash flow statement", d:"Direct and indirect view", i:"Coin" },
+      { n:"Inventory report", d:"Valuation, turnover, aging", i:"Box" },
+      { n:"Tax return pack", d:"VAT, CIT · STI ready", i:"Shield" },
+      { n:"Payroll summary", d:"Monthly payroll register", i:"Users" },
+    ]
+  },
+  uz: {
+    title: "Hisobotlar",
+    format: "PDF · XLSX",
+    preview: "Ko'rib chiqish",
+    generate: "Yaratish",
+    cards: [
+      { n:"Foyda va zarar", d:"Oylik P&L hisobot", i:"Chart" },
+      { n:"Balans", d:"Aktivlar, majburiyatlar, kapital", i:"Ledger" },
+      { n:"Pul oqimi hisobotı", d:"To'g'ridan-to'g'ri va bilvosita ko'rinish", i:"Coin" },
+      { n:"Inventar hisobotı", d:"Baholash, aylanish, eskirish", i:"Box" },
+      { n:"Soliq hisobotlari to'plami", d:"QQS, foyda solig'i · DSQ uchun tayyor", i:"Shield" },
+      { n:"Ish haqi xulosasi", d:"Oylik ish haqi reyestri", i:"Users" },
+    ]
+  }
+};
+
+function ReportsPage({ lang = "ru" }) {
+  const t = REPORTS_PAGE_I18N[lang] || REPORTS_PAGE_I18N.ru;
+  const reports = t.cards;
   return (
-    <Placeholder title="Reports">
+    <Placeholder title={t.title} lang={lang}>
       <div className="grid grid-3" style={{gap:12}}>
-        {REPORTS.map((r, i) => {
+        {reports.map((r, i) => {
           const IC = Icon[r.i];
           return (
             <div key={i} className="card" style={{padding:14}}>
-              <div className="row"><IC size={16} style={{color:"var(--ai)"}}/><span className="sp"/><span className="mono muted" style={{fontSize:10}}>PDF · XLSX</span></div>
+              <div className="row"><IC size={16} style={{color:"var(--ai)"}}/><span className="sp"/><span className="mono muted" style={{fontSize:10}}>{t.format}</span></div>
               <div style={{fontSize:14, fontWeight:500, color:"var(--ink)", marginTop:8}}>{r.n}</div>
               <div className="muted mt-4" style={{fontSize:12}}>{r.d}</div>
-              <div className="row mt-12"><Button size="sm" variant="ghost">Preview</Button><Button size="sm" variant="primary" icon={<Icon.Download size={12}/>}>Generate</Button></div>
+              <div className="row mt-12"><Button size="sm" variant="ghost">{t.preview}</Button><Button size="sm" variant="primary" icon={<Icon.Download size={12}/>}>{t.generate}</Button></div>
             </div>
           );
         })}
@@ -236,8 +608,37 @@ function ReportsPage() {
     </Placeholder>
   );
 }
-
-function TeamPage() {
+function TeamPage({ lang = "ru" }) {
+  const TEAM_PAGE_I18N = {
+    ru: {
+      title: "Команда", export: "Экспорт", exporting: "Экспорт...", invite: "Пригласить участника",
+      name: "Имя", role: "Роль", email: "Email", lastActive: "Последняя активность", manage: "Управлять",
+      noAccess: "У вас нет доступа к пространству Команда.", loading: "Загрузка участников...", accessDenied: "Доступ запрещен.", noMembers: "Участники не найдены.", revoke: "Отозвать", pendingInvites: "Ожидающие приглашения", invited: "Приглашен", inviteTitle: "Пригласить участника", cancel: "Отмена", sending: "Отправка...", sendInvite: "Отправить приглашение", fullName: "Полное имя", permissionGroups: "Группы разрешений", manageMember: "Управление участником", saving: "Сохранение...", saveChanges: "Сохранить изменения", noEmail: "Нет email", resetDefaults: "Сбросить по умолчанию", effectivePermissions: "Эффективные разрешения", noEffectivePermissions: "Эффективные разрешения не выбраны.",
+      never: "никогда", now: "сейчас", mAgo: "мин назад", hAgo: "ч назад", dAgo: "д назад",
+      roleNames: { owner: "Владелец", company_admin: "Администратор компании", manager: "Менеджер", operator: "Оператор" },
+      groupNames: { tenant_governance: "Управление тенантом", finance_operations: "Финансовые операции", inventory_operations: "Складские операции", production_operations: "Производственные операции", service_operations: "Сервисные операции", audit_compliance: "Аудит и комплаенс" },
+      groupSummaries: { tenant_governance: "Владение рабочим пространством, настройки организации и административная политика.", finance_operations: "Главная книга, счета, расходы и денежные процессы.", inventory_operations: "Движение запасов и складские операции.", production_operations: "Производство и исполнение спецификаций BOM.", service_operations: "Управление сервисными заказами и workflow.", audit_compliance: "Аудиторские подтверждения и контроль соответствия." },
+    },
+    en: {
+      title: "Team", export: "Export", exporting: "Exporting...", invite: "Invite member",
+      name: "Name", role: "Role", email: "Email", lastActive: "Last active", manage: "Manage",
+      noAccess: "You do not have access to the Team workspace.", loading: "Loading team members...", accessDenied: "Access denied.", noMembers: "No team members found.", revoke: "Revoke", pendingInvites: "Pending invites", invited: "Invited", inviteTitle: "Invite member", cancel: "Cancel", sending: "Sending...", sendInvite: "Send invite", fullName: "Full name", permissionGroups: "Permission groups", manageMember: "Manage member", saving: "Saving...", saveChanges: "Save changes", noEmail: "No email", resetDefaults: "Reset defaults", effectivePermissions: "Effective permissions", noEffectivePermissions: "No effective permissions selected.",
+      never: "never", now: "now", mAgo: "m ago", hAgo: "h ago", dAgo: "d ago",
+      roleNames: { owner: "Owner", company_admin: "Company admin", manager: "Manager", operator: "Operator" },
+      groupNames: { tenant_governance: "Tenant governance", finance_operations: "Finance operations", inventory_operations: "Inventory operations", production_operations: "Production operations", service_operations: "Service operations", audit_compliance: "Audit and compliance" },
+      groupSummaries: { tenant_governance: "Workspace ownership, organization settings, and administrative policy.", finance_operations: "Ledger, invoices, bills, and money workflows.", inventory_operations: "Stock movement and warehouse operations.", production_operations: "Manufacturing and BOM execution.", service_operations: "Service orders and workflow execution.", audit_compliance: "Audit evidence and compliance review." },
+    },
+    uz: {
+      title: "Jamoa", export: "Eksport", exporting: "Eksport qilinmoqda...", invite: "A'zoni taklif qilish",
+      name: "Ism", role: "Lavozim", email: "Email", lastActive: "Oxirgi faollik", manage: "Boshqarish",
+      noAccess: "Sizda Jamoa sahifasiga kirish huquqi yo'q.", loading: "Jamoa a'zolari yuklanmoqda...", accessDenied: "Kirish taqiqlangan.", noMembers: "Jamoa a'zolari topilmadi.", revoke: "Bekor qilish", pendingInvites: "Kutilayotgan takliflar", invited: "Taklif yuborilgan", inviteTitle: "A'zoni taklif qilish", cancel: "Bekor qilish", sending: "Yuborilmoqda...", sendInvite: "Taklif yuborish", fullName: "To'liq ism", permissionGroups: "Ruxsat guruhlari", manageMember: "A'zoni boshqarish", saving: "Saqlanmoqda...", saveChanges: "O'zgarishlarni saqlash", noEmail: "Email yo'q", resetDefaults: "Standartga qaytarish", effectivePermissions: "Amaldagi ruxsatlar", noEffectivePermissions: "Amaldagi ruxsatlar tanlanmagan.",
+      never: "hech qachon", now: "hozir", mAgo: "daq oldin", hAgo: "soat oldin", dAgo: "kun oldin",
+      roleNames: { owner: "Ega", company_admin: "Kompaniya administratori", manager: "Menejer", operator: "Operator" },
+      groupNames: { tenant_governance: "Tenant boshqaruvi", finance_operations: "Moliya operatsiyalari", inventory_operations: "Ombor operatsiyalari", production_operations: "Ishlab chiqarish operatsiyalari", service_operations: "Servis operatsiyalari", audit_compliance: "Audit va muvofiqlik" },
+      groupSummaries: { tenant_governance: "Ish maydoni egaligi, tashkilot sozlamalari va ma'muriy siyosat.", finance_operations: "Bosh daftar, hisob-fakturalar, xarajatlar va pul oqimi jarayonlari.", inventory_operations: "Zaxira harakati va ombor amaliyotlari.", production_operations: "Ishlab chiqarish va BOM bajarilishi.", service_operations: "Servis buyurtmalari va workflow jarayonlari.", audit_compliance: "Audit dalillari va muvofiqlik nazorati." },
+    },
+  };
+  const t = TEAM_PAGE_I18N[lang] || TEAM_PAGE_I18N.ru;
   const ROLE_FALLBACKS = [
     { role:"owner", label:"Owner", defaultPermissionGroups:["tenant_governance","finance_operations","inventory_operations","production_operations","service_operations","audit_compliance"] },
     { role:"company_admin", label:"Company admin", defaultPermissionGroups:["tenant_governance","finance_operations","inventory_operations","production_operations","service_operations","audit_compliance"] },
@@ -272,6 +673,7 @@ function TeamPage() {
   const pendingInvites = (workspace.invites || []).filter((invite) => invite.status === "pending");
 
   const roleLabel = (role) => {
+    if (t.roleNames[role]) return t.roleNames[role];
     const match = roles.find((entry) => entry.role === role);
     return match ? match.label : String(role || "").replace(/_/g, " ");
   };
@@ -282,6 +684,9 @@ function TeamPage() {
   };
 
   const permissionGroupMeta = (key) => permissionGroups.find((group) => group.key === key);
+  const permissionGroupLabel = (group) => t.groupNames[group.key] || group.label;
+
+  const permissionGroupSummary = (group) => t.groupSummaries[group.key] || group.summary;
 
   const effectivePermissions = (groups) => {
     const keys = Array.from(new Set(groups || []));
@@ -297,12 +702,12 @@ function TeamPage() {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 
   const relativeTime = (value) => {
-    if (!value) return "never";
+    if (!value) return t.never;
     const diff = Date.now() - new Date(value).getTime();
-    if (!Number.isFinite(diff) || diff < 60 * 1000) return "now";
-    if (diff < 60 * 60 * 1000) return `${Math.floor(diff / (60 * 1000))}m ago`;
-    if (diff < 24 * 60 * 60 * 1000) return `${Math.floor(diff / (60 * 60 * 1000))}h ago`;
-    return `${Math.floor(diff / (24 * 60 * 60 * 1000))}d ago`;
+    if (!Number.isFinite(diff) || diff < 60 * 1000) return t.now;
+    if (diff < 60 * 60 * 1000) return `${Math.floor(diff / (60 * 1000))}${t.mAgo}`;
+    if (diff < 24 * 60 * 60 * 1000) return `${Math.floor(diff / (60 * 60 * 1000))}${t.hAgo}`;
+    return `${Math.floor(diff / (24 * 60 * 60 * 1000))}${t.dAgo}`;
   };
 
   const applyWorkspacePayload = (body) => {
@@ -446,14 +851,15 @@ function TeamPage() {
 
   return (
     <Placeholder
-      title="Team"
+      title={t.title}
+      lang={lang}
       headerActions={
         <>
           <Button variant="ghost" icon={<Icon.Download size={13}/>} onClick={exportWorkspace} disabled={loading || exporting || !!errorStatus}>
-            {exporting ? "Exporting..." : "Export"}
+            {exporting ? t.exporting : t.export}
           </Button>
           <Button variant="primary" icon={<Icon.UserPlus size={13}/>} onClick={openInvite} disabled={!canManageTeam}>
-            Invite member
+            {t.invite}
           </Button>
         </>
       }
@@ -462,15 +868,15 @@ function TeamPage() {
         <div className="tbl-toolbar">
           <span className="sp"/>
         </div>
-        {error && <div className="muted" style={{fontSize:12, color:"var(--bad)", padding:"0 12px 12px"}}>{errorStatus === 403 ? "You do not have access to the Team workspace." : error}</div>}
+        {error && <div className="muted" style={{fontSize:12, color:"var(--bad)", padding:"0 12px 12px"}}>{errorStatus === 403 ? t.noAccess : error}</div>}
         <table className="tbl">
-          <thead><tr><th>Name</th><th>Role</th><th>Email</th><th>Last active</th><th/></tr></thead>
+          <thead><tr><th>{t.name}</th><th>{t.role}</th><th>{t.email}</th><th>{t.lastActive}</th><th/></tr></thead>
           <tbody>
             {loading && (
-              <tr><td colSpan="5" className="dim mono">Loading team members…</td></tr>
+              <tr><td colSpan="5" className="dim mono">{t.loading}</td></tr>
             )}
             {!loading && errorStatus === 403 && (
-              <tr><td colSpan="5" className="dim mono">Access denied.</td></tr>
+              <tr><td colSpan="5" className="dim mono">{t.accessDenied}</td></tr>
             )}
             {!loading && activeUsers.map((member, index) => (
               <tr key={member.id}>
@@ -484,12 +890,12 @@ function TeamPage() {
                 <td className="dim mono">{member.email || "—"}</td>
                 <td className="dim mono">{relativeTime(member.lastActiveAt)}</td>
                 <td className="row-actions">
-                  {canManageTeam && <Button size="sm" variant="ghost" onClick={() => openManage(member)}>Manage</Button>}
+                  {canManageTeam && <Button size="sm" variant="ghost" onClick={() => openManage(member)}>{t.manage}</Button>}
                 </td>
               </tr>
             ))}
             {!loading && !errorStatus && activeUsers.length === 0 && (
-              <tr><td colSpan="5" className="dim mono">No team members found.</td></tr>
+              <tr><td colSpan="5" className="dim mono">{t.noMembers}</td></tr>
             )}
           </tbody>
         </table>
@@ -497,9 +903,9 @@ function TeamPage() {
 
       {errorStatus !== 403 && pendingInvites.length > 0 && (
         <div className="card card-pad-0 mt-16">
-          <div className="panel-title">Pending invites <span className="sp"/><span className="mono muted" style={{fontSize:10}}>{pendingInvites.length}</span></div>
+          <div className="panel-title">{t.pendingInvites} <span className="sp"/><span className="mono muted" style={{fontSize:10}}>{pendingInvites.length}</span></div>
           <table className="tbl">
-            <thead><tr><th>Name</th><th>Role</th><th>Email</th><th>Invited</th><th/></tr></thead>
+            <thead><tr><th>{t.name}</th><th>{t.role}</th><th>{t.email}</th><th>{t.invited}</th><th/></tr></thead>
             <tbody>{pendingInvites.map((invite, index) => (
               <tr key={invite.id}>
                 <td>
@@ -512,7 +918,7 @@ function TeamPage() {
                 <td className="dim mono">{invite.email}</td>
                 <td className="dim mono">{relativeTime(invite.invitedAt)}</td>
                 <td className="row-actions">
-                  {canManageTeam && <Button size="sm" variant="ghost" onClick={() => revokeInvite(invite.id)}>Revoke</Button>}
+                  {canManageTeam && <Button size="sm" variant="ghost" onClick={() => revokeInvite(invite.id)}>{t.revoke}</Button>}
                 </td>
               </tr>
             ))}</tbody>
@@ -523,26 +929,26 @@ function TeamPage() {
       <Modal
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}
-        title="Invite member"
+        title={t.inviteTitle}
         footer={
           <>
-            <Button variant="ghost" onClick={() => setInviteOpen(false)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setInviteOpen(false)}>{t.cancel}</Button>
             <span className="sp"/>
             <Button variant="primary" onClick={submitInvite} disabled={saving || !inviteForm.name || !inviteForm.email}>
-              {saving ? "Sending…" : "Send invite"}
+              {saving ? t.sending : t.sendInvite}
             </Button>
           </>
         }
       >
         <div className="col gap-12">
-          <Field label="Full name"><input className="input" value={inviteForm.name} onChange={(e) => setInviteForm({ ...inviteForm, name:e.target.value })}/></Field>
+          <Field label={t.fullName}><input className="input" value={inviteForm.name} onChange={(e) => setInviteForm({ ...inviteForm, name:e.target.value })}/></Field>
           <Field label="Email"><input className="input mono" value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email:e.target.value })}/></Field>
-          <Field label="Role">
+          <Field label={t.role}>
             <select className="select" value={inviteForm.role} onChange={(e) => setInviteForm({ ...inviteForm, role:e.target.value, permissionGroups: defaultsForRole(e.target.value) })}>
-              {roles.map((role) => <option key={role.role} value={role.role}>{role.label}</option>)}
+              {roles.map((role) => <option key={role.role} value={role.role}>{roleLabel(role.role)}</option>)}
             </select>
           </Field>
-          <div className="label">Permission groups</div>
+          <div className="label">{t.permissionGroups}</div>
           <div className="col gap-8">
             {permissionGroups.map((group) => (
               <label key={group.key} className="row hairline" style={{padding:10, borderRadius:6, cursor:"pointer", alignItems:"flex-start", gap:10}}>
@@ -552,8 +958,8 @@ function TeamPage() {
                   onChange={(e) => setInviteForm({ ...inviteForm, permissionGroups: updateGroupSelection(inviteForm.permissionGroups, group.key, e.target.checked) })}
                 />
                 <div style={{flex:1}}>
-                  <div style={{fontWeight:500, color:"var(--ink)"}}>{group.label}</div>
-                  <div className="muted" style={{fontSize:11, marginTop:2}}>{group.summary}</div>
+                  <div style={{fontWeight:500, color:"var(--ink)"}}>{permissionGroupLabel(group)}</div>
+                  <div className="muted" style={{fontSize:11, marginTop:2}}>{permissionGroupSummary(group)}</div>
                 </div>
               </label>
             ))}
@@ -564,13 +970,13 @@ function TeamPage() {
       <Drawer
         open={manageOpen}
         onClose={() => { setManageOpen(false); setSelectedMember(null); }}
-        title={selectedMember ? `Manage ${selectedMember.name}` : "Manage member"}
+        title={selectedMember ? `${t.manage} ${selectedMember.name}` : t.manageMember}
         footer={
           <>
-            <Button variant="ghost" onClick={() => { setManageOpen(false); setSelectedMember(null); }}>Cancel</Button>
+            <Button variant="ghost" onClick={() => { setManageOpen(false); setSelectedMember(null); }}>{t.cancel}</Button>
             <span className="sp"/>
             <Button variant="primary" onClick={submitMemberUpdate} disabled={saving || !selectedMember}>
-              {saving ? "Saving…" : "Save changes"}
+              {saving ? t.saving : t.saveChanges}
             </Button>
           </>
         }
@@ -579,17 +985,17 @@ function TeamPage() {
           <div className="col gap-12">
             <div className="hairline" style={{padding:10, borderRadius:6}}>
               <div style={{fontWeight:500, color:"var(--ink)"}}>{selectedMember.name}</div>
-              <div className="muted mono" style={{fontSize:11, marginTop:3}}>{selectedMember.email || "No email"}</div>
+              <div className="muted mono" style={{fontSize:11, marginTop:3}}>{selectedMember.email || t.noEmail}</div>
             </div>
-            <Field label="Role">
+            <Field label={t.role}>
               <select className="select" value={memberForm.role} onChange={(e) => setMemberForm({ ...memberForm, role:e.target.value, permissionGroups: defaultsForRole(e.target.value) })}>
-                {roles.map((role) => <option key={role.role} value={role.role}>{role.label}</option>)}
+                {roles.map((role) => <option key={role.role} value={role.role}>{roleLabel(role.role)}</option>)}
               </select>
             </Field>
             <div className="row">
-              <div className="label">Permission groups</div>
+              <div className="label">{t.permissionGroups}</div>
               <span className="sp"/>
-              <Button size="sm" variant="ghost" onClick={() => setMemberForm({ ...memberForm, permissionGroups: defaultsForRole(memberForm.role) })}>Reset defaults</Button>
+              <Button size="sm" variant="ghost" onClick={() => setMemberForm({ ...memberForm, permissionGroups: defaultsForRole(memberForm.role) })}>{t.resetDefaults}</Button>
             </div>
             <div className="col gap-8">
               {permissionGroups.map((group) => (
@@ -600,18 +1006,18 @@ function TeamPage() {
                     onChange={(e) => setMemberForm({ ...memberForm, permissionGroups: updateGroupSelection(memberForm.permissionGroups, group.key, e.target.checked) })}
                   />
                   <div style={{flex:1}}>
-                    <div style={{fontWeight:500, color:"var(--ink)"}}>{group.label}</div>
-                    <div className="muted" style={{fontSize:11, marginTop:2}}>{group.summary}</div>
+                    <div style={{fontWeight:500, color:"var(--ink)"}}>{permissionGroupLabel(group)}</div>
+                    <div className="muted" style={{fontSize:11, marginTop:2}}>{permissionGroupSummary(group)}</div>
                   </div>
                 </label>
               ))}
             </div>
-            <div className="label">Effective permissions</div>
+            <div className="label">{t.effectivePermissions}</div>
             <div className="row" style={{gap:6, flexWrap:"wrap"}}>
               {effectivePermissions(memberForm.permissionGroups).map((permission) => (
                 <Pill key={permission} tone="info" dot={false}>{permissionLabel(permission)}</Pill>
               ))}
-              {effectivePermissions(memberForm.permissionGroups).length === 0 && <span className="muted" style={{fontSize:12}}>No effective permissions selected.</span>}
+              {effectivePermissions(memberForm.permissionGroups).length === 0 && <span className="muted" style={{fontSize:12}}>{t.noEffectivePermissions}</span>}
             </div>
           </div>
         )}
@@ -620,32 +1026,80 @@ function TeamPage() {
   );
 }
 
-function SmbSettings() {
+const SMB_SETTINGS_I18N = {
+  ru: {
+    title: "Настройки",
+    companyProfile: "Профиль компании",
+    companyName: "Название компании",
+    tin: "ИНН",
+    address: "Адрес",
+    phone: "Телефон",
+    bankAccount: "Банковский счет",
+    primaryAccount: "Основной счет",
+    currency: "Валюта",
+    localeNotifications: "Язык и уведомления",
+    emailAlerts: "Email-уведомления",
+    smsAlerts: "SMS-уведомления",
+    aiCopilotSuggestions: "Подсказки AI Copilot"
+  },
+  en: {
+    title: "Settings",
+    companyProfile: "Company profile",
+    companyName: "Company name",
+    tin: "TIN",
+    address: "Address",
+    phone: "Phone",
+    bankAccount: "Bank account",
+    primaryAccount: "Primary account",
+    currency: "Currency",
+    localeNotifications: "Locale & notifications",
+    emailAlerts: "Email alerts",
+    smsAlerts: "SMS alerts",
+    aiCopilotSuggestions: "AI Copilot suggestions"
+  },
+  uz: {
+    title: "Sozlamalar",
+    companyProfile: "Kompaniya profili",
+    companyName: "Kompaniya nomi",
+    tin: "STIR",
+    address: "Manzil",
+    phone: "Telefon",
+    bankAccount: "Bank hisobi",
+    primaryAccount: "Asosiy hisob",
+    currency: "Valyuta",
+    localeNotifications: "Til va bildirishnomalar",
+    emailAlerts: "Email bildirishnomalari",
+    smsAlerts: "SMS bildirishnomalari",
+    aiCopilotSuggestions: "AI Copilot tavsiyalari"
+  }
+};
+
+function SmbSettings({ lang = "ru" }) {
+  const t = SMB_SETTINGS_I18N[lang] || SMB_SETTINGS_I18N.ru;
   return (
-    <Placeholder title="Settings">
+    <Placeholder title={t.title} lang={lang}>
       <div className="grid" style={{gridTemplateColumns:"1fr 1fr", gap:12}}>
         <div className="card"><div className="card-body">
-          <h2>Company profile</h2>
+          <h2>{t.companyProfile}</h2>
           <div className="col gap-8 mt-8">
-            <Field label="Company name"><input className="input" defaultValue="Kamolot Savdo LLC"/></Field>
-            <Field label="TIN"><input className="input mono" defaultValue="301 452 776"/></Field>
-            <Field label="Address"><input className="input" defaultValue="Mirobod district, Tashkent 100170"/></Field>
-            <Field label="Phone"><input className="input mono" defaultValue="+998 71 200 44 82"/></Field>
+            <Field label={t.companyName}><input className="input" defaultValue="Kamolot Savdo LLC"/></Field>
+            <Field label={t.tin}><input className="input mono" defaultValue="301 452 776"/></Field>
+            <Field label={t.address}><input className="input" defaultValue="Mirobod district, Tashkent 100170"/></Field>
+            <Field label={t.phone}><input className="input mono" defaultValue="+998 71 200 44 82"/></Field>
           </div>
         </div></div>
         <div className="card"><div className="card-body">
-          <h2>Bank account</h2>
+          <h2>{t.bankAccount}</h2>
           <div className="col gap-8 mt-8">
-            <Field label="Primary account"><input className="input mono" defaultValue="20208 000 100 100 001 · SQB"/></Field>
-            <Field label="Currency"><select className="select"><option>UZS</option><option>USD</option><option>EUR</option></select></Field>
+            <Field label={t.primaryAccount}><input className="input mono" defaultValue="20208 000 100 100 001 · SQB"/></Field>
+            <Field label={t.currency}><select className="select"><option>UZS</option><option>USD</option><option>EUR</option></select></Field>
           </div>
           <div className="divider"/>
-          <h2>Locale & notifications</h2>
+          <h2>{t.localeNotifications}</h2>
           <div className="col gap-8 mt-8">
-            <div className="row"><span>Language</span><span className="sp"/><select className="select" style={{width:120}}><option>English</option><option>O'zbek</option><option>Русский</option></select></div>
-            <div className="row"><span>Email alerts</span><span className="sp"/><Toggle on={true} onChange={()=>{}}/></div>
-            <div className="row"><span>SMS alerts</span><span className="sp"/><Toggle on={false} onChange={()=>{}}/></div>
-            <div className="row"><span>AI Copilot suggestions</span><span className="sp"/><Toggle on={true} onChange={()=>{}}/></div>
+            <div className="row"><span>{t.emailAlerts}</span><span className="sp"/><Toggle on={true} onChange={()=>{}}/></div>
+            <div className="row"><span>{t.smsAlerts}</span><span className="sp"/><Toggle on={false} onChange={()=>{}}/></div>
+            <div className="row"><span>{t.aiCopilotSuggestions}</span><span className="sp"/><Toggle on={true} onChange={()=>{}}/></div>
           </div>
         </div></div>
       </div>
@@ -654,9 +1108,9 @@ function SmbSettings() {
 }
 
 /* -------- Production order detail, Services WO detail (simple) -------- */
-function ProductionOrder({ go }) {
+function ProductionOrder({ go, lang }) {
   return (
-    <Placeholder title="Production order PO-0451">
+    <Placeholder title="Production order PO-0451" lang={lang}>
       <div className="grid" style={{gridTemplateColumns:"2fr 1fr", gap:12}}>
         <div className="card"><div className="card-body">
           <h2>Inputs</h2>
@@ -688,9 +1142,9 @@ function ProductionOrder({ go }) {
   );
 }
 
-function ServiceOrderDetail() {
+function ServiceOrderDetail({ lang }) {
   return (
-    <Placeholder title="Work order WO-1041">
+    <Placeholder title="Work order WO-1041" lang={lang}>
       <div className="grid" style={{gridTemplateColumns:"2fr 1fr", gap:12}}>
         <div className="card"><div className="card-body">
           <h2>Oriental Trade LLC · Delivery · Tashkent</h2>

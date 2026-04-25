@@ -135,11 +135,12 @@ function SmbCredit({ go }) {
           <div className="desc">Your revenue trend, AR/AP, inventory turnover, and SQB transaction history are pulled automatically. No uploading bank statements or filling 12-page forms.</div>
         </div>
       </div>
+      <AskCopilotFAB go={go} lang={lang}/>
     </div>
   );
 }
 
-function LoanApplication({ go }) {
+function LoanApplication({ go, lang }) {
   const [step, setStep] = useStateS(0);
   const [signed, setSigned] = useStateS(false);
   const [amount, setAmount] = useStateS(180);
@@ -342,6 +343,7 @@ function LoanApplication({ go }) {
           {step === 1 && <Button variant="primary" disabled={!signed} onClick={() => setStep(2)}>Submit application <Icon.Arrow size={13}/></Button>}
         </div>
       )}
+      <AskCopilotFAB go={go} lang={lang}/>
     </div>
   );
 }

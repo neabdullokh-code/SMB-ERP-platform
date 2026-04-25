@@ -9,6 +9,7 @@
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@sqb/api-client": "0.1.0",
     "@sqb/domain-types": "0.1.0",
     "@sqb/ui": "0.1.0",
