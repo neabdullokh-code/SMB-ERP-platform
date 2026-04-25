@@ -187,6 +187,38 @@ async function runWithDb<T>(operation: (client: PoolClient) => Promise<T>) {
   return result;
 }
 
+/**
+ * Open a tenant-scoped transaction on an already-checked-out client. Pins
+ * `app.tenant_id` via `SET LOCAL` so RLS policies (008_finance_rls.sql) get a
+ * real value to compare against for the duration of this transaction. Every
+ * finance BEGIN in this store should go through this helper.
+ */
+async function beginTenantTx(client: PoolClient, tenantId: string) {
+  await client.query("BEGIN");
+  // Postgres `SET LOCAL` does not accept bind parameters for the value, so
+  // we use set_config(name, value, is_local=true) which does.
+  await client.query(`select set_config('app.tenant_id', $1, true)`, [tenantId]);
+}
+
+/**
+ * Acquire a row-level lock on the invoice header so a concurrent post/void/
+ * payment can't interleave with the current transaction. Must be called
+ * BEFORE loadInvoicesInternal inside any posting transaction.
+ */
+async function lockInvoiceRow(client: PoolClient, tenantId: string, invoiceId: string) {
+  await client.query(
+    `select id from finance_invoices where tenant_id = $1 and id = $2 for update`,
+    [tenantId, invoiceId]
+  );
+}
+
+async function lockBillRow(client: PoolClient, tenantId: string, billId: string) {
+  await client.query(
+    `select id from finance_bills where tenant_id = $1 and id = $2 for update`,
+    [tenantId, billId]
+  );
+}
+
 function assertPositive(value: Decimal, fieldName: string) {
   if (value.lte(0)) {
     throw new Error(`${fieldName} must be greater than zero.`);
@@ -1031,7 +1063,7 @@ export async function createInvoice(tenantId: string, actorUserId: string, paylo
   ensureSingleCurrency(DEFAULT_CURRENCY);
 
   return runWithDb(async (client) => {
-    await client.query("BEGIN");
+    await beginTenantTx(client, tenantId);
 
     try {
       const coreAccounts = await loadCoreAccounts(client, tenantId);
@@ -1142,9 +1174,11 @@ export async function createInvoice(tenantId: string, actorUserId: string, paylo
 
 export async function issueInvoice(tenantId: string, actorUserId: string, invoiceId: string) {
   return runWithDb(async (client) => {
-    await client.query("BEGIN");
+    await beginTenantTx(client, tenantId);
 
     try {
+      await lockInvoiceRow(client, tenantId, invoiceId);
+
       const invoices = await loadInvoicesInternal(client, tenantId, invoiceId);
       const invoice = invoices[0];
       if (!invoice) {
@@ -1221,9 +1255,11 @@ export async function issueInvoice(tenantId: string, actorUserId: string, invoic
 
 export async function recordInvoicePayment(tenantId: string, actorUserId: string, invoiceId: string, payload: RecordInvoicePaymentRequest) {
   return runWithDb(async (client) => {
-    await client.query("BEGIN");
+    await beginTenantTx(client, tenantId);
 
     try {
+      await lockInvoiceRow(client, tenantId, invoiceId);
+
       const invoice = (await loadInvoicesInternal(client, tenantId, invoiceId))[0];
       if (!invoice) {
         throw new Error("Invoice not found.");
@@ -1270,7 +1306,7 @@ export async function createBill(tenantId: string, actorUserId: string, payload:
   ensureSingleCurrency(DEFAULT_CURRENCY);
 
   return runWithDb(async (client) => {
-    await client.query("BEGIN");
+    await beginTenantTx(client, tenantId);
 
     try {
       const coreAccounts = await loadCoreAccounts(client, tenantId);
@@ -1381,9 +1417,11 @@ export async function createBill(tenantId: string, actorUserId: string, payload:
 
 export async function postBill(tenantId: string, actorUserId: string, billId: string) {
   return runWithDb(async (client) => {
-    await client.query("BEGIN");
+    await beginTenantTx(client, tenantId);
 
     try {
+      await lockBillRow(client, tenantId, billId);
+
       const bill = (await loadBillsInternal(client, tenantId, billId))[0];
       if (!bill) {
         throw new Error("Bill not found.");
@@ -1458,9 +1496,11 @@ export async function postBill(tenantId: string, actorUserId: string, billId: st
 
 export async function recordBillPayment(tenantId: string, actorUserId: string, billId: string, payload: RecordBillPaymentRequest) {
   return runWithDb(async (client) => {
-    await client.query("BEGIN");
+    await beginTenantTx(client, tenantId);
 
     try {
+      await lockBillRow(client, tenantId, billId);
+
       const bill = (await loadBillsInternal(client, tenantId, billId))[0];
       if (!bill) {
         throw new Error("Bill not found.");
@@ -1700,9 +1740,11 @@ export async function getTenantFinanceSnapshot(tenantId: string) {
 
 export async function voidInvoice(tenantId: string, actorUserId: string, invoiceId: string) {
   return runWithDb(async (client) => {
-    await client.query("BEGIN");
+    await beginTenantTx(client, tenantId);
 
     try {
+      await lockInvoiceRow(client, tenantId, invoiceId);
+
       const invoice = (await loadInvoicesInternal(client, tenantId, invoiceId))[0];
       if (!invoice) {
         throw new Error("Invoice not found.");
@@ -1775,9 +1817,11 @@ export async function voidInvoice(tenantId: string, actorUserId: string, invoice
 
 export async function voidBill(tenantId: string, actorUserId: string, billId: string) {
   return runWithDb(async (client) => {
-    await client.query("BEGIN");
+    await beginTenantTx(client, tenantId);
 
     try {
+      await lockBillRow(client, tenantId, billId);
+
       const bill = (await loadBillsInternal(client, tenantId, billId))[0];
       if (!bill) {
         throw new Error("Bill not found.");
