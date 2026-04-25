@@ -42,10 +42,33 @@ const toneForAlert = (severity: string) => {
   return "neutral" as const;
 };
 
+interface CollateralTenantRow {
+  tenantId: string;
+  tenantName: string;
+  totalCollateralUzs: string;
+  distinctItems: number;
+  distinctWarehouses: number;
+}
+
+interface CollateralSummary {
+  totalCollateralUzs: string;
+  tenantCount: number;
+  tenants: CollateralTenantRow[];
+}
+
+function formatUzs(v: string) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return v;
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)} Bn UZS`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)} M UZS`;
+  return `${Math.round(n).toLocaleString("en-US")} UZS`;
+}
+
 export function BankDashboardPage() {
   const [tenants, setTenants] = useState<BankTenantHealth[]>([]);
   const [alerts, setAlerts] = useState<PortfolioAlert[]>([]);
   const [analytics, setAnalytics] = useState<BankPortfolioAnalytics | null>(null);
+  const [collateral, setCollateral] = useState<CollateralSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,16 +78,18 @@ export function BankDashboardPage() {
     async function load() {
       setLoading(true);
       try {
-        const [portfolio, analyticsPayload, alertsPayload] = await Promise.all([
+        const [portfolio, analyticsPayload, alertsPayload, collateralPayload] = await Promise.all([
           readApi<{ tenants: BankTenantHealth[] }>("/api/bank/portfolio"),
           readApi<{ analytics: BankPortfolioAnalytics }>("/api/bank/portfolio/analytics"),
-          readApi<{ alerts: PortfolioAlert[] }>("/api/bank/portfolio/alerts")
+          readApi<{ alerts: PortfolioAlert[] }>("/api/bank/portfolio/alerts"),
+          readApi<{ collateral: CollateralSummary }>("/api/bank/portfolio/collateral").catch(() => ({ collateral: null }))
         ]);
 
         if (!cancelled) {
           setTenants(portfolio.tenants ?? []);
           setAnalytics(analyticsPayload.analytics ?? null);
           setAlerts(alertsPayload.alerts ?? []);
+          setCollateral(collateralPayload?.collateral ?? null);
           setError(null);
         }
       } catch (loadError) {
@@ -126,7 +151,32 @@ export function BankDashboardPage() {
           value={`${analytics?.slaHealthPercent ?? 0}%`}
           helper="Pending applications within 24h SLA window"
         />
+        <KpiCard
+          label="Total collateral value"
+          value={collateral ? formatUzs(collateral.totalCollateralUzs) : "—"}
+          helper="Sum of on-hand × WAC across all tenants"
+        />
       </div>
+
+      {collateral && collateral.tenants.length > 0 ? (
+        <SectionCard
+          title="Tenant collateral valuation"
+          description="Inventory on hand priced at weighted-average cost, aggregated from the ledger."
+        >
+          <DataTable
+            columns={["Tenant", "Collateral value", "Items", "Warehouses"]}
+            rows={collateral.tenants
+              .slice()
+              .sort((a, b) => Number(b.totalCollateralUzs) - Number(a.totalCollateralUzs))
+              .map((t) => [
+                t.tenantName,
+                formatUzs(t.totalCollateralUzs),
+                t.distinctItems,
+                t.distinctWarehouses
+              ])}
+          />
+        </SectionCard>
+      ) : null}
 
       {alerts.length > 0 && (
         <SectionCard

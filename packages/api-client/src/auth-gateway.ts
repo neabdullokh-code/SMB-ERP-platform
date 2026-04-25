@@ -156,6 +156,22 @@ export async function getBankPortfolioAnalytics(sessionToken: string) {
   }, sessionToken);
 }
 
+export async function getBankCollateral(sessionToken: string) {
+  return platformRequest<{
+    collateral: {
+      totalCollateralUzs: string;
+      tenantCount: number;
+      tenants: Array<{
+        tenantId: string;
+        tenantName: string;
+        totalCollateralUzs: string;
+        distinctItems: number;
+        distinctWarehouses: number;
+      }>;
+    };
+  }>("/bank/portfolio/collateral", { method: "GET" }, sessionToken);
+}
+
 export async function getCreditQueue(
   sessionToken: string,
   query?: {
