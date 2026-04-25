@@ -52,10 +52,10 @@ function todayIso() {
 }
 
 async function apiRequest<T>(path: string, init: RequestInit): Promise<{ ok: boolean; status: number; body: T | null }> {
-  const response = await fetch(path, {
-    ...init,
-    headers: { "content-type": "application/json", ...(init.headers ?? {}) }
-  });
+  const hasBody = init.body != null;
+  const headers: Record<string, string> = { ...(init.headers as Record<string, string> | undefined) };
+  if (hasBody && !headers["content-type"]) headers["content-type"] = "application/json";
+  const response = await fetch(path, { ...init, headers });
   const contentType = response.headers.get("content-type") ?? "";
   const body = contentType.includes("application/json") ? ((await response.json()) as T) : null;
   return { ok: response.ok, status: response.status, body };

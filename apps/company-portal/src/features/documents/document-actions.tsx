@@ -37,7 +37,8 @@ export function DocumentActions({
     try {
       const response = await fetch(`/api/documents/${kindPlural}/${documentId}/${action}`, {
         method: "POST",
-        headers: { "content-type": "application/json" }
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({})
       });
       const body = await response.json().catch(() => null);
       if (!response.ok) {

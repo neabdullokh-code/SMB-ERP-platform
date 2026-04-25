@@ -28,18 +28,15 @@ async function proxy(request: Request, context: { params: Promise<{ path: string
   const search = new URL(request.url).search;
   const target = `${platformApiUrl()}/documents/${path.join("/")}${search}`;
 
-  const init: RequestInit = {
-    method: request.method,
-    headers: {
-      "x-session-token": sessionToken,
-      "content-type": "application/json"
-    },
-    cache: "no-store"
-  };
+  const headers: Record<string, string> = { "x-session-token": sessionToken };
+  const init: RequestInit = { method: request.method, headers, cache: "no-store" };
 
   if (request.method !== "GET" && request.method !== "HEAD") {
     const body = await request.text();
-    if (body) init.body = body;
+    if (body) {
+      init.body = body;
+      headers["content-type"] = "application/json";
+    }
   }
 
   const response = await fetch(target, init);

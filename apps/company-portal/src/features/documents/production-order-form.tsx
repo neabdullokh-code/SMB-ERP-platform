@@ -150,7 +150,10 @@ export function ProductionOrderForm({
       const postResponse = await apiRequest<{
         data?: { document: unknown };
         error?: { message?: string; errorCode?: string; details?: InsufficientStockDetail[] };
-      }>(`/api/documents/production-orders/${draft.id}/post`, { method: "POST" });
+      }>(`/api/documents/production-orders/${draft.id}/post`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
 
       if (!postResponse.ok) {
         const err = postResponse.body?.error;
