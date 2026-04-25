@@ -1,8 +1,8 @@
 # SQB Business OS — Developer Guide
 
-> **Last updated**: 2026-04-24 (D4 implementation sync)
+> **Last updated**: 2026-04-25 (database connectivity update)
 > **Team size**: 5 developers (D1–D5)
-> **Runtime**: Node.js 20+ · TypeScript 5.7+ (platform-api currently 6.x) · PostgreSQL 16 · Redis 7 · MinIO
+> **Runtime**: Node.js 20+ · TypeScript 5.7+ (platform-api currently 6.x) · PostgreSQL 16 / Supabase Postgres / self-hosted Postgres · Redis 7 · MinIO
 
 ---
 
@@ -83,7 +83,7 @@ graph TB
 | `packages/ui/` | Shared UI primitives (KpiCard, DataTable, StatusBadge) | `@sqb/ui` |
 | `db/migrations/` | Sequential SQL migrations (001–015, including two `014_*` files) | — |
 | `db/seeds/` | Seed data for local development | — |
-| `infra/docker/` | Docker Compose (Postgres 16 + Redis 7) | — |
+| `infra/docker/` | Docker Compose (Redis 7 + optional local Postgres 16 for self-hosted dev) | — |
 
 ---
 
@@ -138,7 +138,7 @@ All mutation endpoints must use **Zod schemas** (see `services/platform-api/src/
 
 ### Database Access
 
-Use `withDb()` from `services/platform-api/src/lib/db.ts`. It handles connection pooling and gracefully falls back to in-memory stubs when `ALLOW_DEMO_AUTH=true` and PostgreSQL is unavailable.
+Use `withDb()` from `services/platform-api/src/lib/db.ts`. It handles connection pooling, supports Supabase pooler/direct DSNs or standard Postgres DSNs, and can fall back to in-memory stubs when `ALLOW_DEMO_AUTH=true` and PostgreSQL is unavailable.
 
 ---
 
@@ -167,7 +167,7 @@ D1 is the critical path. This person starts on day 1 and everyone else is blocke
 | DB migrations 001–015 (schema, auth, onboarding, profiles, OTP, refresh tokens, workspace access control, session activity, bank surface, inventory unit cost patch) | `db/migrations/*.sql` |
 | RLS policies on all tenant-scoped tables | `db/migrations/001_initial_schema.sql` |
 | Domain types: platform contracts | `packages/domain-types/src/platform.ts` |
-| Docker Compose (Postgres 16 + Redis 7) | `infra/docker/docker-compose.yml` |
+| Docker Compose (Redis 7 + optional local Postgres 16 for self-hosted dev) | `infra/docker/docker-compose.yml` |
 | Environment config + logger | `packages/config/src/` |
 | Frontend auth flow (login, OTP, terms, forgot) | Both portals: `app/(auth)/` |
 | **JWT access tokens** — HS256 signed, stateless verification, JTI stored in DB for revocability | `services/platform-api/src/lib/jwt.ts`, `auth/store.ts` |
@@ -512,25 +512,51 @@ infra/docker/docker-compose.yml  (Redis)
 ## Getting Started
 
 ```bash
-# 1. Start infrastructure
-docker compose -f infra/docker/docker-compose.yml up -d
-
-# 2. Run migrations
-psql -U postgres -d sqb_erp -f db/migrations/001_initial_schema.sql
-psql -U postgres -d sqb_erp -f db/migrations/002_auth_identity.sql
-# ... run all migrations in order through 015 (including both 014_* files)
-
-# 3. Copy environment file
+# 1. Copy environment values
 cp .env.example .env
-# Edit DATABASE_URL, OTP_*, and other variables
 
-# 4. Start the API
+# 2. Edit DATABASE_URL and DIRECT_DATABASE_URL
+# Supabase option:
+# DATABASE_URL for app/runtime traffic:
+# postgresql://postgres.<project-ref>:<url-encoded-password>@aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require
+# DIRECT_DATABASE_URL for migrations/manual SQL:
+# postgresql://postgres:<url-encoded-password>@db.<project-ref>.supabase.co:5432/postgres?sslmode=require
+#
+# Self-hosted PostgreSQL option:
+# DATABASE_URL=postgresql://<user>:<url-encoded-password>@<host>:5432/<database>
+# DIRECT_DATABASE_URL=postgresql://<user>:<url-encoded-password>@<host>:5432/<database>
+# Keep PLATFORM_API_URL and NEXT_PUBLIC_API_URL pointed at the local API.
+# NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY are currently not used.
+
+# 3. Start optional local infrastructure
+docker compose -f infra/docker/docker-compose.yml up -d
+# Redis and MinIO are still local. The bundled local Postgres is optional when Supabase is used.
+
+# 4. Run migrations against the configured database
+npm run db:migrate --workspace @sqb/platform-api
+# or apply db/migrations/*.sql manually against the configured database in order through 015 (including both 014_* files)
+
+# 5. Start the API
 npm run dev --workspace @sqb/platform-api
 
-# 5. Start a portal
+# 6. Start a portal
 npm run dev --workspace @sqb/company-portal
 npm run dev --workspace @sqb/bank-portal
 
-# 6. Start the worker
+# 7. Start the worker
 npm run dev --workspace @sqb/worker
 ```
+
+### Supabase Postgres Notes
+
+- Keep the existing custom login, OTP, refresh-token, and session-cookie flow. This repo does not use Supabase Auth.
+- `DATABASE_URL` must be the Supabase Session Pooler URI for runtime app traffic on IPv4-compatible networks.
+- `DIRECT_DATABASE_URL` should be the direct database URI used by Prisma migrate and admin SQL tools.
+- If the password contains reserved characters, URL-encode them before placing the value in either URI.
+- For Supabase hosts, require TLS by keeping `sslmode=require` on both URIs.
+
+### Self-hosted PostgreSQL Notes
+
+- Supabase is optional. Any PostgreSQL server compatible with `pg` and Prisma can be used.
+- For self-hosted PostgreSQL, `DATABASE_URL` and `DIRECT_DATABASE_URL` can point at the same server.
+- Local Docker Postgres under `infra/docker/docker-compose.yml` remains available for offline or isolated development.
