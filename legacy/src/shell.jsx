@@ -104,7 +104,7 @@ function Sidebar({ surface, setSurface, path, go }) {
             </div>
           </>
         )}
-        <button className="icon-btn" title="Sign out" onClick={() => window.AuthRuntime.logout().finally(() => go("/login"))}><Icon.Logout size={14}/></button>
+        <button className="icon-btn" title="Sign out" onClick={() => go("/login")}><Icon.Logout size={14}/></button>
       </div>
     </aside>
   );

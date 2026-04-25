@@ -49,7 +49,6 @@
     "/login":          { surface: null,   crumbs: ["Sign in"],                comp: () => <LoginPage go={go}/> },
     "/otp":            { surface: null,   crumbs: ["Verify"],                 comp: () => <OtpPage go={go}/> },
     "/forgot":         { surface: null,   crumbs: ["Reset password"],         comp: () => <ForgotPage go={go}/> },
-    "/terms":          { surface: null,   crumbs: ["Terms"],                  comp: () => <TermsPage go={go}/> },
     "/onboarding":     { surface: null,   crumbs: ["Workspace setup"],        comp: () => <OnboardingPage go={go}/> },
 
     // SMB
@@ -177,44 +176,6 @@
       window.addEventListener("hashchange", h);
       return () => window.removeEventListener("hashchange", h);
     }, []);
-
-    useEffect(() => {
-      let cancelled = false;
-      const syncSession = async () => {
-        const auth = window.AuthRuntime;
-        if (!auth) return;
-        const isPublic = auth.AUTH_PUBLIC_ROUTES.has(path);
-        const sessionState = await auth.fetchSession();
-        if (cancelled) return;
-
-        if (!sessionState.authenticated) {
-          if (!isPublic) go("/login");
-          return;
-        }
-
-        const nextSurface = sessionState.session.role === "bank_admin" || sessionState.session.role === "super_admin" ? "bank" : "smb";
-        setSurface(nextSurface);
-        const authenticatedPath = sessionState.session.requiresTermsAcceptance ? "/terms" : sessionState.session.redirectPath;
-
-        if (isPublic) {
-          if (auth.redirectToSurface(authenticatedPath)) return;
-          if (authenticatedPath !== path) go(authenticatedPath);
-          return;
-        }
-
-        if (sessionState.session.requiresTermsAcceptance && path !== "/terms") {
-          go("/terms");
-          return;
-        }
-
-        const allowed = auth.allowedRoute(path, sessionState.session);
-        if (auth.redirectToSurface(allowed)) return;
-        if (allowed !== path) go(allowed);
-      };
-
-      syncSession();
-      return () => { cancelled = true; };
-    }, [path]);
 
     // apply tweaks to root
     useEffect(() => {

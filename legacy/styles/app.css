@@ -370,20 +370,15 @@ h3 { font-size: 13px; margin: 0 0 6px; font-weight: 600; }
   padding: 7px 10px; font-size: 13px; color: var(--fg); outline: none; width: 100%;
   transition: border-color 80ms, box-shadow 80ms;
 }
-.input::placeholder, .select::placeholder, textarea.input::placeholder {
-  color: var(--muted-2);
-  opacity: 1;
-}
 .input:focus, .select:focus, textarea.input:focus {
   border-color: var(--ink); box-shadow: 0 0 0 3px rgba(14,42,71,0.08);
 }
 .input.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .input[disabled] { background: var(--bg); color: var(--muted); }
-.input.with-prefix { padding-left: 38px; }
-.input.with-suffix { padding-right: 84px; }
+.input.with-prefix { padding-left: 36px; }
 .input-wrap { position: relative; }
-.input-wrap .prefix { position: absolute; left: 12px; top: 50%; transform: translateY(calc(-50% + 1px)); display: inline-flex; align-items: center; justify-content: center; color: var(--muted); font-family: var(--mono); font-size: 11px; line-height: 1; }
-.input-wrap .suffix { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; color: var(--muted); font-family: var(--mono); font-size: 11px; line-height: 1; }
+.input-wrap .prefix { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-family: var(--mono); font-size: 11px; }
+.input-wrap .suffix { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-family: var(--mono); font-size: 11px; }
 
 .toggle {
   width: 30px; height: 17px; border-radius: 10px; background: var(--line); position: relative;
