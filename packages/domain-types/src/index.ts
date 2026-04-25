@@ -1,5 +1,6 @@
 export * from "./access-control";
 export * from "./bank";
+export * from "./documents";
 export * from "./finance";
 export * from "./inventory";
 export * from "./mock-data";

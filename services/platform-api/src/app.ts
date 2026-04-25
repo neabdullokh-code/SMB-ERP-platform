@@ -7,6 +7,7 @@ import { auditModule } from "./modules/audit/index.js";
 import { authModule } from "./modules/auth/index.js";
 import { bankMonitoringModule } from "./modules/bank-monitoring/index.js";
 import { creditModule } from "./modules/credit/index.js";
+import { documentsModule } from "./modules/documents/index.js";
 import { financeModule } from "./modules/finance/index.js";
 import { inventoryModule } from "./modules/inventory/index.js";
 import { notificationsModule } from "./modules/notifications/index.js";
@@ -56,6 +57,7 @@ export function buildApp() {
   app.register(tenancyModule);
   app.register(financeModule);
   app.register(inventoryModule);
+  app.register(documentsModule);
   app.register(productionModule);
   app.register(serviceOrdersModule);
   app.register(bankMonitoringModule);
