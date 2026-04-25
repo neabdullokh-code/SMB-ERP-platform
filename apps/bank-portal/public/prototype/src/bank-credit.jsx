@@ -1,54 +1,206 @@
 // Bank — Credit queue (hero) and Loan Application review (centerpiece)
 
-function CreditQueue({ go }) {
+const CREDIT_QUEUE_I18N = {
+  ru: {
+    title: "Кредитная очередь",
+    applicationsLabel: "заявок",
+    avgTimeLabel: "среднее время решения",
+    slaLabel: "SLA 24ч",
+    slaHealthLabel: "Здоровье SLA",
+    filter: "Фильтр",
+    chips: {
+      all: "Все",
+      approve: "AI: одобрить",
+      review: "AI: проверить",
+      decline: "AI: отклонить"
+    },
+    score: "Скор"
+  },
+  en: {
+    title: "Credit queue",
+    applicationsLabel: "applications",
+    avgTimeLabel: "avg time to decision",
+    slaLabel: "SLA 24h",
+    slaHealthLabel: "SLA health",
+    filter: "Filter",
+    chips: {
+      all: "All",
+      approve: "AI: approve",
+      review: "AI: review",
+      decline: "AI: decline"
+    },
+    score: "Score"
+  },
+  uz: {
+    title: "Kredit navbati",
+    applicationsLabel: "ariza",
+    avgTimeLabel: "qaror vaqti o'rtachasi",
+    slaLabel: "SLA 24 soat",
+    slaHealthLabel: "SLA holati",
+    filter: "Filtr",
+    chips: {
+      all: "Barchasi",
+      approve: "AI: tasdiqlash",
+      review: "AI: ko'rib chiqish",
+      decline: "AI: rad etish"
+    },
+    score: "Ball"
+  }
+};
+
+/* ─── Kanban Board ───────────────────────────────────────── */
+const KANBAN_COLS = [
+  { key: "new",       label: "New",          color: "var(--muted)" },
+  { key: "review",    label: "In Review",    color: "var(--warn)" },
+  { key: "committee", label: "Committee",    color: "var(--info, #0ea5e9)" },
+  { key: "approved",  label: "Approved",     color: "var(--good)" },
+  { key: "disbursed", label: "Disbursed",    color: "var(--ai)" },
+];
+
+function KanbanBoard({ queue, sel, setSel }) {
+  const buckets = {
+    new:       queue.filter((_,i) => i < 3),
+    review:    queue.filter((_,i) => i >= 3 && i < 6),
+    committee: queue.filter((_,i) => i >= 6 && i < 8),
+    approved:  queue.filter((_,i) => i >= 8 && i < 10),
+    disbursed: queue.filter((_,i) => i >= 10),
+  };
+  return (
+    <div className="kanban mt-4" style={{minHeight:"calc(100vh - 270px)"}}>
+      {KANBAN_COLS.map(col => (
+        <div key={col.key} className="kanban-col">
+          <div className="kanban-col-header">
+            <span style={{width:7, height:7, borderRadius:"50%", background:col.color, flexShrink:0}}/>
+            {col.label}
+            <span className="sp"/>
+            <span className="kanban-badge">{buckets[col.key].length}</span>
+          </div>
+          <div className="kanban-col-body">
+            {buckets[col.key].map(q => {
+              const globalIdx = queue.indexOf(q);
+              return (
+                <div key={q.id} className={`kanban-card${sel === globalIdx ? " sel" : ""}`}
+                  onClick={() => setSel(globalIdx)}>
+                  <div className="row" style={{marginBottom:4, gap:4}}>
+                    <span className="mono muted" style={{fontSize:9, flex:1}}>{q.id}</span>
+                    <Pill tone={q.aiRec==="approve"?"good":q.aiRec==="review"?"warn":"bad"} dot={false} style={{fontSize:9}}>
+                      AI {q.aiRec}
+                    </Pill>
+                  </div>
+                  <div style={{fontSize:12.5, fontWeight:500, color:"var(--ink)", marginBottom:2, lineHeight:1.3}}>{q.co}</div>
+                  <div className="mono muted" style={{fontSize:10.5}}>{q.amt}</div>
+                  <div className="row mt-6" style={{gap:4, alignItems:"center"}}>
+                    <span className="mono muted" style={{fontSize:9}}>Score {q.score}</span>
+                    <span className="sp"/>
+                    {q.priority === "high" && <Pill tone="bad" dot={false} style={{fontSize:8, padding:"1px 5px"}}>!</Pill>}
+                  </div>
+                </div>
+              );
+            })}
+            {buckets[col.key].length === 0 && (
+              <div style={{textAlign:"center", padding:"18px 8px", color:"var(--muted)", fontSize:10.5, fontFamily:"var(--mono)"}}>
+                Empty
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CreditQueue({ go, lang = "ru" }) {
   const [sel, setSel] = useStateS(0);
-  const [filter, setFilter] = useStateS("All");
+  const [view, setView] = useStateS("list"); // "list" | "kanban"
+  const t = CREDIT_QUEUE_I18N[lang] || CREDIT_QUEUE_I18N.ru;
+  const filterOptions = [
+    { key: "all",     label: t.chips.all },
+    { key: "approve", label: t.chips.approve },
+    { key: "review",  label: t.chips.review },
+    { key: "decline", label: t.chips.decline }
+  ];
+  const [filter, setFilter] = useStateS("all");
   const queue = LOAN_QUEUE;
+
+  // Cmd+Enter to approve the selected application
+  useEffectS(() => {
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        const app = queue[sel];
+        if (app) {
+          window.toast && window.toast.good(`Approved: ${app.co} · ${app.amt}`);
+        }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sel, queue]);
+
   return (
     <div className="page page-flush">
       <div className="page-head">
         <div>
-          <h1>Credit queue</h1>
-          <div className="sub">17 applications · avg time to decision <span className="mono" style={{color:"var(--ai)"}}>4h 12m</span> · SLA 24h</div>
+          <h1>{t.title}</h1>
+          <div className="sub">17 {t.applicationsLabel} · {t.avgTimeLabel} <span className="mono" style={{color:"var(--ai)"}}>4h 12m</span> · {t.slaLabel}</div>
         </div>
         <span className="sp"/>
-        <div className="chip">SLA health <span style={{color:"var(--good)", marginLeft:6}}>98%</span></div>
-        <Button variant="ghost" icon={<Icon.Filter size={13}/>}>Filter</Button>
-      </div>
-      <div className="split-layout" style={{gridTemplateColumns:"340px 1fr"}}>
-        <div className="card card-pad-0" style={{overflow:"hidden"}}>
-          <div className="tbl-toolbar" style={{gap:4}}>
-            {["All","AI: approve","AI: review","AI: decline"].map(c => (
-              <button key={c} className="chip" onClick={() => setFilter(c)}
-                style={{background: filter===c ? "var(--ink)":undefined, color:filter===c?"var(--surface)":undefined, borderColor:filter===c?"var(--ink)":undefined}}>{c}</button>
-            ))}
-          </div>
-          <div style={{maxHeight:"calc(100vh - 220px)", overflowY:"auto"}}>
-            {queue.map((q, i) => (
-              <div key={q.id} onClick={() => setSel(i)}
-                className="hairline-b"
-                style={{padding:"12px 14px", cursor:"pointer", background: sel===i ? "var(--ai-bg)" : "transparent", borderLeft: sel===i ? "3px solid var(--ai)" : "3px solid transparent"}}>
-                <div className="row">
-                  <span className="mono id" style={{fontSize:10}}>{q.id}</span>
-                  <span className="sp"/>
-                  <Pill tone={q.aiRec==="approve"?"good":q.aiRec==="review"?"warn":"bad"} dot={false}>AI {q.aiRec}</Pill>
-                </div>
-                <div style={{fontSize:13, color:"var(--ink)", fontWeight:500, marginTop:4}}>{q.co}</div>
-                <div className="muted" style={{fontSize:11, marginTop:2}}>{q.product} · <span className="mono">{q.amt}</span></div>
-                <div className="row mt-8">
-                  <span className="mono muted" style={{fontSize:10}}>Score {q.score} · {q.submitted}</span>
-                  <span className="sp"/>
-                  {q.priority === "high" && <Pill tone="bad" dot={false}>Priority</Pill>}
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="chip">{t.slaHealthLabel} <span style={{color:"var(--good)", marginLeft:6}}>98%</span></div>
+        <div className="view-switcher">
+          <button className={`view-switcher-btn${view==="list" ? " active" : ""}`} onClick={() => setView("list")}>
+            <Icon.Doc size={12}/> List
+          </button>
+          <button className={`view-switcher-btn${view==="kanban" ? " active" : ""}`} onClick={() => setView("kanban")}>
+            <Icon.Layers size={12}/> Kanban
+          </button>
         </div>
+        <Button variant="ghost" icon={<Icon.Filter size={13}/>}>{t.filter}</Button>
+      </div>
 
+      {view === "kanban" ? (
         <div>
-          <LoanReview app={queue[sel]} go={go}/>
+          <KanbanBoard queue={queue} sel={sel} setSel={setSel}/>
+          {sel !== null && (
+            <div className="mt-12">
+              <LoanReview app={queue[sel]} go={go}/>
+            </div>
+          )}
         </div>
-      </div>
+      ) : (
+        <div className="split-layout" style={{gridTemplateColumns:"340px 1fr"}}>
+          <div className="card card-pad-0" style={{overflow:"hidden"}}>
+            <div className="tbl-toolbar" style={{gap:4}}>
+              {filterOptions.map((opt) => (
+                <button key={opt.key} className="chip" onClick={() => setFilter(opt.key)}
+                  style={{background: filter===opt.key ? "var(--ink)":undefined, color:filter===opt.key?"var(--surface)":undefined, borderColor:filter===opt.key?"var(--ink)":undefined}}>{opt.label}</button>
+              ))}
+            </div>
+            <div style={{maxHeight:"calc(100vh - 220px)", overflowY:"auto"}}>
+              {queue.map((q, i) => (
+                <div key={q.id} onClick={() => setSel(i)}
+                  className="hairline-b"
+                  style={{padding:"12px 14px", cursor:"pointer", background: sel===i ? "var(--ai-bg)" : "transparent", borderLeft: sel===i ? "3px solid var(--ai)" : "3px solid transparent"}}>
+                  <div className="row">
+                    <span className="mono id" style={{fontSize:10}}>{q.id}</span>
+                    <span className="sp"/>
+                    <Pill tone={q.aiRec==="approve"?"good":q.aiRec==="review"?"warn":"bad"} dot={false}>AI {q.aiRec}</Pill>
+                  </div>
+                  <div style={{fontSize:13, color:"var(--ink)", fontWeight:500, marginTop:4}}>{q.co}</div>
+                  <div className="muted" style={{fontSize:11, marginTop:2}}>{q.product} · <span className="mono">{q.amt}</span></div>
+                  <div className="row mt-8">
+                    <span className="mono muted" style={{fontSize:10}}>{t.score} {q.score} · {q.submitted}</span>
+                    <span className="sp"/>
+                    {q.priority === "high" && <Pill tone="bad" dot={false}>Priority</Pill>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <LoanReview app={queue[sel]} go={go}/>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -219,4 +371,4 @@ function LoanReview({ app, go }) {
   );
 }
 
-Object.assign(window, { CreditQueue, LoanReview });
+Object.assign(window, { CreditQueue, LoanReview, KanbanBoard });

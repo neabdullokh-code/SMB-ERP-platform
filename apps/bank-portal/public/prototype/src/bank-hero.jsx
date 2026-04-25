@@ -210,6 +210,171 @@ function BankTenants({ go }) {
   );
 }
 
+/* ─── Split-Screen Underwriter ───────────────────────────── */
+function UnderwriterView({ go }) {
+  const [reqSent, setReqSent] = useStateS(false);
+
+  const BFEED = [
+    { kind: "payment", time: "2h",  title: "Payment received",  text: "Oriental Trade LLC paid #INV-1482", amount: "+14 500 000 UZS", positive: true },
+    { kind: "stock",   time: "6h",  title: "Stock received",    text: "38 units · Cooking oil 5L from Samarkand Oil Co." },
+    { kind: "invoice", time: "1d",  title: "Invoice issued",    text: "#INV-1481 sent to Zamon Foods · due Apr 14", amount: "8 200 000 UZS" },
+    { kind: "bank",    time: "1d",  title: "Transfer",          text: "UZS 8.2M transferred to SQB current account" },
+    { kind: "stock",   time: "2d",  title: "Low stock alert",   text: "Laundry detergent 6kg — 12 left (min 40)" },
+    { kind: "user",    time: "3d",  title: "Staff change",      text: "New employee: Bekzod Yusupov · Warehouse Operator" },
+  ];
+  const kindMeta = {
+    payment: { icon: <Icon.Coin size={12}/>,   color: "var(--good)", bg: "var(--good-bg)" },
+    invoice: { icon: <Icon.Doc size={12}/>,    color: "var(--ink)",  bg: "var(--bg)" },
+    stock:   { icon: <Icon.Box size={12}/>,    color: "var(--muted)",bg: "var(--bg)" },
+    bank:    { icon: <Icon.Bank size={12}/>,   color: "var(--ai)",   bg: "var(--ai-bg)" },
+    user:    { icon: <Icon.Users size={12}/>,  color: "var(--muted)",bg: "var(--bg)" },
+  };
+  const FLAGS = [
+    { tone: "bad",  icon: <Icon.Alert size={12}/>, title: "Revenue Q1 −18% YoY",           body: "Q1 2025 down vs Q1 2024. Seasonal pattern or structural decline — verify." },
+    { tone: "warn", icon: <Icon.Alert size={12}/>, title: "AR days stretched · 34d",        body: "Average collection period grew from 22 → 34 days last quarter." },
+    { tone: "warn", icon: <Icon.Alert size={12}/>, title: "Customer concentration 62%",     body: "Top 2 customers = 62% of revenue. Single-account risk." },
+    { tone: "good", icon: <Icon.Check size={12}/>, title: "Zero overdrafts · 2.3 yrs",      body: "1 420 SQB transactions, no overdrafts or missed payments." },
+    { tone: "good", icon: <Icon.Check size={12}/>, title: "Inventory turnover 6.2x/yr",     body: "Well above sector median 4.1x — disciplined stock management." },
+  ];
+  const RATIOS = [
+    ["Revenue TTM",  "2.48B UZS", "good"],
+    ["Gross margin", "28.4%",     "good"],
+    ["AR days",      "34d",       "warn"],
+    ["Current ratio","1.82",      "good"],
+    ["Debt / equity","0.38",      "good"],
+    ["EBITDA margin","14.8%",     "good"],
+  ];
+
+  return (
+    <div className="underwriter">
+      {/* LEFT: read-only business feed */}
+      <div className="underwriter-feed">
+        <div className="row mb-12">
+          <div style={{fontSize:13, fontWeight:600, color:"var(--ink)"}}>Business Activity Feed</div>
+          <span className="sp"/>
+          <span className="mono muted" style={{fontSize:10}}>READ-ONLY · LIVE ERP</span>
+        </div>
+
+        {reqSent && (
+          <div className="feed-card mb-12" style={{border:"2px solid var(--ai)", marginBottom:12}}>
+            <div className="feed-card-header">
+              <div style={{width:28, height:28, borderRadius:8, background:"var(--ai-bg)", display:"grid", placeItems:"center", color:"var(--ai)", flexShrink:0}}><Icon.Sparkle size={12}/></div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:12.5, fontWeight:600, color:"var(--ai)"}}>Document Request · SQB Bank</div>
+                <div className="mono muted" style={{fontSize:10}}>Just now · Awaiting owner</div>
+              </div>
+              <Pill tone="warn" dot={false}>Pending</Pill>
+            </div>
+            <div className="feed-card-body">
+              <div style={{fontSize:13, color:"var(--ink)"}}>SQB has requested: <b>Q1 2025 P&L Statement</b></div>
+              <div className="muted" style={{fontSize:12, marginTop:4}}>Owner will see this in their ERP feed and can upload directly.</div>
+            </div>
+          </div>
+        )}
+
+        <div className="feed">
+          {BFEED.map((item, i) => {
+            const m = kindMeta[item.kind] || kindMeta.invoice;
+            return (
+              <div key={i} className="feed-card">
+                <div className="feed-card-header">
+                  <div style={{width:28, height:28, borderRadius:7, background:m.bg, display:"grid", placeItems:"center", color:m.color, flexShrink:0}}>{m.icon}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:12.5, fontWeight:500, color:"var(--ink)"}}>{item.title}</div>
+                    <div className="mono muted" style={{fontSize:10}}>{item.time} ago</div>
+                  </div>
+                </div>
+                <div className="feed-card-body">
+                  <div style={{fontSize:13, color:"var(--fg)"}}>{item.text}</div>
+                  {item.amount && (
+                    <div style={{fontSize:14, fontWeight:700, fontFamily:"var(--mono)", marginTop:5, color: item.positive ? "var(--good)" : "var(--ink)"}}>{item.amount}</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* RIGHT: credit analysis */}
+      <div className="underwriter-data">
+        <div className="row mb-12">
+          <div style={{fontSize:13, fontWeight:600, color:"var(--ink)"}}>Credit Analysis</div>
+          <span className="sp"/>
+          {!reqSent ? (
+            <Button variant="ghost" size="sm" icon={<Icon.FileDoc size={12}/>}
+              onClick={() => { setReqSent(true); window.toast && window.toast.ai("Doc request sent — owner will see it in their ERP feed"); }}>
+              Request document
+            </Button>
+          ) : (
+            <span className="pill warn" style={{fontSize:10}}><span className="dot"/>Doc requested</span>
+          )}
+        </div>
+
+        {/* Credit score arc */}
+        <div className="ai-card mb-12" style={{padding:14}}>
+          <span className="ai-tag"><Icon.Sparkle size={9}/> AI ASSESSMENT</span>
+          <div className="row mt-10" style={{gap:14, alignItems:"center"}}>
+            <div style={{position:"relative", flexShrink:0}}>
+              <ArcGauge value={81} max={100} size={88} thickness={8} color="var(--ai)" trackColor="var(--line)"/>
+              <div style={{position:"absolute", inset:0, display:"grid", placeItems:"center"}}>
+                <div style={{textAlign:"center"}}>
+                  <div style={{fontSize:18, fontWeight:700, color:"var(--ink)", lineHeight:1}}>81</div>
+                  <div className="mono muted" style={{fontSize:8}}>/100</div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div style={{fontSize:13, fontWeight:600, color:"var(--ink)", marginBottom:6}}>Credit Score</div>
+              <div className="row gap-4 mb-6">
+                <Pill tone="good" dot={false}>Low risk</Pill>
+                <Pill tone="ai" dot={false}>Conf. 94%</Pill>
+              </div>
+              <div className="mono muted" style={{fontSize:10}}>Default probability: 2.1%</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Key ratios */}
+        <div className="eyebrow mb-6">Financial ratios</div>
+        <div className="hairline" style={{borderRadius:8, overflow:"hidden", marginBottom:14}}>
+          {RATIOS.map(([label, val, tone], i) => (
+            <div key={i} className="row hairline-b" style={{padding:"7px 12px", fontSize:12, background: i%2===0 ? "var(--surface)" : "var(--surface-2)"}}>
+              <span className="muted">{label}</span>
+              <span className="sp"/>
+              <span className="mono" style={{fontWeight:500, color:`var(--${tone})`}}>{val}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Automated red flags */}
+        <div className="row mb-6">
+          <div className="eyebrow">Automated red flags</div>
+          <span className="sp"/>
+          <Pill tone="warn" dot={false}>2 issues</Pill>
+        </div>
+        {FLAGS.map((f, i) => (
+          <div key={i} className={`risk-flag ${f.tone}`}>
+            <div style={{marginTop:1, flexShrink:0, color:`var(--${f.tone})`}}>{f.icon}</div>
+            <div>
+              <div style={{fontSize:12.5, fontWeight:500, color:`var(--${f.tone})`}}>{f.title}</div>
+              <div style={{fontSize:11.5, color:"var(--fg-2)", marginTop:2, lineHeight:1.4}}>{f.body}</div>
+            </div>
+          </div>
+        ))}
+
+        {/* CTA */}
+        <div className="divider"/>
+        <Button variant="primary" className="block" style={{justifyContent:"space-between"}}
+          onClick={() => { window.toast && window.toast.good("Opened in credit queue"); go("/bank/credit-queue"); }}>
+          <span style={{display:"flex", alignItems:"center", gap:6}}><Icon.Handshake size={13}/> Open in credit queue</span>
+          <span className="kbd" style={{background:"rgba(255,255,255,0.15)", color:"rgba(255,255,255,0.65)", borderColor:"transparent", marginLeft:"auto"}}>⌘↵</span>
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function TenantDetail({ go }) {
   const [tab, setTab] = useStateS("overview");
   const t = TENANTS[2]; // Kamolot Savdo
@@ -240,13 +405,14 @@ function TenantDetail({ go }) {
         <Button variant="primary" icon={<Icon.Handshake size={13}/>} onClick={() => go("/bank/credit-queue")}>Offer financing</Button>
       </div>
       <Tabs tabs={[
-        {key:"overview", label:"Overview"},
-        {key:"financials", label:"Financials"},
-        {key:"credit", label:"Credit history", count:4},
-        {key:"loans", label:"Loan portfolio", count:2},
-        {key:"txn", label:"Transactions"},
-        {key:"docs", label:"Documents"},
-        {key:"notes", label:"Notes"},
+        {key:"overview",     label:"Overview"},
+        {key:"underwriter",  label:"Underwriter"},
+        {key:"financials",   label:"Financials"},
+        {key:"credit",       label:"Credit history", count:4},
+        {key:"loans",        label:"Loan portfolio", count:2},
+        {key:"txn",          label:"Transactions"},
+        {key:"docs",         label:"Documents"},
+        {key:"notes",        label:"Notes"},
       ]} value={tab} onChange={setTab}/>
 
       <div className="mt-16">
@@ -258,7 +424,8 @@ function TenantDetail({ go }) {
             <Kpi label="Risk tier" value="A−" delta="Stable" trend="up"/>
           </div>
         )}
-        {tab !== "overview" && <Banner tone="info" title={`${tab[0].toUpperCase()+tab.slice(1)} data loaded`}>Switch tabs to explore other sections. This view is wired up with real ERP data.</Banner>}
+        {tab === "underwriter" && <UnderwriterView go={go}/>}
+        {tab !== "overview" && tab !== "underwriter" && <Banner tone="info" title={`${tab[0].toUpperCase()+tab.slice(1)} data loaded`}>Switch tabs to explore other sections. This view is wired up with real ERP data.</Banner>}
 
         <div className="grid mt-16" style={{gridTemplateColumns:"2fr 1fr", gap:12}}>
           <div className="card card-pad-0">
@@ -304,4 +471,4 @@ function TenantDetail({ go }) {
   );
 }
 
-Object.assign(window, { BankDashboard, BankTenants, TenantDetail });
+Object.assign(window, { BankDashboard, BankTenants, TenantDetail, UnderwriterView });

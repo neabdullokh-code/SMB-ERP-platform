@@ -582,10 +582,37 @@ h3 { font-size: 13px; margin: 0 0 6px; font-weight: 600; }
 /* login / auth backdrop */
 .auth-bg {
   min-height: 100vh; background: var(--bg); display: grid; place-items: center; padding: 40px 20px;
+  position: relative; overflow: hidden;
 }
+.auth-bg::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 55% at 15% 25%, rgba(209,138,43,0.13) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 60% at 85% 75%, rgba(14,42,71,0.09) 0%, transparent 55%),
+    radial-gradient(ellipse 42% 45% at 65% 12%, rgba(31,122,77,0.07) 0%, transparent 50%);
+  animation: auth-orbs 14s ease-in-out infinite alternate;
+}
+[data-theme="dark"] .auth-bg::before {
+  background:
+    radial-gradient(ellipse 60% 55% at 15% 25%, rgba(232,165,61,0.09) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 60% at 85% 75%, rgba(120,167,209,0.07) 0%, transparent 55%),
+    radial-gradient(ellipse 42% 45% at 65% 12%, rgba(79,177,122,0.06) 0%, transparent 50%);
+}
+@keyframes auth-orbs {
+  0%   { transform: scale(1) translate(0px, 0px); }
+  33%  { transform: scale(1.04) translate(14px, -8px); }
+  66%  { transform: scale(0.97) translate(-8px, 14px); }
+  100% { transform: scale(1.02) translate(6px, -5px); }
+}
+.auth-bg > * { position: relative; z-index: 1; }
 .auth-card {
-  width: 100%; max-width: 420px; background: var(--surface); border: 1px solid var(--line);
+  width: 100%; max-width: 420px;
+  background: rgba(255,255,255,0.93); border: 1px solid var(--line);
   border-radius: var(--r-3); padding: 28px; box-shadow: var(--shadow-2);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+}
+[data-theme="dark"] .auth-card {
+  background: rgba(16,26,44,0.93);
 }
 
 .ticker {
@@ -619,3 +646,264 @@ h3 { font-size: 13px; margin: 0 0 6px; font-weight: 600; }
 
 /* dot divider */
 .sep-dot { width: 3px; height: 3px; background: var(--muted-2); border-radius: 50%; display: inline-block; }
+
+/* ============================================================
+   TOAST SYSTEM
+   ============================================================ */
+.toast-stack {
+  position: fixed; bottom: 24px; right: 24px; z-index: 9000;
+  display: flex; flex-direction: column-reverse; gap: 8px; pointer-events: none;
+}
+.toast {
+  pointer-events: all;
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-radius: 8px;
+  background: var(--ink); color: var(--surface);
+  font-size: 13px; font-family: var(--sans);
+  box-shadow: var(--shadow-3); min-width: 240px; max-width: 360px;
+  animation: toast-in 0.28s cubic-bezier(.22,.68,0,1.2) both;
+}
+.toast.toast-exit { animation: toast-out 0.22s ease forwards; }
+.toast.toast-good { background: var(--good); }
+.toast.toast-warn { background: var(--warn); }
+.toast.toast-bad  { background: var(--bad); }
+.toast.toast-ai   { background: var(--ink); border-left: 3px solid var(--ai); }
+@keyframes toast-in  { from { transform: translateY(14px) scale(.96); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+@keyframes toast-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(.95); } }
+
+/* ============================================================
+   SIDEBAR ACTIVE INDICATOR
+   ============================================================ */
+.nav-item { position: relative; }
+.nav-item.active::before {
+  content: ""; position: absolute;
+  left: 0; top: 5px; bottom: 5px; width: 3px;
+  background: var(--ink); border-radius: 0 2px 2px 0;
+}
+
+/* ============================================================
+   KEYBOARD SHORTCUTS OVERLAY
+   ============================================================ */
+.shortcuts-scrim {
+  position: fixed; inset: 0; z-index: 8000;
+  background: rgba(10,18,30,0.45); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center;
+  animation: fade 140ms ease-out;
+}
+.shortcuts-modal {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; padding: 24px; width: 500px; max-height: 80vh; overflow-y: auto;
+  box-shadow: var(--shadow-3); animation: modalIn 160ms ease-out;
+}
+.shortcut-row {
+  display: flex; align-items: center; padding: 7px 0;
+  border-bottom: 1px solid var(--line-2); font-size: 13px; color: var(--fg);
+}
+.shortcut-row:last-child { border-bottom: 0; }
+.shortcut-keys { display: flex; gap: 3px; margin-left: auto; }
+
+/* ============================================================
+   SEARCH PALETTE — KEYBOARD FOCUS
+   ============================================================ */
+.search-result-row { transition: background 80ms; cursor: pointer; }
+.search-result-row:hover,
+.search-result-row.kb-focused { background: var(--hover); }
+
+/* ============================================================
+   NOTIFICATION BELL — UNREAD DOT CONTROL
+   ============================================================ */
+.notif-btn .unread { display: none; }
+.notif-btn.has-unread .unread { display: block; }
+
+/* ============================================================
+   OCR DRAG-DROP ZONE
+   ============================================================ */
+.drop-zone { transition: border-color 0.15s, background 0.15s, box-shadow 0.15s; }
+.drop-zone.drag-over {
+  border-color: var(--ai) !important;
+  background: var(--ai-bg) !important;
+  box-shadow: 0 0 0 3px var(--ai-line) !important;
+}
+
+/* ============================================================
+   ARC GAUGE
+   ============================================================ */
+.arc-gauge { display: block; overflow: visible; }
+.arc-gauge-fill { transition: stroke-dasharray 1.3s cubic-bezier(.4,0,.2,1); }
+
+/* ============================================================
+   PERIOD SELECTOR — ACTIVE STATE
+   ============================================================ */
+.btn-group .btn.sm.period-active {
+  background: var(--ink); color: var(--surface); border-color: var(--ink);
+}
+
+/* ============================================================
+   SPIN UTILITY
+   ============================================================ */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 1s linear infinite; display: inline-block; }
+
+/* ============================================================
+   CRUMB LINKS (clickable breadcrumbs)
+   ============================================================ */
+.crumbs .crumb-link { cursor: pointer; }
+.crumbs .crumb-link:hover { color: var(--ink); text-decoration: underline; }
+
+/* ============================================================
+   PULSE STORIES
+   ============================================================ */
+.stories-bar { display: flex; gap: 14px; padding: 2px 0 18px; overflow-x: auto; scrollbar-width: none; }
+.stories-bar::-webkit-scrollbar { display: none; }
+.story-bubble-wrap { display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; flex-shrink: 0; }
+.story-ring {
+  width: 58px; height: 58px; border-radius: 50%; padding: 2.5px;
+  display: grid; place-items: center;
+  background: var(--line); transition: transform 0.14s, box-shadow 0.14s;
+}
+.story-ring:hover { transform: scale(1.08); box-shadow: 0 4px 14px rgba(0,0,0,0.13); }
+.story-ring-inner {
+  width: 100%; height: 100%; border-radius: 50%; overflow: hidden;
+  background: var(--surface); border: 2.5px solid var(--surface);
+  display: grid; place-items: center; font-size: 22px; line-height: 1;
+}
+.story-ring.tone-bad  { background: var(--bad); }
+.story-ring.tone-good { background: var(--good); }
+.story-ring.tone-ai   { background: linear-gradient(135deg, var(--ai), #7c3aed); }
+.story-ring.tone-warn { background: var(--warn); }
+.story-label { font-size: 10px; font-family: var(--mono); color: var(--fg-2); max-width: 64px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.story-panel-scrim {
+  position: fixed; inset: 0; z-index: 7000;
+  background: rgba(10,18,30,0.5); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  animation: fade 140ms ease-out;
+}
+.story-panel {
+  position: relative; background: var(--surface); border-radius: 16px;
+  box-shadow: var(--shadow-3); width: 360px; padding: 28px 24px 20px;
+  animation: modalIn 180ms cubic-bezier(.22,.68,0,1.2);
+}
+.story-panel-emoji { font-size: 36px; margin-bottom: 12px; display: block; }
+.story-panel-close {
+  position: absolute; top: 14px; right: 14px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 50%;
+  width: 28px; height: 28px; display: grid; place-items: center;
+  cursor: pointer; color: var(--muted);
+}
+.story-panel-close:hover { background: var(--hover); }
+
+/* ============================================================
+   BUSINESS FEED (SMB portal)
+   ============================================================ */
+.feed { display: flex; flex-direction: column; gap: 10px; }
+.feed-card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 3px 12px rgba(0,0,0,0.04);
+  transition: box-shadow 0.15s;
+}
+.feed-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 6px 20px rgba(0,0,0,0.06); }
+.feed-card-header { display: flex; align-items: center; gap: 10px; padding: 14px 14px 0; }
+.feed-card-body { padding: 8px 14px 12px; }
+.feed-card-actions {
+  display: flex; gap: 8px; padding: 10px 14px;
+  border-top: 1px solid var(--line-2); background: var(--surface-2);
+}
+.feed-action-btn {
+  flex: 1; padding: 7px 10px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--surface);
+  color: var(--ink); font-size: 12px; font-family: var(--sans);
+  cursor: pointer; font-weight: 500; white-space: nowrap;
+  transition: background 0.1s, border-color 0.1s;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+}
+.feed-action-btn:hover { background: var(--hover); }
+.feed-action-btn.primary { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.feed-action-btn.primary:hover { opacity: 0.88; }
+.feed-action-btn.danger { color: var(--bad); border-color: rgba(220,60,60,0.25); }
+.feed-action-btn.danger:hover { background: var(--bad-bg); }
+.feed-amount { font-size: 16px; font-weight: 700; font-family: var(--mono); margin-top: 5px; color: var(--ink); }
+.feed-amount.positive { color: var(--good); }
+.feed-amount.negative { color: var(--bad); }
+.feed-dismissed { opacity: 0.42; pointer-events: none; transition: opacity 0.3s; }
+
+/* ============================================================
+   KANBAN BOARD (Bank credit pipeline)
+   ============================================================ */
+.kanban { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 16px; align-items: flex-start; }
+.kanban::-webkit-scrollbar { height: 6px; }
+.kanban::-webkit-scrollbar-track { background: var(--bg); }
+.kanban::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+.kanban-col {
+  flex-shrink: 0; width: 232px; background: var(--surface-2);
+  border-radius: 10px; overflow: hidden; border: 1px solid var(--line);
+}
+.kanban-col-header {
+  padding: 9px 12px; font-size: 10.5px; font-weight: 600;
+  font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.07em;
+  display: flex; align-items: center; gap: 6px;
+  border-bottom: 1px solid var(--line); color: var(--fg-2);
+  background: var(--surface);
+}
+.kanban-col-body { padding: 8px; display: flex; flex-direction: column; gap: 6px; min-height: 60px; }
+.kanban-card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 8px; padding: 10px 11px; cursor: pointer;
+  transition: box-shadow 0.12s, transform 0.1s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.kanban-card:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.1); transform: translateY(-1px); }
+.kanban-card.sel { border-color: var(--ai); background: var(--ai-bg); box-shadow: 0 0 0 2px rgba(var(--ai-rgb,0,140,255),0.15); }
+.kanban-badge {
+  min-width: 17px; height: 17px; border-radius: 9px; padding: 0 5px;
+  font-size: 9.5px; font-family: var(--mono); font-weight: 700;
+  background: var(--line); color: var(--fg-2); display: inline-flex;
+  align-items: center; justify-content: center;
+}
+
+/* View switcher (List / Kanban) */
+.view-switcher { display: flex; gap: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.view-switcher-btn {
+  padding: 5px 12px; font-size: 12px; font-family: var(--sans);
+  border: 0; background: transparent; cursor: pointer; color: var(--muted);
+  display: flex; align-items: center; gap: 5px; transition: background 0.1s, color 0.1s;
+}
+.view-switcher-btn:first-child { border-right: 1px solid var(--line); }
+.view-switcher-btn.active { background: var(--ink); color: var(--surface); }
+
+/* ============================================================
+   SPLIT-SCREEN UNDERWRITER (Bank tenant detail)
+   ============================================================ */
+.underwriter { display: grid; grid-template-columns: 1fr 1.15fr; gap: 0; }
+.underwriter-feed {
+  border-right: 1px solid var(--line); overflow-y: auto;
+  background: var(--bg); padding: 16px;
+  max-height: calc(100vh - 240px);
+}
+.underwriter-data { overflow-y: auto; padding: 16px; max-height: calc(100vh - 240px); }
+.risk-flag {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 10px 12px; border-radius: 8px; margin-bottom: 7px;
+  border-left: 3px solid transparent;
+}
+.risk-flag.bad  { border-left-color: var(--bad);  background: var(--bad-bg); }
+.risk-flag.warn { border-left-color: var(--warn); background: rgba(224,142,36,0.07); }
+.risk-flag.good { border-left-color: var(--good); background: var(--good-bg); }
+
+/* ============================================================
+   SKELETON LOADING
+   ============================================================ */
+@keyframes shimmer {
+  0%   { background-position: -500px 0; }
+  100% { background-position: 500px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--line-2) 0%, var(--line) 50%, var(--line-2) 100%);
+  background-size: 1000px 100%; animation: shimmer 1.5s ease infinite;
+  border-radius: 4px;
+}
+.skeleton-text { height: 13px; margin-bottom: 8px; border-radius: 3px; }
+.skeleton-title { height: 20px; width: 55%; margin-bottom: 12px; border-radius: 3px; }
+.skeleton-card { height: 100px; border-radius: 10px; }
+.skeleton-kpi { height: 72px; border-radius: 8px; }
