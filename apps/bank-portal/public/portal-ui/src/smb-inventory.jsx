@@ -158,7 +158,7 @@ function OcrScan({ go }) {
   const [stage, setStage] = useStateS(0); // 0 drop, 1 scanning, 2 extracting, 3 done
   const [extracted, setExtracted] = useStateS([]);
   const [jobId, setJobId] = useStateS(null);
-  const [scanError, setScanError] = useStateS("");
+  const [scanNotice, setScanNotice] = useStateS("");
   const fileInputRef = React.useRef(null);
 
   const LINES = [
@@ -175,7 +175,7 @@ function OcrScan({ go }) {
   ];
 
   const start = () => {
-    setScanError("");
+    setScanNotice("");
     setStage(1); 
     setExtracted([]);
     setJobId("ocr_req_" + Math.random().toString(36).substring(7));
@@ -196,7 +196,7 @@ function OcrScan({ go }) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
-    setScanError("Uploaded file selected. Live OCR parsing for uploads is not wired in this surface yet, so sample data was not applied.");
+    setScanNotice("File selected. Live OCR upload parsing is not enabled in this build. Use sample waybill for demo flow.");
   };
 
   return (
@@ -220,9 +220,9 @@ function OcrScan({ go }) {
           </>
         )}
       </div>
-      {scanError && (
-        <Banner tone="warn" title="Scan not started">
-          {scanError}
+      {scanNotice && (
+        <Banner tone="info" title="Upload notice">
+          {scanNotice}
         </Banner>
       )}
 

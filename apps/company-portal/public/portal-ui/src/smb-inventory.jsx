@@ -1267,6 +1267,7 @@ function OcrScan({ go }) {
   const [applying, setApplying] = useStateS(false);
   const [applyError, setApplyError] = useStateS("");
   const [applyMessage, setApplyMessage] = useStateS("");
+  const [scanNotice, setScanNotice] = useStateS("");
   const [scanSource, setScanSource] = useStateS("sample");
   const [scanFields, setScanFields] = useStateS([]);
   const [scanItems, setScanItems] = useStateS([]);
@@ -1304,6 +1305,7 @@ function OcrScan({ go }) {
     setSelectedFileName("WB-23887.pdf");
     setApplyError("");
     setApplyMessage("");
+    setScanNotice("");
     runExtraction(SAMPLE_LINES, SAMPLE_ITEMS);
   };
 
@@ -1315,14 +1317,63 @@ function OcrScan({ go }) {
     setSelectedFileName(file.name);
     setApplyError("");
     setApplyMessage("");
+    setScanNotice("");
 
     const lowerName = file.name.toLowerCase();
-    if (!(lowerName.endsWith(".csv") || lowerName.endsWith(".tsv") || lowerName.endsWith(".txt"))) {
-      setStage(0);
-      setScanFields([]);
-      setScanItems([]);
-      setExtracted([]);
-      setApplyError("Uploaded file selected. OCR parsing for PDF/image files is not enabled in this portal build yet, so no sample data was applied.");
+    if (lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls")) {
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const response = await fetch("/api/inventory/import", {
+          method: "POST",
+          credentials: "include",
+          body: formData
+        });
+        const body = await response.json();
+        if (!response.ok || !body.data) {
+          throw new Error(body.message || body.error?.message || "Excel import failed.");
+        }
+        setScanNotice(`Excel imported: ${body.data.imported} rows (${body.data.movements} inbound movements).`);
+        setTimeout(() => go("/smb/inventory"), 700);
+      } catch (excelError) {
+        setScanNotice(excelError instanceof Error ? excelError.message : "Unable to import Excel file.");
+      }
+      return;
+    }
+
+    const isDelimited = lowerName.endsWith(".csv") || lowerName.endsWith(".tsv") || lowerName.endsWith(".txt");
+    if (!isDelimited) {
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const response = await fetch("/api/inventory/ocr", {
+          method: "POST",
+          credentials: "include",
+          body: formData
+        });
+        const body = await response.json();
+        if (!response.ok || !body.data) {
+          throw new Error(body.message || body.error?.message || "OCR extraction failed.");
+        }
+
+        const fields = Array.isArray(body.data.fields) ? body.data.fields : [];
+        const items = Array.isArray(body.data.items) ? body.data.items : [];
+        if (items.length === 0) {
+          setStage(0);
+          setScanFields([]);
+          setScanItems([]);
+          setExtracted([]);
+          setScanNotice("OCR completed but no line items were detected. You can still use Excel/CSV import.");
+          return;
+        }
+        runExtraction(fields, items);
+      } catch (ocrError) {
+        setStage(0);
+        setScanFields([]);
+        setScanItems([]);
+        setExtracted([]);
+        setScanNotice(ocrError instanceof Error ? ocrError.message : "Unable to run OCR.");
+      }
       return;
     }
 
@@ -1362,7 +1413,7 @@ function OcrScan({ go }) {
       setScanFields([]);
       setScanItems([]);
       setExtracted([]);
-      setApplyError(fileError instanceof Error ? fileError.message : "Unable to parse uploaded file.");
+      setScanNotice(fileError instanceof Error ? fileError.message : "Unable to parse uploaded file.");
     }
   };
 
@@ -1486,6 +1537,11 @@ function OcrScan({ go }) {
       {applyError && (
         <Banner tone="warn" title="Waybill apply failed">
           {applyError}
+        </Banner>
+      )}
+      {scanNotice && (
+        <Banner tone="info" title="Upload notice">
+          {scanNotice}
         </Banner>
       )}
       {applyMessage && (
