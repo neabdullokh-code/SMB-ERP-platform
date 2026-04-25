@@ -1,0 +1,2 @@
+-- Bank portal: Reports
+-- Reporting screens are UI-only in the legacy mock; no dedicated table seed yet.

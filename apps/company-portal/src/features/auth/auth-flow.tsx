@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { mapCompanyRedirectPath } from "@sqb/config/portal";
 import { AuthExperience, type AuthExperienceMode } from "@sqb/ui";
-import { mapCompanyRedirectPath } from "@/lib/portal-routes";
 
 export function CompanyAuthFlow({ mode, actorName }: { mode: AuthExperienceMode; actorName?: string }) {
   const router = useRouter();
@@ -56,9 +56,9 @@ export function CompanyAuthFlow({ mode, actorName }: { mode: AuthExperienceMode;
               { label: "Access state", value: "Fail-closed", detail: "Missing or invalid sessions return users to the real login flow." }
             ]
           : [
-              { label: "SMBs on platform", value: "12 400+", detail: "Prototype-matched marketing stat for the hero section." },
-              { label: "Avg. credit decision", value: "24h", detail: "Prototype-matched turnaround message for financing decisions." },
-              { label: "Financed in 2025", value: "UZS 1.8T", detail: "Prototype-matched financing volume for the hero section." }
+              { label: "SMBs on platform", value: "12 400+", detail: "Platform marketing stat for the hero section." },
+              { label: "Avg. credit decision", value: "24h", detail: "Turnaround message for financing decisions." },
+              { label: "Financed in 2025", value: "UZS 1.8T", detail: "Financing volume highlight for the hero section." }
             ]
       }
       loginIntent={loginIntent}

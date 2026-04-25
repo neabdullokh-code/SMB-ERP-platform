@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { BANK_PROTECTED_PROTOTYPE_PATHS, BANK_PUBLIC_PROTOTYPE_PATHS } from "./src/lib/portal-routes";
+import { BANK_PROTECTED_PORTAL_PATHS, BANK_PUBLIC_PORTAL_PATHS, mapBankRedirectPath } from "@sqb/config/portal";
 
 const AUTH_COOKIES = ["erp_auth_session", "erp_auth_refresh", "erp_role", "erp_tenant", "erp_redirect_path", "erp_requires_terms", "erp_is_privileged"];
 
@@ -102,11 +102,15 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (BANK_PUBLIC_PROTOTYPE_PATHS.has(pathname)) {
-    return NextResponse.rewrite(new URL("/prototype/index.html", request.url));
+  if (pathname.startsWith("/bank/")) {
+    return NextResponse.redirect(new URL(mapBankRedirectPath(pathname), request.url));
   }
 
-  if (!BANK_PROTECTED_PROTOTYPE_PATHS.has(pathname)) {
+  if (BANK_PUBLIC_PORTAL_PATHS.has(pathname)) {
+    return NextResponse.rewrite(new URL("/portal-ui/index.html", request.url));
+  }
+
+  if (!BANK_PROTECTED_PORTAL_PATHS.has(pathname)) {
     return NextResponse.next();
   }
 
@@ -129,7 +133,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/terms", request.url));
   }
 
-  const nextResponse = NextResponse.rewrite(new URL("/prototype/index.html", request.url));
+  const nextResponse = NextResponse.rewrite(new URL("/portal-ui/index.html", request.url));
 
   if (validation.newSessionToken) {
     const opts = { httpOnly: true, sameSite: "lax" as const, path: "/", secure: request.url.startsWith("https:") };
@@ -143,5 +147,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login", "/otp", "/forgot", "/terms", "/onboarding", "/app/:path*"]
+  matcher: ["/", "/login", "/otp", "/forgot", "/terms", "/onboarding", "/app/:path*", "/bank/:path*"]
 };

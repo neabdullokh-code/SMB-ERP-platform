@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@sqb/api-client": "0.1.0",
+    "@sqb/config": "0.1.0",
     "@sqb/domain-types": "0.1.0",
     "@sqb/ui": "0.1.0",
     "next": "^15.0.0",

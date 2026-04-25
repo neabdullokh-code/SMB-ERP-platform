@@ -1,24 +1,24 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { mapBankRedirectPath, resolvePortalUrl } from "@sqb/config/portal";
 import { AuthExperience, type AuthExperienceMode } from "@sqb/ui";
-import { mapBankRedirectPath } from "@/lib/portal-routes";
 
 export function BankAuthFlow({ mode, actorName }: { mode: AuthExperienceMode; actorName?: string }) {
   const router = useRouter();
 
-  function replaceAcrossPortals(port: string, path: string) {
+  function replaceAcrossPortals(target: "company" | "bank", path: string) {
     if (typeof window === "undefined") {
       router.replace(path);
       return;
     }
 
-    const target = new URL(window.location.href);
-    target.port = port;
-    target.pathname = path;
-    target.search = "";
-    target.hash = "";
-    window.location.replace(target.toString());
+    const url = resolvePortalUrl(path, target, {
+      currentHref: window.location.href,
+      companyPortalUrl: process.env.NEXT_PUBLIC_COMPANY_PORTAL_URL,
+      bankPortalUrl: process.env.NEXT_PUBLIC_BANK_PORTAL_URL
+    });
+    window.location.replace(url);
   }
 
   return (
@@ -35,8 +35,8 @@ export function BankAuthFlow({ mode, actorName }: { mode: AuthExperienceMode; ac
       ]}
       stats={[
         { label: "Portal boundary", value: "Staff-only", detail: "Only bank-admin and super-admin sessions can proceed through this surface." },
-        { label: "Session gate", value: "Validated", detail: "Protected routes now verify the active session before rewriting to the prototype shell." },
-        { label: "Access state", value: "Fail-closed", detail: "Missing or invalid sessions return users to the real login flow instead of the prototype." }
+        { label: "Session gate", value: "Validated", detail: "Protected routes now verify the active session before rewriting to the portal shell." },
+        { label: "Access state", value: "Fail-closed", detail: "Missing or invalid sessions return users to the real login flow instead of stale static screens." }
       ]}
       loginIntent="bank_staff"
       challengeStorageKey="bank-portal-auth-challenge"
@@ -45,10 +45,10 @@ export function BankAuthFlow({ mode, actorName }: { mode: AuthExperienceMode; ac
       accentEnd="#65d5a0"
       accentGlow="#8abfef"
       actorName={actorName}
-      onCreateWorkspace={() => replaceAcrossPortals("3000", "/onboarding")}
+      onCreateWorkspace={() => replaceAcrossPortals("company", "/onboarding")}
       onSelectLoginIntent={(intent) => {
         if (intent === "smb_customer") {
-          replaceAcrossPortals("3000", "/login");
+          replaceAcrossPortals("company", "/login");
         }
       }}
       navigate={(path) => router.push(path)}

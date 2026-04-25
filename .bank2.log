@@ -1,0 +1,37 @@
+
+> sqb-business-os@0.1.0 dev:bank
+> npm run dev --workspace @sqb/bank-portal
+
+
+> @sqb/bank-portal@0.1.0 dev
+> next dev -p 3001
+
+   ▲ Next.js 15.5.15
+   - Local:        http://localhost:3001
+   - Network:      http://192.168.56.1:3001
+
+ ✓ Starting...
+ ✓ Ready in 9.3s
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 2.9s (115 modules)
+ ✓ Compiled in 331ms (115 modules)
+ ✓ Compiled in 159ms (115 modules)
+ ✓ Compiled in 837ms (115 modules)
+ ✓ Compiled in 238ms (115 modules)
+ ✓ Compiled in 218ms (115 modules)
+ ⚠ ./middleware.ts
+Attempted import error: 'BANK_PROTECTED_PROTOTYPE_PATHS' is not exported from './src/lib/portal-routes' (imported as 'BANK_PROTECTED_PROTOTYPE_PATHS').
+ ✓ Compiled in 978ms (115 modules)
+ ✓ Compiled in 115ms (115 modules)
+ ✓ Compiled in 72ms (115 modules)
+ ✓ Compiled in 79ms (115 modules)
+ ✓ Compiled in 62ms (115 modules)
+ ✓ Compiled in 102ms (115 modules)
+ ✓ Compiled in 75ms (115 modules)
+npm error Lifecycle script `dev` failed with error:
+npm error code 4294967295
+npm error path C:\Users\uvays\Desktop\SMB-ERP-platform\apps\bank-portal
+npm error workspace @sqb/bank-portal@0.1.0
+npm error location C:\Users\uvays\Desktop\SMB-ERP-platform\apps\bank-portal
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c next dev -p 3001

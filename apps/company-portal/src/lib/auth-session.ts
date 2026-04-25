@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { getAuthSession } from "@sqb/api-client";
+import { mapCompanyRedirectPath } from "@sqb/config/portal";
 import type { AuthSession, Role } from "@sqb/domain-types";
-import { mapCompanyRedirectPath } from "@/lib/portal-routes";
 
 const COMPANY_ALLOWED_ROLES = new Set<Role>(["company_admin", "employee", "bank_admin", "super_admin"]);
 

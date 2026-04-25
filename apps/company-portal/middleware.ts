@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { COMPANY_NEXTJS_APP_PATHS, COMPANY_PROTECTED_PROTOTYPE_PATHS, COMPANY_PUBLIC_PROTOTYPE_PATHS } from "./src/lib/portal-routes";
+import { COMPANY_PROTECTED_PORTAL_PATHS, COMPANY_PUBLIC_PORTAL_PATHS } from "@sqb/config/portal";
 
 const AUTH_COOKIES = ["erp_auth_session", "erp_auth_refresh", "erp_role", "erp_tenant", "erp_redirect_path", "erp_requires_terms", "erp_is_privileged"];
 
@@ -104,36 +104,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (COMPANY_PUBLIC_PROTOTYPE_PATHS.has(pathname)) {
-    return NextResponse.rewrite(new URL("/prototype/index.html", request.url));
+  if (COMPANY_PUBLIC_PORTAL_PATHS.has(pathname)) {
+    return NextResponse.rewrite(new URL("/portal-ui/index.html", request.url));
   }
 
-  // Real Next.js app pages — validate session then let routing continue normally
-  if (COMPANY_NEXTJS_APP_PATHS.has(pathname)) {
-    const validation = await validateSession(request);
-    if (validation.status === "unavailable") {
-      return new NextResponse("Authentication service unavailable.", {
-        status: 503,
-        headers: { "content-type": "text/plain; charset=utf-8" }
-      });
-    }
-    if (validation.status !== "authenticated") {
-      const response = NextResponse.redirect(new URL("/login", request.url));
-      clearAuthCookies(response);
-      return response;
-    }
-    const nextResponse = NextResponse.next();
-    if (validation.newSessionToken) {
-      const opts = { httpOnly: true, sameSite: "lax" as const, path: "/", secure: request.url.startsWith("https:") };
-      nextResponse.cookies.set("erp_auth_session", validation.newSessionToken, opts);
-      if (validation.newRefreshToken) {
-        nextResponse.cookies.set("erp_auth_refresh", validation.newRefreshToken, opts);
-      }
-    }
-    return nextResponse;
-  }
-
-  if (!COMPANY_PROTECTED_PROTOTYPE_PATHS.has(pathname)) {
+  if (!COMPANY_PROTECTED_PORTAL_PATHS.has(pathname)) {
     return NextResponse.next();
   }
 
@@ -164,7 +139,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/terms", request.url));
   }
 
-  const nextResponse = NextResponse.rewrite(new URL("/prototype/index.html", request.url));
+  const nextResponse = NextResponse.rewrite(new URL("/portal-ui/index.html", request.url));
 
   // Apply new cookies from silent refresh
   if (validation.newSessionToken) {

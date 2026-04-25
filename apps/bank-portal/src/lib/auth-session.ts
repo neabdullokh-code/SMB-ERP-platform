@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { getAuthSession } from "@sqb/api-client";
+import { mapBankRedirectPath } from "@sqb/config/portal";
 import type { AuthSession, Role } from "@sqb/domain-types";
-import { mapBankRedirectPath } from "@/lib/portal-routes";
 
 const BANK_ALLOWED_ROLES = new Set<Role>(["bank_admin", "super_admin"]);
 

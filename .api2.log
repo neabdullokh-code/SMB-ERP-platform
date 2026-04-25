@@ -1,0 +1,30 @@
+
+> sqb-business-os@0.1.0 dev:api
+> npm run dev --workspace @sqb/platform-api
+
+
+> @sqb/platform-api@0.1.0 dev
+> tsx watch src/server.ts
+
+{"level":"info","scope":"platform-api","message":"API bootstrapped","metadata":{"port":4000},"timestamp":"2026-04-25T11:36:24.881Z"}
+{"level":30,"time":1777116984947,"pid":2872,"hostname":"coder","msg":"Server listening at http://127.0.0.1:4000"}
+{"level":30,"time":1777116984948,"pid":2872,"hostname":"coder","msg":"Server listening at http://192.168.56.1:4000"}
+{"level":30,"time":1777116984948,"pid":2872,"hostname":"coder","msg":"Server listening at http://192.168.10.174:4000"}
+{"level":30,"time":1777116984948,"pid":2872,"hostname":"coder","msg":"platform-api listening on 0.0.0.0:4000"}
+{"level":30,"time":1777116998296,"pid":2872,"hostname":"coder","reqId":"req-1","req":{"method":"POST","url":"/auth/login/password","host":"localhost:4000","remoteAddress":"127.0.0.1","remotePort":7038},"msg":"incoming request"}
+{"level":50,"time":1777116998693,"pid":2872,"hostname":"coder","reqId":"req-1","req":{"method":"POST","url":"/auth/login/password","host":"localhost:4000","remoteAddress":"127.0.0.1","remotePort":7038},"res":{"statusCode":500},"err":{"type":"Error","message":"self-signed certificate in certificate chain","stack":"Error: self-signed certificate in certificate chain\n    at C:\\Users\\uvays\\Desktop\\SMB-ERP-platform\\node_modules\\pg-pool\\index.js:45:11\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async <anonymous> (C:\\Users\\uvays\\Desktop\\SMB-ERP-platform\\services\\platform-api\\src\\modules\\auth\\store.ts:398:20)\n    at async withDb (C:\\Users\\uvays\\Desktop\\SMB-ERP-platform\\services\\platform-api\\src\\lib\\db.ts:44:12)\n    at async supportsMembershipsPermissionGroupsColumn (C:\\Users\\uvays\\Desktop\\SMB-ERP-platform\\services\\platform-api\\src\\modules\\auth\\store.ts:397:21)\n    at async loadPersistedAccountByIdentifier (C:\\Users\\uvays\\Desktop\\SMB-ERP-platform\\services\\platform-api\\src\\modules\\auth\\store.ts:662:31)\n    at async handlePasswordLogin (C:\\Users\\uvays\\Desktop\\SMB-ERP-platform\\services\\platform-api\\src\\modules\\auth\\store.ts:1169:28)\n    at async Object.<anonymous> (C:\\Users\\uvays\\Desktop\\SMB-ERP-platform\\services\\platform-api\\src\\modules\\auth\\index.ts:26:20)","code":"SELF_SIGNED_CERT_IN_CHAIN"},"msg":"self-signed certificate in certificate chain"}
+{"level":30,"time":1777116998704,"pid":2872,"hostname":"coder","reqId":"req-1","res":{"statusCode":500},"responseTime":407.31990000000224,"msg":"request completed"}
+4:36:56 PM [tsx] change in ./src\lib\db.ts Restarting...
+c{"level":"info","scope":"platform-api","message":"API bootstrapped","metadata":{"port":4000},"timestamp":"2026-04-25T11:37:00.046Z"}
+{"level":50,"time":1777117020155,"pid":2024,"hostname":"coder","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:4000","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:4000\n    at Server.setupListenHandle [as _listen2] (node:net:1908:16)\n    at listenInCluster (node:net:1965:12)\n    at doListen (node:net:2139:7)\n    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)","code":"EADDRINUSE","errno":-4091,"syscall":"listen","address":"0.0.0.0","port":4000},"msg":"listen EADDRINUSE: address already in use 0.0.0.0:4000"}
+4:45:39 PM [tsx] change in ./src\lib\db.ts Rerunning...
+c{"level":"info","scope":"platform-api","message":"API bootstrapped","metadata":{"port":4000},"timestamp":"2026-04-25T11:45:42.012Z"}
+{"level":30,"time":1777117542096,"pid":16856,"hostname":"coder","msg":"Server listening at http://127.0.0.1:4000"}
+{"level":30,"time":1777117542097,"pid":16856,"hostname":"coder","msg":"Server listening at http://192.168.56.1:4000"}
+{"level":30,"time":1777117542097,"pid":16856,"hostname":"coder","msg":"Server listening at http://192.168.10.174:4000"}
+{"level":30,"time":1777117542097,"pid":16856,"hostname":"coder","msg":"platform-api listening on 0.0.0.0:4000"}
+7:21:18 PM [tsx] change in ./src\server.ts Rerunning...
+c{"level":"info","scope":"platform-api","message":"API bootstrapped","metadata":{"port":4000},"timestamp":"2026-04-25T14:21:28.484Z"}
+{"level":50,"time":1777126888638,"pid":4124,"hostname":"coder","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:4000","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:4000\n    at Server.setupListenHandle [as _listen2] (node:net:1908:16)\n    at listenInCluster (node:net:1965:12)\n    at doListen (node:net:2139:7)\n    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)","code":"EADDRINUSE","errno":-4091,"syscall":"listen","address":"0.0.0.0","port":4000},"msg":"listen EADDRINUSE: address already in use 0.0.0.0:4000"}
+
+C:\Users\uvays\Desktop\SMB-ERP-platform>

@@ -1,0 +1,17 @@
+
+> sqb-business-os@0.1.0 dev:company
+> npm run dev --workspace @sqb/company-portal
+
+
+> @sqb/company-portal@0.1.0 dev
+> next dev -p 3000
+
+   ▲ Next.js 15.5.15
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.56.1:3000
+
+ ✓ Starting...
+ ✓ Ready in 5.1s
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 979ms (115 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (128kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)

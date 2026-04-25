@@ -1,0 +1,1 @@
+PostgreSQL unavailable, falling back to in-memory auth/workspace store. code=42703 message=column i.unit_cost_uzs does not exist

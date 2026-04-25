@@ -1,0 +1,2 @@
+-- Bank portal: Platform
+-- Platform settings are UI-only in the legacy mock; no dedicated table seed yet.

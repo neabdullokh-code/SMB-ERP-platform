@@ -1,0 +1,141 @@
+
+> sqb-business-os@0.1.0 dev:company
+> npm run dev --workspace @sqb/company-portal
+
+
+> @sqb/company-portal@0.1.0 dev
+> next dev -p 3000
+
+   ▲ Next.js 15.5.15
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.56.1:3000
+
+ ✓ Starting...
+ ✓ Ready in 2.8s
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 856ms (115 modules)
+ ○ Compiling /api/auth/session ...
+ ✓ Compiled /api/auth/session in 2.8s (299 modules)
+ GET /api/auth/session 401 in 2956ms
+ ✓ Compiled /api/auth/login/password in 487ms (301 modules)
+ POST /api/auth/login/password 200 in 835ms
+ GET /api/auth/session 401 in 98ms
+ ✓ Compiled /api/auth/otp/verify in 267ms (303 modules)
+ POST /api/auth/otp/verify 200 in 386ms
+ GET /api/auth/session 200 in 41ms
+ ✓ Compiled /api/tenants/me in 331ms (305 modules)
+ GET /api/tenants/me 200 in 424ms
+ GET /api/auth/session 200 in 432ms
+ ✓ Compiled /api/auth/logout in 242ms (307 modules)
+ POST /api/auth/logout 200 in 345ms
+ GET /api/auth/session 401 in 33ms
+ GET /api/auth/session 401 in 36ms
+ POST /api/auth/login/password 500 in 433ms
+ POST /api/auth/login/password 500 in 408ms
+ GET /api/auth/session 401 in 32ms
+ POST /api/auth/login/password 200 in 1176ms
+ GET /api/auth/session 401 in 39ms
+ POST /api/auth/otp/verify 200 in 962ms
+ GET /api/auth/session 200 in 44ms
+ GET /api/tenants/me 200 in 67ms
+ GET /api/auth/session 200 in 75ms
+ GET /api/auth/session 200 in 38ms
+ GET /api/auth/session 200 in 44ms
+ GET /api/auth/session 200 in 38ms
+ GET /api/auth/session 200 in 46ms
+ ○ Compiling /app/production ...
+ ✓ Compiled /app/production in 4s (578 modules)
+ GET /app/production 200 in 5890ms
+ GET /api/auth/session 200 in 66ms
+ ○ Compiling /app/service-orders ...
+ ✓ Compiled /app/service-orders in 613ms (568 modules)
+ GET /app/service-orders 200 in 1187ms
+ GET /api/auth/session 200 in 47ms
+ GET /api/auth/session 200 in 31ms
+ GET /api/auth/session 200 in 39ms
+ GET /api/auth/session 200 in 61ms
+ GET /api/auth/session 200 in 33ms
+ GET /api/auth/session 200 in 32ms
+ GET /api/auth/session 200 in 31ms
+ GET /api/auth/session 200 in 55ms
+ GET /api/auth/session 200 in 33ms
+ GET /api/auth/session 200 in 53ms
+ GET /api/auth/session 200 in 35ms
+ GET /api/auth/session 200 in 42ms
+ GET /api/auth/session 200 in 42ms
+ ✓ Compiled /api/tenants/me in 306ms (348 modules)
+ GET /api/tenants/me 200 in 617ms
+ GET /api/auth/session 200 in 624ms
+ GET /api/auth/session 401 in 35ms
+ ✓ Compiled /api/auth/login/password in 310ms (348 modules)
+ POST /api/auth/login/password 200 in 1522ms
+ GET /api/auth/session 401 in 32ms
+ ✓ Compiled /api/auth/otp/verify in 212ms (350 modules)
+ POST /api/auth/otp/verify 200 in 989ms
+ GET /api/auth/session 200 in 43ms
+ GET /api/auth/session 200 in 35ms
+ ✓ Compiled /api/tenants/me in 197ms (352 modules)
+ GET /api/tenants/me 200 in 447ms
+ GET /api/auth/session 200 in 454ms
+ GET /api/auth/session 200 in 38ms
+ GET /api/auth/session 200 in 38ms
+ ○ Compiling /app/inventory ...
+ ✓ Compiled /app/inventory in 879ms (574 modules)
+ GET /app/inventory 200 in 2365ms
+ GET /api/auth/session 200 in 50ms
+ GET /app/inventory 200 in 1156ms
+ GET /api/auth/session 200 in 48ms
+ GET /api/auth/session 200 in 37ms
+ GET /api/auth/session 200 in 38ms
+ GET /api/auth/session 200 in 33ms
+ GET /api/auth/session 200 in 42ms
+ GET /app/inventory 200 in 1563ms
+ GET /api/auth/session 200 in 53ms
+ GET /api/auth/session 200 in 30ms
+ GET /api/auth/session 200 in 35ms
+ GET /api/auth/session 200 in 43ms
+ GET /api/auth/session 200 in 35ms
+ GET /api/auth/session 200 in 44ms
+ GET /app/inventory 200 in 1332ms
+ GET /api/auth/session 200 in 32ms
+ GET /app/inventory 200 in 499ms
+ GET /api/auth/session 200 in 36ms
+ GET /api/auth/session 200 in 27ms
+ GET /api/auth/session 200 in 32ms
+ GET /api/auth/session 200 in 36ms
+ GET /api/auth/session 200 in 32ms
+ GET /api/auth/session 200 in 34ms
+ GET /api/auth/session 200 in 42ms
+ GET /api/auth/session 200 in 35ms
+ GET /api/auth/session 200 in 54ms
+ GET /api/auth/session 200 in 51ms
+ GET /api/auth/session 200 in 38ms
+ GET /api/auth/session 200 in 46ms
+ GET /api/auth/session 200 in 46ms
+ ✓ Compiled /api/auth/logout in 393ms (352 modules)
+ POST /api/auth/logout 200 in 1727ms
+ GET /api/auth/session 401 in 28ms
+ POST /api/auth/logout 200 in 1089ms
+ GET /api/auth/session 200 in 53ms
+ GET /api/auth/session 200 in 37ms
+ GET /api/auth/session 200 in 44ms
+ GET /api/auth/session 200 in 40ms
+ GET /api/auth/session 200 in 43ms
+ GET /api/auth/session 200 in 41ms
+ GET /api/auth/session 200 in 40ms
+ GET /api/auth/session 200 in 40ms
+ GET /api/auth/session 200 in 42ms
+ GET /api/auth/session 200 in 37ms
+ GET /api/auth/session 200 in 32ms
+ GET /api/auth/session 200 in 39ms
+ GET /api/auth/session 200 in 37ms
+ GET /api/auth/session 200 in 34ms
+ GET /api/auth/session 200 in 107ms
+ GET /app/inventory 200 in 1459ms
+ GET /api/auth/session 200 in 29ms
+ GET /api/auth/session 200 in 32ms
+ GET /api/auth/session 200 in 36ms
+ ✓ Compiled in 1422ms (329 modules)
+[?25h
+
+C:\Users\uvays\Desktop\SMB-ERP-platform>
