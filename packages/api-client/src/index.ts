@@ -41,7 +41,34 @@ interface Envelope<T> {
   error: null;
 }
 
+/** 
+ * Simple audit utility to log missing data during development 
+ */
+function auditData(label: string, data: any) {
+  if (process.env.NODE_ENV !== "development") return;
+  if (!data || typeof data !== "object") return;
+
+  const isEnvelope = "data" in data && "error" in data;
+  const target = isEnvelope ? data.data : data;
+
+  const missing = Object.entries(data || {})
+    .filter(([_, v]) => v === undefined || v === null)
+    .map(([k]) => k);
+  
+  if (missing.length > 0) console.warn(`⚠️ [${label}] Missing/Null fields:`, missing);
+}
+
 async function requestJson<T>(baseUrl: string, path: string, headers?: HeadersInit): Promise<T> {
+  const url = `${baseUrl}${path}`;
+  
+  if (process.env.NODE_ENV === "development") {
+    console.group(`🔍 [GET] ${path}`);
+    // Check if Authorization header exists without logging the actual secret
+    const hasAuth = !!(headers as any)?.["Authorization"] || !!(headers as any)?.["authorization"];
+    console.log(`Auth Header Present: ${hasAuth}`);
+    console.log(`Full URL: ${url}`);
+  }
+
   const response = await fetch(`${baseUrl}${path}`, {
     headers: {
       "content-type": "application/json",
@@ -51,13 +78,41 @@ async function requestJson<T>(baseUrl: string, path: string, headers?: HeadersIn
   });
 
   if (!response.ok) {
+    if (process.env.NODE_ENV === "development") {
+      const errorText = await response.text().catch(() => "Unknown Error");
+      console.error(`❌ [API Error] ${response.status} ${response.statusText}`, errorText);
+      console.groupEnd();
+    }
     throw new Error(`Request failed: ${response.status} ${response.statusText}`);
   }
 
-  return response.json() as Promise<T>;
+  const contentType = response.headers.get("content-type");
+  const isJson = contentType && contentType.includes("application/json");
+  const data = isJson ? await response.json() : await response.text();
+  
+  if (process.env.NODE_ENV === "development") {
+    auditData("Backend -> Frontend", data);
+    console.log("Response (Backend -> Frontend):", data);
+    console.groupEnd();
+  }
+
+  return data as T;
 }
 
 async function requestPlatform<T>(baseUrl: string, path: string, init: RequestInit = {}, headers?: HeadersInit): Promise<T> {
+  const url = `${baseUrl}${path}`;
+
+  if (process.env.NODE_ENV === "development") {
+    console.group(`🚀 [${init.method || "GET"}] ${path}`);
+    const hasAuth = !!(headers as any)?.["Authorization"] || !!(init.headers as any)?.["Authorization"];
+    console.log(`Auth Header Present: ${hasAuth}`);
+    if (init.body) {
+      const body = JSON.parse(init.body as string);
+      auditData("Frontend -> Backend", body);
+      console.log("Payload:", body);
+    }
+  }
+
   const response = await fetch(`${baseUrl}${path}`, {
     ...init,
     headers: {
@@ -69,10 +124,24 @@ async function requestPlatform<T>(baseUrl: string, path: string, init: RequestIn
   });
 
   if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    if (process.env.NODE_ENV === "development") {
+      console.error(`❌ [API Error] ${response.status}`, errorBody);
+      console.groupEnd();
+    }
     throw new Error(`Request failed: ${response.status} ${response.statusText}`);
   }
 
-  return response.json() as Promise<T>;
+  const contentType = response.headers.get("content-type");
+  const isJson = contentType && contentType.includes("application/json");
+  const data = isJson ? await response.json() : await response.text();
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("Response (Backend -> Frontend):", data);
+    console.groupEnd();
+  }
+
+  return data as T;
 }
 
 function buildQuery(params: Record<string, string | number | undefined>): string {
