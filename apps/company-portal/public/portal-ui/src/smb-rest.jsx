@@ -8,8 +8,8 @@ function Placeholder({ title, kpis, children, headerActions }) {
         <span className="sp"/>
         {headerActions || (
           <>
-            <Button variant="ghost" icon={<Icon.Download size={13}/>}>Export</Button>
-            <Button variant="primary" icon={<Icon.Plus size={13}/>}>New</Button>
+            <Button variant="ghost" icon={<Icon.Download size={13}/>}>Экспорт</Button>
+            <Button variant="primary" icon={<Icon.Plus size={13}/>}>Новый</Button>
           </>
         )}
       </div>
@@ -688,6 +688,9 @@ function ServicesKanban() {
   const [overview, setOverview] = useStateS(null);
   const [loading, setLoading] = useStateS(true);
   const [error, setError] = useStateS("");
+  const [updatingOrderId, setUpdatingOrderId] = useStateS("");
+  const [draggingOrderId, setDraggingOrderId] = useStateS("");
+  const [dragOverStatus, setDragOverStatus] = useStateS("");
   const [createOpen, setCreateOpen] = useStateS(false);
   const [creating, setCreating] = useStateS(false);
   const [createError, setCreateError] = useStateS("");
@@ -716,7 +719,7 @@ function ServicesKanban() {
         const { response, body } = await fetchPortalJson("/api/service-orders/overview");
         if (cancelled) return;
         if (!response.ok || !body.data) {
-          setError(body.error?.message || body.message || "Unable to load service orders.");
+          setError(body.error?.message || body.message || "Не удалось загрузить сервисные наряды.");
           setOverview(null);
           return;
         }
@@ -724,7 +727,7 @@ function ServicesKanban() {
         setError("");
       } catch {
         if (!cancelled) {
-          setError("Unable to load service orders.");
+          setError("Не удалось загрузить сервисные наряды.");
           setOverview(null);
         }
       } finally {
@@ -777,7 +780,7 @@ function ServicesKanban() {
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch {
-      setError("Unable to export service orders.");
+      setError("Не удалось экспортировать сервисные наряды.");
     } finally {
       setExporting(false);
     }
@@ -786,7 +789,7 @@ function ServicesKanban() {
   const submitCreateOrder = async (event) => {
     event.preventDefault();
     if (!createForm.title.trim() || !createForm.customer.trim() || !createForm.requestedBy.trim() || !createForm.dueDate.trim()) {
-      setCreateError("Title, customer, requested by, and due date are required.");
+      setCreateError("Нужно заполнить название, клиента, инициатора и срок.");
       return;
     }
     setCreating(true);
@@ -805,7 +808,7 @@ function ServicesKanban() {
       });
       const postBody = await post.json();
       if (!post.ok || !postBody.data) {
-        throw new Error(postBody.error?.message || postBody.message || "Unable to create service order.");
+        throw new Error(postBody.error?.message || postBody.message || "Не удалось создать сервисный наряд.");
       }
       setCreateOpen(false);
       setCreateForm({
@@ -816,50 +819,161 @@ function ServicesKanban() {
       });
       await refreshOverview();
     } catch (createOrderError) {
-      setCreateError(createOrderError instanceof Error ? createOrderError.message : "Unable to create service order.");
+      setCreateError(createOrderError instanceof Error ? createOrderError.message : "Не удалось создать сервисный наряд.");
     } finally {
       setCreating(false);
     }
+  };
+
+  const translateServiceStatus = (status) => {
+    switch (status) {
+      case "pending":
+        return "В ожидании";
+      case "submitted":
+        return "Запрошен";
+      case "approved":
+        return "Одобрен";
+      case "in_progress":
+        return "В работе";
+      case "completed":
+        return "Завершен";
+      case "rejected":
+        return "Отклонен";
+      default:
+        return status ? status.replace(/_/g, " ") : "—";
+    }
+  };
+
+  const updateOrderStatus = async (orderId, status, previousStatus) => {
+    setUpdatingOrderId(orderId);
+    setError("");
+    setOverview((prev) => {
+      if (!prev || !Array.isArray(prev.orders)) return prev;
+      return {
+        ...prev,
+        orders: prev.orders.map((item) =>
+          String(item.id) === String(orderId) ? { ...item, status } : item
+        )
+      };
+    });
+    try {
+      const response = await fetch(`/api/service-orders/${orderId}/status`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status })
+      });
+      const body = await response.json();
+      if (!response.ok || !body.data) {
+        throw new Error(body.error?.message || body.message || "Не удалось обновить статус заказа.");
+      }
+      await refreshOverview();
+    } catch (statusError) {
+      setOverview((prev) => {
+        if (!prev || !Array.isArray(prev.orders)) return prev;
+        return {
+          ...prev,
+          orders: prev.orders.map((item) =>
+            String(item.id) === String(orderId) ? { ...item, status: previousStatus } : item
+          )
+        };
+      });
+      setError(statusError instanceof Error ? statusError.message : "Не удалось обновить статус заказа.");
+    } finally {
+      setUpdatingOrderId("");
+      setDragOverStatus("");
+      setDraggingOrderId("");
+    }
+  };
+
+  const handleOrderDrop = async (event, nextStatus) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const orderId = draggingOrderId || event.dataTransfer?.getData("text/plain");
+    if (!orderId) return;
+    const order = orders.find((item) => String(item.id) === String(orderId));
+    if (!order || order.status === nextStatus || updatingOrderId) {
+      setDragOverStatus("");
+      setDraggingOrderId("");
+      return;
+    }
+    await updateOrderStatus(order.id, nextStatus, order.status);
   };
 
   const orders = overview?.orders || [];
   const pendingApprovals = overview?.approvals || [];
   const orderById = new Map(orders.map((order) => [order.id, order]));
   const cols = [
-    { n:"Requested", tone:"info", status:"submitted" },
-    { n:"Approved", tone:"warn", status:"approved" },
-    { n:"In progress", tone:"ai", status:"in_progress" },
-    { n:"Completed", tone:"good", status:"completed" },
+    { n:"Запрошено", tone:"info", status:"submitted" },
+    { n:"Одобрено", tone:"warn", status:"approved" },
+    { n:"В работе", tone:"ai", status:"in_progress" },
+    { n:"Завершено", tone:"good", status:"completed" },
   ].map((col) => ({
       ...col,
       items: orders.filter((order) => order.status === col.status)
   }));
   return (
     <Placeholder
-      title="Services · Work orders"
+      title="Сервисы · Наряды"
       headerActions={
         <>
           <Button variant="ghost" icon={<Icon.Download size={13}/>} onClick={handleExport} disabled={exporting || loading}>
-            {exporting ? "Exporting..." : "Export"}
+            {exporting ? "Экспорт..." : "Экспорт"}
           </Button>
-          <Button variant="primary" icon={<Icon.Plus size={13}/>} onClick={() => setCreateOpen(true)}>New</Button>
+          <Button variant="primary" icon={<Icon.Plus size={13}/>} onClick={() => setCreateOpen(true)}>Новый</Button>
         </>
       }
     >
       {error && (
-        <Banner tone="warn" title="Live service orders unavailable">
-          Showing current service order data. {error}
+        <Banner tone="warn" title="Сервис нарядов недоступен">
+          Отображаются текущие данные по нарядам. {error}
         </Banner>
       )}
       <div className="grid grid-4" style={{gap:12}}>
         {cols.map((col, i) => (
-          <div key={i} className="card card-pad-0">
+          <div
+            key={i}
+            className="card card-pad-0"
+            onDragOver={(event) => {
+              event.preventDefault();
+              if (updatingOrderId) return;
+              setDragOverStatus(col.status);
+            }}
+            onDragLeave={() => {
+              if (dragOverStatus === col.status) setDragOverStatus("");
+            }}
+            onDrop={(event) => handleOrderDrop(event, col.status)}
+            style={{
+              outline: dragOverStatus === col.status ? "1px dashed var(--line)" : "none",
+              outlineOffset: dragOverStatus === col.status ? -3 : 0
+            }}
+          >
             <div className="panel-title"><Pill tone={col.tone} dot={false}>{col.n}</Pill><span className="sp"/><span className="mono muted" style={{fontSize:11}}>{col.items.length}</span></div>
             <div style={{padding:8}}>
               {col.items.map((w, j) => (
-                <div key={j} className="hairline" style={{padding:10, borderRadius:6, marginBottom:8}}>
+                <div
+                  key={j}
+                  className="hairline"
+                  draggable={!updatingOrderId}
+                  onDragStart={(event) => {
+                    event.dataTransfer.effectAllowed = "move";
+                    event.dataTransfer.setData("text/plain", String(w.id));
+                    setDraggingOrderId(String(w.id));
+                  }}
+                  onDragEnd={() => {
+                    setDraggingOrderId("");
+                    setDragOverStatus("");
+                  }}
+                  style={{
+                    padding:10,
+                    borderRadius:6,
+                    marginBottom:8,
+                    cursor: updatingOrderId ? "wait" : "grab",
+                    opacity: draggingOrderId === String(w.id) ? 0.6 : 1
+                  }}
+                >
                   <div style={{fontSize:12.5, color:"var(--ink)", fontWeight:500}}>{w.title}</div>
-                  <div className="muted" style={{fontSize:11, marginTop:2}}>{w.customer} · due {w.dueDate}</div>
+                  <div className="muted" style={{fontSize:11, marginTop:2}}>{w.customer} · срок {w.dueDate}</div>
                   <div className="row mt-8">
                     <div className="avatar sm green">{String(w.requestedBy || w.customer).slice(0, 2).toUpperCase()}</div>
                     <span className="sp"/>
@@ -873,15 +987,15 @@ function ServicesKanban() {
       </div>
       <div className="grid" style={{gridTemplateColumns:"1.2fr .8fr", gap:12, marginTop:12}}>
         <div className="card card-pad-0">
-          <div className="panel-title">Service order backlog</div>
+          <div className="panel-title">Очередь сервисных нарядов</div>
           <table className="tbl">
-            <thead><tr><th>Order</th><th>Customer</th><th>Status</th><th>Requested by</th></tr></thead>
+            <thead><tr><th>Наряд</th><th>Клиент</th><th>Статус</th><th>Запросил</th></tr></thead>
             <tbody>
               {orders.map((order) => (
                 <tr key={order.id}>
                   <td className="id">{formatEntityCode(order.id, "WO")}</td>
                   <td style={{color:"var(--ink)", fontWeight:500}}>{order.title}</td>
-                  <td><Pill tone={order.status === "completed" ? "good" : order.status === "in_progress" ? "ai" : order.status === "approved" ? "warn" : order.status === "rejected" ? "bad" : "info"}>{order.status.replace(/_/g, " ")}</Pill></td>
+                  <td><Pill tone={order.status === "completed" ? "good" : order.status === "in_progress" ? "ai" : order.status === "approved" ? "warn" : order.status === "rejected" ? "bad" : "info"}>{translateServiceStatus(order.status)}</Pill></td>
                   <td className="dim">{order.requestedBy}</td>
                 </tr>
               ))}
@@ -889,22 +1003,22 @@ function ServicesKanban() {
           </table>
         </div>
         <div className="card card-pad-0">
-          <div className="panel-title">Pending approvals</div>
+          <div className="panel-title">Ожидают согласования</div>
           {pendingApprovals.length === 0 ? (
             <div className="empty" style={{minHeight:180}}>
               <Icon.Check size={24}/>
-              <h3>No approvals pending</h3>
-              <div>The backend has no service order approvals in queue.</div>
+              <h3>Нет ожидающих согласований</h3>
+              <div>В очереди нет заявок на согласование сервисных нарядов.</div>
             </div>
           ) : (
             <table className="tbl">
-              <thead><tr><th>Entity</th><th>Submitted by</th><th>Status</th></tr></thead>
+              <thead><tr><th>Сущность</th><th>Отправил</th><th>Статус</th></tr></thead>
               <tbody>
                 {pendingApprovals.map((approval) => (
                   <tr key={approval.id}>
                     <td className="id">{formatEntityCode(approval.entityId, "WO")} {orderById.get(approval.entityId)?.title ? `· ${orderById.get(approval.entityId).title}` : ""}</td>
                     <td>{approval.submittedBy}</td>
-                    <td><Pill tone="warn">{approval.status}</Pill></td>
+                    <td><Pill tone="warn">{translateServiceStatus(approval.status)}</Pill></td>
                   </tr>
                 ))}
               </tbody>
@@ -919,30 +1033,30 @@ function ServicesKanban() {
           setCreateOpen(false);
           setCreateError("");
         }}
-        title="Create service order"
+        title="Создать сервисный наряд"
         size="sm"
         footer={
           <>
-            <Button variant="ghost" type="button" onClick={() => setCreateOpen(false)} disabled={creating}>Cancel</Button>
+            <Button variant="ghost" type="button" onClick={() => setCreateOpen(false)} disabled={creating}>Отмена</Button>
             <span className="sp" />
             <Button variant="primary" type="submit" form="create-service-order-form" icon={<Icon.Check size={13} />} disabled={creating}>
-              {creating ? "Saving..." : "Create order"}
+              {creating ? "Сохранение..." : "Создать наряд"}
             </Button>
           </>
         }
       >
         <form id="create-service-order-form" onSubmit={submitCreateOrder}>
           <div className="grid grid-2" style={{ gap: 12 }}>
-            <Field label="Title" required>
-              <input className="input" value={createForm.title} onChange={(e) => setCreateForm((prev) => ({ ...prev, title: e.target.value }))} placeholder="Delivery to Chorsu Market" />
+            <Field label="Название" required>
+              <input className="input" value={createForm.title} onChange={(e) => setCreateForm((prev) => ({ ...prev, title: e.target.value }))} placeholder="Доставка в Oriental Trade" />
             </Field>
-            <Field label="Customer" required>
-              <input className="input" value={createForm.customer} onChange={(e) => setCreateForm((prev) => ({ ...prev, customer: e.target.value }))} placeholder="Chorsu Market" />
+            <Field label="Клиент" required>
+              <input className="input" value={createForm.customer} onChange={(e) => setCreateForm((prev) => ({ ...prev, customer: e.target.value }))} placeholder="Oriental Trade" />
             </Field>
-            <Field label="Requested by" required>
-              <input className="input" value={createForm.requestedBy} onChange={(e) => setCreateForm((prev) => ({ ...prev, requestedBy: e.target.value }))} placeholder="Jasur Azimov" />
+            <Field label="Инициатор" required>
+              <input className="input" value={createForm.requestedBy} onChange={(e) => setCreateForm((prev) => ({ ...prev, requestedBy: e.target.value }))} placeholder="Жасур Азимов" />
             </Field>
-            <Field label="Due date" required>
+            <Field label="Срок" required>
               <input className="input" type="date" value={createForm.dueDate} onChange={(e) => setCreateForm((prev) => ({ ...prev, dueDate: e.target.value }))} />
             </Field>
           </div>

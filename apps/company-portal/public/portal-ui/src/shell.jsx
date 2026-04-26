@@ -10,15 +10,15 @@ const SMB_NAV = [
   { section: "Operations", items: [
     { path: "/smb/inventory", label: "Inventory",   icon: "Box" },
     { path: "/smb/production",label: "Production",  icon: "Factory" },
-    { path: "/smb/services",  label: "Services",    icon: "Wrench" },
+    { path: "/smb/services",  label: "Сервисы",     icon: "Wrench" },
   ]},
   { section: "Finance", items: [
-    { path: "/smb/finance/ledger",   label: "General ledger", icon: "Ledger" },
-    { path: "/smb/finance/invoices", label: "Invoices",       icon: "Doc" },
-    { path: "/smb/finance/bills",    label: "Bills",          icon: "File" },
-    { path: "/smb/finance/payments", label: "Accounts & Payments", icon: "Coin" },
-    { path: "/smb/finance/cash",     label: "Cash flow",      icon: "Chart" },
-    { path: "/smb/reports",          label: "Reports",        icon: "Download" },
+    { path: "/smb/finance/bills",    label: "Закупка",        icon: "File" },
+    { path: "/smb/finance/invoices", label: "Продажи",        icon: "Doc" },
+    { path: "/smb/finance/payments", label: "Счета и Платежи", icon: "Coin" },
+    { path: "/smb/finance/cash",     label: "Денежный поток", icon: "Chart" },
+    { path: "/smb/finance/ledger",   label: "Главная книга",  icon: "Ledger" },
+    { path: "/smb/reports",          label: "Отчёты",         icon: "Download" },
   ]},
   { section: "Growth", items: [
     { path: "/smb/credit",    label: "Credit & Financing", icon: "Handshake", ai: true },
@@ -222,7 +222,7 @@ function Topbar({ crumbs, onNotif, onSearch }) {
       <div className="topbar-spacer"/>
       <button className="search" onClick={onSearch} style={{cursor:"pointer"}}>
         <Icon.Search size={13}/>
-        <span style={{flex:1, color:"var(--muted)"}}>Search tenants, SKUs, invoices...</span>
+        <span style={{flex:1, color:"var(--muted)"}}>Поиск арендаторов, SKU, счетов...</span>
         <span className="kbd">Ctrl+K</span>
       </button>
       <button className="icon-btn" onClick={onNotif} title="Notifications">
