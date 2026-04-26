@@ -24,7 +24,7 @@ async function apiFetch(path, init) {
   const headers = { ...(init && init.headers ? init.headers : {}) };
   const hasBody = init && init.body != null;
   if (hasBody && !headers["content-type"]) headers["content-type"] = "application/json";
-  const res = await fetch(path, { ...(init || {}), headers, cache: "no-store" });
+  const res = await fetch(path, { credentials: "include", ...(init || {}), headers, cache: "no-store" });
   const ct = res.headers.get("content-type") || "";
   const body = ct.includes("application/json") ? await res.json() : null;
   return { ok: res.ok, status: res.status, body };
@@ -106,12 +106,10 @@ function DocumentJournal({ go, kind }) {
   const [loading, setLoading] = useStateD(true);
   const [error, setError] = useStateD(null);
 
-  useEffectD(() => {
-    let cancelled = false;
+  const loadDocs = useCallbackD(() => {
     setLoading(true);
     setError(null);
     apiFetch(config.apiPath, { method: "GET" }).then((res) => {
-      if (cancelled) return;
       if (!res.ok) {
         setError(
           (res.body && res.body.error && res.body.error.message) ||
@@ -126,6 +124,10 @@ function DocumentJournal({ go, kind }) {
       setLoading(false);
     });
   }, [config.apiPath]);
+
+  useEffectD(() => {
+    loadDocs();
+  }, [loadDocs]);
 
   function rowTotal(r) {
     if (r.totalAmountUzs != null && Number(r.totalAmountUzs) > 0) return Number(r.totalAmountUzs);
@@ -171,7 +173,7 @@ function DocumentJournal({ go, kind }) {
             {loading ? "Loading…" : `${rows.length} documents`}
           </div>
           <span className="sp" />
-          <Button variant="ghost" size="sm" icon={<Icon.Refresh size={12} />}>
+          <Button variant="ghost" size="sm" icon={<Icon.Refresh size={12} />} onClick={loadDocs} disabled={loading}>
             Refresh
           </Button>
         </div>

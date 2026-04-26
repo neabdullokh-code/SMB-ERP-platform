@@ -13,7 +13,9 @@ function formatRelativeTime(iso) {
 }
 
 function mapInventoryItem(item, movements) {
-  const latestMovement = [...movements].find((movement) => movement.itemId === item.id);
+  const latestMovement = [...movements]
+    .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
+    .find((movement) => movement.itemId === item.id);
   const status = item.onHand <= 0 ? "Out of stock" : item.onHand <= item.reorderPoint ? "Low stock" : "In stock";
   return {
     id: item.id,

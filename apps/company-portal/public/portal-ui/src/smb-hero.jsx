@@ -679,7 +679,7 @@ function CopilotPage({ go }) {
                               {p.body}
                               {p.partial && p.body && <span className="caret"/>}
                             </div>
-                            {p.body.length === p.body.length && !p.partial && (
+                            {p.body.length > 0 && !p.partial && (
                               <div className="row mt-8" style={{gap:6, flexWrap:"wrap"}}>
                                 {p.refs.map((r, ri) => (
                                   <span key={ri} className="chip" style={{fontSize:11, background:"var(--surface)"}} onClick={() => go(r.p)}>
