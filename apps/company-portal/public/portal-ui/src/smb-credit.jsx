@@ -50,8 +50,8 @@ function SmbCredit({ go }) {
     const normalized = meta.invert ? (1 - raw) : raw;
     const pct = Math.max(0, Math.min(100, Math.round(normalized * 100)));
     const tone = pct >= 75 ? "good" : pct >= 50 ? "warn" : "bad";
-    const state = pct >= 75 ? "Strong" : pct >= 50 ? "Moderate" : "Weak";
-    const note = `${pct}% contribution`;
+    const state = pct >= 75 ? "Сильный" : pct >= 50 ? "Умеренный" : "Слабый";
+    const note = `${pct}% вклад`;
     return { ...meta, s: state, tone, note, strengthPct: pct };
   });
 
@@ -62,7 +62,7 @@ function SmbCredit({ go }) {
       term:"6–12 месяцев",
       max:`${fmtShort(Math.round(suggestedLimit))} UZS`,
       fee:"0.5%",
-      desc:"Cover cash-flow gaps, supplier prepayments, and seasonal stock.",
+      desc:"Покрытие кассовых разрывов, предоплата поставщикам и сезонные запасы.",
       good:true,
       match:Math.max(65, Math.min(98, score + 10)),
     },
@@ -176,7 +176,7 @@ function SmbCredit({ go }) {
                 <div style={{flex:1}}>
                   <div className="row gap-8">
                     <div style={{fontSize:12.5, color:"var(--ink)"}}>{f.n}</div>
-                    <span className="mono muted" style={{fontSize:10}}>· weight {f.w}%</span>
+                    <span className="mono muted" style={{fontSize:10}}>· вес {f.w}%</span>
                   </div>
                   <div className="muted" style={{fontSize:11, marginTop:2}}>{f.note}</div>
                 </div>
@@ -204,7 +204,7 @@ function SmbCredit({ go }) {
           <div key={i} className={`card ${p.good ? "" : ""}`} style={{padding:0, borderColor: p.good ? "var(--ai-line)" : "var(--line)"}}>
             <div className="panel-title" style={{background: p.good ? "var(--ai-bg)" : "var(--surface-2)", color: p.good ? "var(--ai)" : "var(--muted)"}}>
               {p.good && <Icon.Sparkle size={11}/>}
-              {p.good ? "RECOMMENDED" : "ALSO ELIGIBLE"}
+              {p.good ? "РЕКОМЕНДУЕТСЯ" : "ТАКЖЕ ДОСТУПНО"}
               <span className="sp"/>
               <span className="mono" style={{fontSize:10}}>MATCH {p.match}%</span>
             </div>
@@ -218,10 +218,10 @@ function SmbCredit({ go }) {
               </div>
               <div className="divider"/>
               <div className="row">
-                <span className="muted" style={{fontSize:11}}>Origination fee {p.fee}</span>
+                <span className="muted" style={{fontSize:11}}>Комиссия за выдачу {p.fee}</span>
                 <span className="sp"/>
                 <Button variant={i===0 ? "primary" : "ghost"} size="sm" onClick={() => go("/smb/loan")}>
-                  Apply {i===0 && <Icon.Arrow size={12}/>}
+                  Подать заявку {i===0 && <Icon.Arrow size={12}/>}
                 </Button>
               </div>
             </div>
@@ -232,8 +232,8 @@ function SmbCredit({ go }) {
       <div className="mt-16 banner ai">
         <span className="ico"><Icon.Sparkle size={15}/></span>
         <div style={{flex:1}}>
-          <div className="title">Why pre-filled? Because we already have the data.</div>
-          <div className="desc">Your revenue trend, AR/AP, inventory turnover, and SQB transaction history are pulled automatically. No uploading bank statements or filling 12-page forms.</div>
+          <div className="title">Почему форма предзаполнена? Потому что у нас уже есть эти данные.</div>
+          <div className="desc">Тренд выручки, дебиторка/кредиторка, оборачиваемость запасов и история транзакций SQB подтягиваются автоматически. Не нужно загружать банковские выписки и заполнять 12-страничные анкеты.</div>
         </div>
       </div>
     </div>
