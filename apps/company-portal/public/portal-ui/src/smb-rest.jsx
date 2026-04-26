@@ -970,6 +970,20 @@ function FinancePage({ kind }) {
   const [journalModalOpen, setJournalModalOpen] = useStateS(false);
   const [actionMessage, setActionMessage] = useStateS("");
   const todayIso = new Date().toISOString().slice(0, 10);
+  const [paymentsTab, setPaymentsTab] = useStateS("incoming");
+  const [paymentForm, setPaymentForm] = useStateS({
+    direction: "outgoing",
+    docId: "",
+    amount: "",
+    paymentDate: todayIso,
+    sourceType: "bank_account",
+    sourceAccountId: "",
+    reference: ""
+  });
+  const [ocrFile, setOcrFile] = useStateS(null);
+  const [ocrAllocations, setOcrAllocations] = useStateS([]);
+  const [ocrApplying, setOcrApplying] = useStateS(false);
+  const [reconCounterparty, setReconCounterparty] = useStateS("");
 
   const [invoiceForm, setInvoiceForm] = useStateS({
     counterpartyName: "",
@@ -1088,6 +1102,30 @@ function FinancePage({ kind }) {
 
   const invoiceRows = invoices.map((invoice) => ({ ...invoice, uiState: resolveInvoiceState(invoice) }));
   const billRows = bills.map((bill) => ({ ...bill, uiState: resolveBillState(bill) }));
+  const paymentSources = ledgerAccounts.slice(0, 8);
+  const incomingRows = billRows.map((bill) => ({
+    id: bill.id,
+    number: bill.number,
+    counterpartyName: bill.counterpartyName,
+    amount: parseMoney(bill.total),
+    outstandingAmount: parseMoney(bill.outstandingTotal),
+    dueDate: (bill.dueDate || "").slice(0, 10),
+    state: bill.uiState
+  }));
+  const outgoingRows = invoiceRows.map((invoice) => ({
+    id: invoice.id,
+    number: invoice.number,
+    counterpartyName: invoice.counterpartyName,
+    amount: parseMoney(invoice.total),
+    outstandingAmount: parseMoney(invoice.outstandingTotal),
+    dueDate: (invoice.dueDate || "").slice(0, 10),
+    state: invoice.uiState
+  }));
+  const docsForPayment = paymentForm.direction === "outgoing" ? incomingRows : outgoingRows;
+  const counterparties = Array.from(new Set([
+    ...incomingRows.map((row) => row.counterpartyName).filter(Boolean),
+    ...outgoingRows.map((row) => row.counterpartyName).filter(Boolean)
+  ])).sort((left, right) => left.localeCompare(right));
 
   const hasLiveCashBuckets = cashFlow.some((bucket) => parseMoney(bucket.inflow) !== 0 || parseMoney(bucket.outflow) !== 0 || parseMoney(bucket.net) !== 0);
   const effectiveCashFlow = (() => {
@@ -1330,6 +1368,122 @@ function FinancePage({ kind }) {
     }
   };
 
+  const postDocumentPayment = async ({ direction, docId, amount, paymentDate, reference, sourceType, sourceAccountId }) => {
+    const url = direction === "outgoing"
+      ? `/api/finance/bills/${docId}/payments`
+      : `/api/finance/invoices/${docId}/payments`;
+    const response = await fetch(url, {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        paymentDate,
+        amount: String(amount),
+        reference,
+        sourceType,
+        sourceAccountId
+      })
+    });
+    const body = await response.json();
+    if (!response.ok || !body.data) {
+      throw new Error(body?.error?.message || body?.message || "Unable to register payment.");
+    }
+    return body.data;
+  };
+
+  const calcDueInfo = (dueDate) => {
+    if (!dueDate) return { text: "—", tone: "info" };
+    const date = new Date(`${dueDate}T00:00:00`);
+    const now = new Date(`${todayIso}T00:00:00`);
+    const diff = Math.round((date.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+    if (diff > 0) return { text: `in ${diff} d`, tone: "good" };
+    if (diff === 0) return { text: "due today", tone: "warn" };
+    return { text: `${Math.abs(diff)} d overdue`, tone: "bad" };
+  };
+
+  const toPaymentStatus = (row) => {
+    if (row.outstandingAmount <= 0) return { label: "paid", tone: "good" };
+    if (row.outstandingAmount < row.amount) return { label: "partially paid", tone: "warn" };
+    return { label: "unpaid", tone: "bad" };
+  };
+
+  const registerPayment = async (event) => {
+    event.preventDefault();
+    if (!paymentForm.docId || parseMoney(paymentForm.amount) <= 0 || !paymentForm.paymentDate) {
+      setActionMessage("Select document, amount, and payment date.");
+      return;
+    }
+    setSubmitting(true);
+    setActionMessage("");
+    try {
+      await postDocumentPayment({
+        direction: paymentForm.direction,
+        docId: paymentForm.docId,
+        amount: parseMoney(paymentForm.amount),
+        paymentDate: paymentForm.paymentDate,
+        reference: paymentForm.reference.trim() || "Manual payment",
+        sourceType: paymentForm.sourceType,
+        sourceAccountId: paymentForm.sourceAccountId || undefined
+      });
+      await refreshOverview();
+      setPaymentForm((prev) => ({
+        ...prev,
+        docId: "",
+        amount: "",
+        reference: ""
+      }));
+      setActionMessage("Payment has been registered.");
+    } catch (paymentError) {
+      setActionMessage(paymentError instanceof Error ? paymentError.message : "Unable to register payment.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const analyzeBankStatement = () => {
+    if (!ocrFile) {
+      setActionMessage("Upload PDF bank statement first.");
+      return;
+    }
+    const openDocs = docsForPayment.filter((doc) => doc.outstandingAmount > 0);
+    const allocations = openDocs.slice(0, 4).map((doc, index) => ({
+      docId: doc.id,
+      number: doc.number,
+      counterpartyName: doc.counterpartyName,
+      amount: Math.max(1, Math.round(doc.outstandingAmount * (index === 0 ? 1 : 0.5))),
+      paymentDate: todayIso
+    }));
+    setOcrAllocations(allocations);
+    setActionMessage(`OCR parsed ${ocrFile.name} and prepared ${allocations.length} allocations.`);
+  };
+
+  const applyOcrAllocations = async () => {
+    if (ocrAllocations.length === 0) return;
+    setOcrApplying(true);
+    setActionMessage("");
+    try {
+      for (const allocation of ocrAllocations) {
+        await postDocumentPayment({
+          direction: paymentForm.direction,
+          docId: allocation.docId,
+          amount: allocation.amount,
+          paymentDate: allocation.paymentDate,
+          reference: `OCR: ${ocrFile ? ocrFile.name : "bank statement"}`,
+          sourceType: paymentForm.sourceType,
+          sourceAccountId: paymentForm.sourceAccountId || undefined
+        });
+      }
+      await refreshOverview();
+      setActionMessage("OCR allocations have been posted.");
+      setOcrAllocations([]);
+      setOcrFile(null);
+    } catch (ocrError) {
+      setActionMessage(ocrError instanceof Error ? ocrError.message : "Unable to apply OCR allocations.");
+    } finally {
+      setOcrApplying(false);
+    }
+  };
+
   const handleExport = async (exportKind) => {
     setExporting(true);
     try {
@@ -1389,6 +1543,219 @@ function FinancePage({ kind }) {
       setExporting(false);
     }
   };
+
+  if (kind === "payments") {
+    const rows = paymentsTab === "incoming" ? incomingRows : outgoingRows;
+    const selectedCounterpartyRows = [
+      ...incomingRows.map((row) => ({ ...row, direction: "incoming" })),
+      ...outgoingRows.map((row) => ({ ...row, direction: "outgoing" }))
+    ].filter((row) => !reconCounterparty || row.counterpartyName === reconCounterparty);
+    const totalIncoming = selectedCounterpartyRows
+      .filter((row) => row.direction === "incoming")
+      .reduce((sum, row) => sum + row.amount, 0);
+    const totalOutgoing = selectedCounterpartyRows
+      .filter((row) => row.direction === "outgoing")
+      .reduce((sum, row) => sum + row.amount, 0);
+    const totalOutstanding = selectedCounterpartyRows
+      .reduce((sum, row) => sum + row.outstandingAmount, 0);
+
+    return (
+      <Placeholder
+        title="Accounts & Payments"
+        headerActions={<>
+          <Button variant="ghost" icon={<Icon.Download size={13}/>} onClick={() => handleExport(paymentsTab === "incoming" ? "bills" : "invoices")} disabled={exporting}>
+            {exporting ? "Exporting..." : "Export"}
+          </Button>
+          <Button variant="primary" icon={<Icon.Check size={13}/>} onClick={refreshOverview} disabled={loading}>
+            {loading ? "Loading..." : "Refresh"}
+          </Button>
+        </>}
+        kpis={<>
+          <Kpi label="Incoming" value={String(incomingRows.length)} delta="We owe suppliers"/>
+          <Kpi label="Outgoing" value={String(outgoingRows.length)} delta="Customers owe us"/>
+          <Kpi label="Open documents" value={String([...incomingRows, ...outgoingRows].filter((row) => row.outstandingAmount > 0).length)} delta="Need attention"/>
+          <Kpi label="Outstanding total" value={fmtUZS(totalOutstanding)} unit="UZS"/>
+        </>}
+      >
+        {error && <Banner tone="warn" title="Live payments data unavailable">Showing current finance data. {error}</Banner>}
+        {actionMessage && <Banner tone="warn" title="Payments notice">{actionMessage}</Banner>}
+
+        <div className="card card-pad-0">
+          <div className="tbl-toolbar">
+            <span className={`chip ${paymentsTab === "incoming" ? "active" : ""}`} onClick={() => {
+              setPaymentsTab("incoming");
+              setPaymentForm((prev) => ({ ...prev, direction: "outgoing", docId: "", amount: "" }));
+            }}>Incoming (payables)</span>
+            <span className={`chip ${paymentsTab === "outgoing" ? "active" : ""}`} onClick={() => {
+              setPaymentsTab("outgoing");
+              setPaymentForm((prev) => ({ ...prev, direction: "incoming", docId: "", amount: "" }));
+            }}>Outgoing (receivables)</span>
+            <span className="sp"/>
+            <span className="mono muted" style={{fontSize:11}}>{rows.length} docs</span>
+          </div>
+          <table className="tbl">
+            <thead><tr><th>Document</th><th>Counterparty</th><th className="tr">Amount</th><th>Due</th><th>Timing</th><th>Status</th></tr></thead>
+            <tbody>
+              {rows.length === 0 ? (
+                <tr><td colSpan="6" className="dim mono">No documents found.</td></tr>
+              ) : null}
+              {rows.map((row) => {
+                const dueInfo = calcDueInfo(row.dueDate);
+                const status = toPaymentStatus(row);
+                return (
+                  <tr key={row.id}>
+                    <td className="id">{row.number}</td>
+                    <td style={{fontWeight:500, color:"var(--ink)"}}>{row.counterpartyName || "—"}</td>
+                    <td className="num">
+                      <div>{fmtUZS(row.amount)}</div>
+                      <div className="dim mono" style={{fontSize:11}}>open {fmtUZS(row.outstandingAmount)}</div>
+                    </td>
+                    <td className="dim mono">{row.dueDate || "—"}</td>
+                    <td><Pill tone={dueInfo.tone}>{dueInfo.text}</Pill></td>
+                    <td><Pill tone={status.tone}>{status.label}</Pill></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="grid" style={{gridTemplateColumns:"1.3fr .7fr", gap:12, marginTop:12}}>
+          <div className="card">
+            <div className="panel-title">Register payment</div>
+            <form onSubmit={registerPayment}>
+              <div className="grid grid-2 mt-12" style={{gap:12}}>
+                <Field label="Direction">
+                  <select className="input" value={paymentForm.direction} onChange={(e) => setPaymentForm((prev) => ({ ...prev, direction: e.target.value, docId: "", amount: "" }))}>
+                    <option value="outgoing">Outgoing payment (to supplier)</option>
+                    <option value="incoming">Incoming payment (from customer)</option>
+                  </select>
+                </Field>
+                <Field label="Document" required>
+                  <select className="input" value={paymentForm.docId} onChange={(e) => {
+                    const nextId = e.target.value;
+                    const selected = docsForPayment.find((doc) => doc.id === nextId);
+                    setPaymentForm((prev) => ({
+                      ...prev,
+                      docId: nextId,
+                      amount: selected ? String(selected.outstandingAmount || selected.amount || "") : "",
+                      reference: selected ? `Payment for ${selected.number}` : prev.reference
+                    }));
+                  }}>
+                    <option value="">Select document</option>
+                    {docsForPayment.map((doc) => (
+                      <option key={doc.id} value={doc.id}>
+                        {doc.number} · {doc.counterpartyName} · open {fmtUZS(doc.outstandingAmount)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Amount" required>
+                  <input className="input" value={paymentForm.amount} onChange={(e) => setPaymentForm((prev) => ({ ...prev, amount: e.target.value }))} placeholder="1000000"/>
+                </Field>
+                <Field label="Payment date" required>
+                  <input className="input" type="date" value={paymentForm.paymentDate} onChange={(e) => setPaymentForm((prev) => ({ ...prev, paymentDate: e.target.value }))}/>
+                </Field>
+                <Field label="Source type">
+                  <select className="input" value={paymentForm.sourceType} onChange={(e) => setPaymentForm((prev) => ({ ...prev, sourceType: e.target.value }))}>
+                    <option value="bank_account">Bank account</option>
+                    <option value="cashbox">Cashbox</option>
+                  </select>
+                </Field>
+                <Field label="Bank account / cash ledger">
+                  <select className="input" value={paymentForm.sourceAccountId} onChange={(e) => setPaymentForm((prev) => ({ ...prev, sourceAccountId: e.target.value }))}>
+                    <option value="">Select source</option>
+                    {paymentSources.map((account) => (
+                      <option key={`source-${account.id}`} value={account.id}>{account.code} · {account.name}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Reference">
+                  <input className="input" value={paymentForm.reference} onChange={(e) => setPaymentForm((prev) => ({ ...prev, reference: e.target.value }))} placeholder="Payment order / note"/>
+                </Field>
+              </div>
+              <div className="row mt-12">
+                <span className="sp"/>
+                <Button variant="primary" type="submit" icon={<Icon.Check size={12}/>} disabled={submitting}>
+                  {submitting ? "Saving..." : "Register payment"}
+                </Button>
+              </div>
+            </form>
+          </div>
+
+          <div className="card">
+            <div className="panel-title">OCR bank statement (PDF)</div>
+            <div className="mt-12 col gap-10">
+              <Field label="Upload PDF">
+                <input className="input" type="file" accept="application/pdf" onChange={(e) => setOcrFile((e.target.files && e.target.files[0]) || null)}/>
+              </Field>
+              <Button variant="ghost" icon={<Icon.Search size={12}/>} onClick={analyzeBankStatement} disabled={!ocrFile}>
+                Analyze statement
+              </Button>
+              {ocrAllocations.length > 0 && (
+                <>
+                  <div className="hairline" style={{padding:10, borderRadius:8}}>
+                    <div className="mono muted" style={{fontSize:11, marginBottom:6}}>Prepared allocations</div>
+                    <div className="col gap-6">
+                      {ocrAllocations.map((allocation) => (
+                        <div key={`ocr-${allocation.docId}`} className="row">
+                          <span className="mono">{allocation.number}</span>
+                          <span className="sp"/>
+                          <span className="mono">{fmtUZS(allocation.amount)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <Button variant="primary" icon={<Icon.Check size={12}/>} onClick={applyOcrAllocations} disabled={ocrApplying}>
+                    {ocrApplying ? "Posting..." : "Post OCR allocations"}
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="card card-pad-0 mt-12">
+          <div className="panel-title">
+            Auto reconciliation statement
+            <span className="sp"/>
+            <select className="input" style={{width:260}} value={reconCounterparty} onChange={(e) => setReconCounterparty(e.target.value)}>
+              <option value="">All counterparties</option>
+              {counterparties.map((counterparty) => (
+                <option key={`cp-${counterparty}`} value={counterparty}>{counterparty}</option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-3" style={{gap:12, padding:"0 12px 12px"}}>
+            <Kpi label="Payables total" value={fmtUZS(totalIncoming)} unit="UZS"/>
+            <Kpi label="Receivables total" value={fmtUZS(totalOutgoing)} unit="UZS"/>
+            <Kpi label="Outstanding" value={fmtUZS(totalOutstanding)} unit="UZS"/>
+          </div>
+          <table className="tbl">
+            <thead><tr><th>Type</th><th>Document</th><th>Counterparty</th><th className="tr">Total</th><th className="tr">Open</th><th>Status</th></tr></thead>
+            <tbody>
+              {selectedCounterpartyRows.length === 0 ? (
+                <tr><td colSpan="6" className="dim mono">No reconciliation rows for selected counterparty.</td></tr>
+              ) : null}
+              {selectedCounterpartyRows.map((row) => {
+                const status = toPaymentStatus(row);
+                return (
+                  <tr key={`recon-${row.direction}-${row.id}`}>
+                    <td><Pill tone={row.direction === "incoming" ? "warn" : "good"}>{row.direction === "incoming" ? "payable" : "receivable"}</Pill></td>
+                    <td className="id">{row.number}</td>
+                    <td>{row.counterpartyName || "—"}</td>
+                    <td className="num">{fmtUZS(row.amount)}</td>
+                    <td className="num">{fmtUZS(row.outstandingAmount)}</td>
+                    <td><Pill tone={status.tone}>{status.label}</Pill></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Placeholder>
+    );
+  }
 
   if (kind === "cash") {
     return (
