@@ -700,8 +700,8 @@ async function copilotStream({ messages, context, locale, signal, onToken, onDon
   }
 }
 
-function CopilotPage({ go, lang }) {
-  const t = COPILOT_I18N[lang] || COPILOT_I18N.en;
+function CopilotPage({ go, lang = "ru" }) {
+  const t = COPILOT_I18N[lang] || COPILOT_I18N.ru;
   const tenantId = (window.AuthRuntime && window.AuthRuntime.getCachedSession && window.AuthRuntime.getCachedSession()?.tenantId) || "default";
 
   const [store, setStore] = useStateS(() => copilotLoadStore(tenantId));

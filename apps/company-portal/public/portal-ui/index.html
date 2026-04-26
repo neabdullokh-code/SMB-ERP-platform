@@ -68,7 +68,7 @@
 
     // SMB
     "/smb/home":       { surface: "smb",  crumbs: ["Kamolot", "Dashboard"],   comp: () => <SMBDashboard go={go}/> },
-    "/smb/copilot":    { surface: "smb",  crumbs: ["Kamolot", "AI Copilot"],  comp: () => <CopilotPage go={go}/> },
+    "/smb/copilot":    { surface: "smb",  crumbs: ["Kamolot", "AI Copilot"],  comp: () => <CopilotPage go={go} lang="ru"/> },
     "/smb/inventory":  { surface: "smb",  crumbs: ["Kamolot", "Inventory"],   comp: () => <InventoryList go={go}/> },
     "/smb/inventory/detail":{ surface:"smb",crumbs:["Kamolot","Inventory","SKU KS-0102"], comp:() => <InventoryDetail go={go}/> },
     "/smb/inventory/scan": { surface:"smb", crumbs:["Kamolot","Inventory","Scan waybill"], comp:() => <OcrScan go={go}/> },
