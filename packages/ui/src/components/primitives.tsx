@@ -10,10 +10,10 @@ import type {
 type Tone = "neutral" | "good" | "warn" | "bad";
 
 const toneMap: Record<Tone, { background: string; color: string }> = {
-  neutral: { background: "#e9eef4", color: "#26364a" },
-  good: { background: "#d9f4e5", color: "#19663c" },
-  warn: { background: "#fff3d6", color: "#7f5c00" },
-  bad: { background: "#fde0df", color: "#8b2621" }
+  neutral: { background: "#18233a", color: "#c7cfdc" },
+  good: { background: "#12291f", color: "#4fb17a" },
+  warn: { background: "#2a2012", color: "#d69a3b" },
+  bad: { background: "#2a1512", color: "#e07a63" }
 };
 
 export function Button({
@@ -41,7 +41,7 @@ export function Button({
     borderRadius: "0.875rem",
     fontWeight: 600,
     textDecoration: "none",
-    border: "1px solid #d4dce6",
+    border: "1px solid #1e2a40",
     cursor: disabled ? "not-allowed" : "pointer",
     opacity: disabled ? 0.55 : 1,
     width: fullWidth ? "100%" : undefined,
@@ -50,13 +50,13 @@ export function Button({
 
   let style: CSSProperties;
   if (variant === "primary") {
-    style = { ...shared, background: "#0d3b66", color: "#ffffff", borderColor: "#0d3b66" };
+    style = { ...shared, background: "#d18a2b", color: "#0b1220", borderColor: "#d18a2b" };
   } else if (variant === "secondary") {
-    style = { ...shared, background: "#ffffff", color: "#10243d" };
+    style = { ...shared, background: "#101a2c", color: "#e7edf5" };
   } else if (variant === "danger") {
-    style = { ...shared, background: "#ffffff", color: "#8b2621", borderColor: "#f1c2c0" };
+    style = { ...shared, background: "#101a2c", color: "#e07a63", borderColor: "#5a2a24" };
   } else {
-    style = { ...shared, background: "transparent", color: "#10243d", borderColor: "transparent" };
+    style = { ...shared, background: "transparent", color: "#c7cfdc", borderColor: "transparent" };
   }
 
   if (href && !disabled) {
@@ -74,15 +74,15 @@ export function Button({
   );
 }
 
-const inputBorderColor = "#d4dce6";
+const inputBorderColor = "#1e2a40";
 
 const inputBaseStyle: CSSProperties = {
   width: "100%",
   padding: "0.6rem 0.75rem",
   borderRadius: "0.65rem",
   border: `1px solid ${inputBorderColor}`,
-  background: "#ffffff",
-  color: "#10243d",
+  background: "#101a2c",
+  color: "#e7edf5",
   fontSize: "0.95rem",
   boxSizing: "border-box"
 };
@@ -102,14 +102,12 @@ export function FormField({
 }) {
   return (
     <label style={{ display: "grid", gap: "0.35rem" }}>
-      <span style={{ color: "#10243d", fontSize: "0.85rem", fontWeight: 600 }}>
+      <span style={{ color: "#e7edf5", fontSize: "0.85rem", fontWeight: 600 }}>
         {label}
         {required ? <span style={{ color: "#8b2621", marginLeft: 4 }}>*</span> : null}
       </span>
       {children}
-      {hint && !error ? (
-        <span style={{ color: "#5f7083", fontSize: "0.78rem" }}>{hint}</span>
-      ) : null}
+      {hint && !error ? <span style={{ color: "#8a94a7", fontSize: "0.78rem" }}>{hint}</span> : null}
       {error ? (
         <span style={{ color: "#8b2621", fontSize: "0.78rem" }}>{error}</span>
       ) : null}
@@ -148,7 +146,7 @@ export function TextInput({
       style={{
         ...inputBaseStyle,
         borderColor: error ? "#d88780" : inputBorderColor,
-        background: disabled ? "#f3f5f8" : inputBaseStyle.background
+        background: disabled ? "#16223b" : inputBaseStyle.background
       }}
     />
   );
@@ -199,7 +197,7 @@ export function Select({
       style={{
         ...inputBaseStyle,
         borderColor: error ? "#d88780" : inputBorderColor,
-        background: disabled ? "#f3f5f8" : inputBaseStyle.background
+        background: disabled ? "#16223b" : inputBaseStyle.background
       }}
     >
       {placeholder ? (
@@ -276,16 +274,16 @@ export function SectionCard({
   return (
     <section
       style={{
-        background: "#ffffff",
-        border: "1px solid #dfe7f0",
+        background: "#101a2c",
+        border: "1px solid #1e2a40",
         borderRadius: "1.25rem",
         padding: "1.25rem",
-        boxShadow: "0 12px 32px rgba(16, 36, 61, 0.06)"
+        boxShadow: "0 12px 32px rgba(0, 0, 0, 0.26)"
       }}
     >
       <div style={{ marginBottom: "1rem" }}>
-        <h2 style={{ margin: 0, fontSize: "1.1rem", color: "#10243d" }}>{title}</h2>
-        {description ? <p style={{ margin: "0.3rem 0 0", color: "#5f7083" }}>{description}</p> : null}
+        <h2 style={{ margin: 0, fontSize: "1.1rem", color: "#e7edf5" }}>{title}</h2>
+        {description ? <p style={{ margin: "0.3rem 0 0", color: "#8a94a7" }}>{description}</p> : null}
       </div>
       {children}
     </section>
@@ -304,15 +302,15 @@ export function KpiCard({
   return (
     <div
       style={{
-        background: "linear-gradient(180deg, #ffffff 0%, #f7fafc 100%)",
-        border: "1px solid #dfe7f0",
+        background: "linear-gradient(180deg, #101a2c 0%, #0e1726 100%)",
+        border: "1px solid #1e2a40",
         borderRadius: "1rem",
         padding: "1rem"
       }}
     >
-      <p style={{ margin: 0, color: "#5f7083", fontSize: "0.85rem" }}>{label}</p>
-      <div style={{ marginTop: "0.4rem", fontSize: "1.7rem", fontWeight: 700, color: "#10243d" }}>{value}</div>
-      <p style={{ margin: "0.35rem 0 0", color: "#3d6c52", fontSize: "0.9rem" }}>{helper}</p>
+      <p style={{ margin: 0, color: "#8a94a7", fontSize: "0.85rem" }}>{label}</p>
+      <div style={{ marginTop: "0.4rem", fontSize: "1.7rem", fontWeight: 700, color: "#e7edf5" }}>{value}</div>
+      <p style={{ margin: "0.35rem 0 0", color: "#d18a2b", fontSize: "0.9rem" }}>{helper}</p>
     </div>
   );
 }
@@ -331,9 +329,9 @@ export function PageHeader({
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem", alignItems: "end", justifyContent: "space-between" }}>
       <div>
-        <div style={{ textTransform: "uppercase", letterSpacing: "0.08em", fontSize: "0.75rem", color: "#5f7083", fontWeight: 700 }}>{eyebrow}</div>
-        <h1 style={{ margin: "0.3rem 0", fontSize: "2rem", color: "#10243d" }}>{title}</h1>
-        <p style={{ margin: 0, color: "#5f7083", maxWidth: "62ch" }}>{description}</p>
+        <div style={{ textTransform: "uppercase", letterSpacing: "0.08em", fontSize: "0.75rem", color: "#8a94a7", fontWeight: 700 }}>{eyebrow}</div>
+        <h1 style={{ margin: "0.3rem 0", fontSize: "2rem", color: "#e7edf5" }}>{title}</h1>
+        <p style={{ margin: 0, color: "#8a94a7", maxWidth: "62ch" }}>{description}</p>
       </div>
       {actions ? <div style={{ display: "flex", gap: "0.75rem" }}>{actions}</div> : null}
     </div>
@@ -358,9 +356,9 @@ export function DataTable({
                 style={{
                   textAlign: "left",
                   padding: "0.8rem 0.65rem",
-                  color: "#5f7083",
+                  color: "#8a94a7",
                   fontSize: "0.82rem",
-                  borderBottom: "1px solid #dfe7f0"
+                  borderBottom: "1px solid #1e2a40"
                 }}
               >
                 {column}
@@ -376,8 +374,8 @@ export function DataTable({
                   key={cellIndex}
                   style={{
                     padding: "0.9rem 0.65rem",
-                    color: "#10243d",
-                    borderBottom: "1px solid #edf2f7",
+                    color: "#e7edf5",
+                    borderBottom: "1px solid #18233a",
                     verticalAlign: "top"
                   }}
                 >

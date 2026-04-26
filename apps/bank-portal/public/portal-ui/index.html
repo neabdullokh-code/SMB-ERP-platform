@@ -32,7 +32,7 @@
 <script>
   // Tweak defaults
   const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
-    "theme": "light",
+    "theme": "dark",
     "accent": "warm-ochre",
     "density": "comfortable",
     "showCopilotDot": true,
@@ -48,7 +48,6 @@
 <script type="text/babel" src="src/smb-hero.jsx"></script>
 <script type="text/babel" src="src/smb-inventory.jsx"></script>
 <script type="text/babel" src="src/smb-rest.jsx"></script>
-<script type="text/babel" src="src/smb-documents.jsx"></script>
 <script type="text/babel" src="src/smb-credit.jsx"></script>
 <script type="text/babel" src="src/bank-hero.jsx"></script>
 <script type="text/babel" src="src/bank-credit.jsx"></script>
@@ -81,14 +80,6 @@
     "/smb/finance/invoices": { surface:"smb", crumbs:["Kamolot","Finance","Invoices"],  comp:() => <FinancePage kind="invoices"/> },
     "/smb/finance/bills":    { surface:"smb", crumbs:["Kamolot","Finance","Bills"],     comp:() => <FinancePage kind="bills"/> },
     "/smb/finance/cash":     { surface:"smb", crumbs:["Kamolot","Finance","Cash flow"], comp:() => <FinancePage kind="cash"/> },
-    "/smb/documents/goods-receipts":     { surface:"smb", crumbs:["Kamolot","Warehouse","Goods receipts"],       comp:() => <GoodsReceiptsJournal go={go}/> },
-    "/smb/documents/goods-receipts/new": { surface:"smb", crumbs:["Kamolot","Warehouse","Goods receipts","New"], comp:() => <GoodsReceiptForm go={go}/> },
-    "/smb/documents/goods-issues":       { surface:"smb", crumbs:["Kamolot","Warehouse","Goods issues"],         comp:() => <GoodsIssuesJournal go={go}/> },
-    "/smb/documents/goods-issues/new":   { surface:"smb", crumbs:["Kamolot","Warehouse","Goods issues","New"],   comp:() => <GoodsIssueForm go={go}/> },
-    "/smb/documents/inventory-transfers":     { surface:"smb", crumbs:["Kamolot","Warehouse","Transfers"],       comp:() => <InventoryTransfersJournal go={go}/> },
-    "/smb/documents/inventory-transfers/new": { surface:"smb", crumbs:["Kamolot","Warehouse","Transfers","New"], comp:() => <InventoryTransferForm go={go}/> },
-    "/smb/documents/production-orders":       { surface:"smb", crumbs:["Kamolot","Production","Orders"],         comp:() => <ProductionOrdersJournal go={go}/> },
-    "/smb/documents/production-orders/new":   { surface:"smb", crumbs:["Kamolot","Production","Orders","New"],   comp:() => <ProductionOrderFormPage go={go}/> },
     "/smb/reports":    { surface: "smb",  crumbs: ["Kamolot", "Reports"],     comp: () => <ReportsPage/> },
     "/smb/credit":     { surface: "smb",  crumbs: ["Kamolot", "Credit"],      comp: () => <SmbCredit go={go}/> },
     "/smb/loan":       { surface: "smb",  crumbs: ["Kamolot", "Credit", "Loan application"], comp: () => <LoanApplication go={go}/> },

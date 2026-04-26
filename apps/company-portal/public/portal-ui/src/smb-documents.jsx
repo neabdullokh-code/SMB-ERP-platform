@@ -959,3 +959,14 @@ function ProductionOrdersJournal({ go }) { return <DocumentJournal go={go} kind=
 function GoodsReceiptForm({ go }) { return <InventoryDocumentForm go={go} kind="goods-receipts" />; }
 function GoodsIssueForm({ go }) { return <InventoryDocumentForm go={go} kind="goods-issues" />; }
 function InventoryTransferForm({ go }) { return <InventoryDocumentForm go={go} kind="inventory-transfers" />; }
+
+Object.assign(window, {
+  GoodsReceiptsJournal,
+  GoodsIssuesJournal,
+  InventoryTransfersJournal,
+  ProductionOrdersJournal,
+  GoodsReceiptForm,
+  GoodsIssueForm,
+  InventoryTransferForm,
+  ProductionOrderFormPage
+});

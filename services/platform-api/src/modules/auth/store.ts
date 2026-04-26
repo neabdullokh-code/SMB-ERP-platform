@@ -947,6 +947,43 @@ function hasVerifiedPassword(account: AccountRecord, password: string) {
   return account.password === "__verified_by_db__" || account.password === password;
 }
 
+export async function verifyUserPasswordForReauth(userId: string, password: string) {
+  let passwordValid = false;
+  try {
+    passwordValid = Boolean(await withDb(async (pool) => {
+      const result = await pool.query<{ password_valid: boolean }>(
+        `select c.password_hash = crypt($2, c.password_hash) as password_valid
+         from credentials c
+         where c.user_id = $1`,
+        [userId, password]
+      );
+      return result.rows[0]?.password_valid ?? false;
+    }));
+  } catch {
+    passwordValid = false;
+  }
+
+  if (passwordValid) {
+    return true;
+  }
+
+  if (!DEMO_AUTH_ENABLED) {
+    return false;
+  }
+
+  const account = findMemoryAccountById(userId);
+  return account ? hasVerifiedPassword(account, password) : false;
+}
+
+export async function verifyUserOtpForReauth(userId: string, code: string) {
+  const account = DEMO_AUTH_ENABLED ? findMemoryAccountById(userId) : await loadPersistedAccountById(userId);
+  if (!account?.otpMethod?.secret) {
+    return false;
+  }
+
+  return verifyTotp(account.otpMethod.secret, code, Date.now(), env.OTP_TOTP_WINDOW);
+}
+
 export function hasAccountEmail(email: string) {
   const lookup = email.trim().toLowerCase();
   return accounts.some((account) => account.email.toLowerCase() === lookup);

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { BANK_PROTECTED_PORTAL_PATHS, BANK_PUBLIC_PORTAL_PATHS, mapBankRedirectPath } from "@sqb/config/portal";
+import { BANK_PROTECTED_PORTAL_PATHS, BANK_PUBLIC_PORTAL_PATHS, mapBankRedirectPath, mapCompanyRedirectPath, resolvePortalUrl } from "@sqb/config/portal";
 
 const AUTH_COOKIES = ["erp_auth_session", "erp_auth_refresh", "erp_role", "erp_tenant", "erp_redirect_path", "erp_requires_terms", "erp_is_privileged"];
 
@@ -106,6 +106,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(mapBankRedirectPath(pathname), request.url));
   }
 
+  if (pathname.startsWith("/smb/")) {
+    const companyPath = mapCompanyRedirectPath(pathname);
+    const companyUrl = resolvePortalUrl(companyPath, "company", {
+      currentHref: request.url,
+      companyPortalUrl: process.env.NEXT_PUBLIC_COMPANY_PORTAL_URL,
+      bankPortalUrl: process.env.NEXT_PUBLIC_BANK_PORTAL_URL
+    });
+    return NextResponse.redirect(companyUrl);
+  }
+
   if (BANK_PUBLIC_PORTAL_PATHS.has(pathname)) {
     return NextResponse.rewrite(new URL("/portal-ui/index.html", request.url));
   }
@@ -147,5 +157,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login", "/otp", "/forgot", "/terms", "/onboarding", "/app/:path*", "/bank/:path*"]
+  matcher: ["/", "/login", "/otp", "/forgot", "/terms", "/onboarding", "/app/:path*", "/smb/:path*", "/bank/:path*"]
 };

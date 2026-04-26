@@ -41,6 +41,9 @@ export interface AuthenticatedUser {
   name: string;
   email?: string;
   phone: string;
+  avatarStorageKey?: string | null;
+  avatarUrl?: string | null;
+  avatarUpdatedAt?: string;
   role: Role;
   workspaceRole?: CompanyWorkspaceRole;
   permissionGroups?: PermissionGroupKey[];
@@ -48,6 +51,46 @@ export interface AuthenticatedUser {
   tenantId?: string;
   lastActiveAt?: string;
 }
+
+export interface UserProfile {
+  userId: string;
+  name: string;
+  email?: string;
+  phone: string;
+  avatarUrl?: string | null;
+  avatarStorageKey?: string | null;
+  avatarUpdatedAt?: string;
+  role: Role;
+  workspaceRole?: CompanyWorkspaceRole;
+  tenantId?: string;
+  permissions: Permission[];
+  permissionGroups?: PermissionGroupKey[];
+  lastActiveAt?: string;
+}
+
+export interface UpdateProfileRequest {
+  name?: string;
+  avatarStorageKey?: string | null;
+  avatarUrl?: string | null;
+}
+
+export interface RequestEmailChangeRequest {
+  newEmail: string;
+  password: string;
+  otpCode?: string;
+  targetUserId?: string;
+}
+
+export interface RequestEmailChangeResponse {
+  status: "verification_sent";
+  expiresAt: string;
+  delivery: "email";
+  verificationPreviewUrl?: string;
+}
+
+export type ConfirmEmailChangeResponse =
+  | { status: "confirmed"; message: string }
+  | { status: "invalid"; message: string };
 
 export interface PrivilegedAccessFlags {
   isPrivileged: boolean;

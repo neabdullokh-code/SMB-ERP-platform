@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { COMPANY_PROTECTED_PORTAL_PATHS, COMPANY_PUBLIC_PORTAL_PATHS } from "@sqb/config/portal";
+import { COMPANY_PROTECTED_PORTAL_PATHS, COMPANY_PUBLIC_PORTAL_PATHS, mapCompanyRedirectPath } from "@sqb/config/portal";
 
 const AUTH_COOKIES = ["erp_auth_session", "erp_auth_refresh", "erp_role", "erp_tenant", "erp_redirect_path", "erp_requires_terms", "erp_is_privileged"];
 
@@ -104,6 +104,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
+  if (pathname.startsWith("/smb/")) {
+    return NextResponse.redirect(new URL(mapCompanyRedirectPath(pathname), request.url));
+  }
+
   if (COMPANY_PUBLIC_PORTAL_PATHS.has(pathname)) {
     return NextResponse.rewrite(new URL("/portal-ui/index.html", request.url));
   }
@@ -154,5 +158,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login", "/otp", "/forgot", "/terms", "/onboarding", "/search", "/app/:path*", "/bank/:path*"]
+  matcher: ["/", "/login", "/otp", "/forgot", "/terms", "/onboarding", "/search", "/app/:path*", "/smb/:path*", "/bank/:path*"]
 };
