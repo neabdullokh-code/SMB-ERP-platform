@@ -36,16 +36,11 @@ export async function GET(request: Request) {
     fetchJson(sessionToken, "/bank/credit-queue")
   ]);
 
-  const firstError = !alerts.response.ok ? alerts : !analytics.response.ok ? analytics : !queue.response.ok ? queue : null;
-  if (firstError) {
-    return NextResponse.json(firstError.body, { status: firstError.response.status });
-  }
-
   return NextResponse.json({
     data: {
-      alertCount: Array.isArray(alerts.body?.data?.alerts) ? alerts.body.data.alerts.length : 0,
-      tenantCount: Number(analytics.body?.data?.analytics?.totalTenants ?? 0),
-      creditQueueCount: Array.isArray(queue.body?.data?.applications) ? queue.body.data.applications.length : 0
+      alertCount: alerts.response.ok && Array.isArray(alerts.body?.data?.alerts) ? alerts.body.data.alerts.length : null,
+      tenantCount: analytics.response.ok ? Number(analytics.body?.data?.analytics?.totalTenants ?? 0) : null,
+      creditQueueCount: queue.response.ok && Array.isArray(queue.body?.data?.applications) ? queue.body.data.applications.length : null
     },
     meta: null,
     error: null

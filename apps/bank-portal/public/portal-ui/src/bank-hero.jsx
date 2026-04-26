@@ -142,17 +142,91 @@ function BankDashboard({ go }) {
 
 function BankTenants({ go }) {
   const [q, setQ] = useStateS("");
+  const [loading, setLoading] = useStateS(true);
+  const [error, setError] = useStateS("");
+  const [tenants, setTenants] = useStateS([]);
   const [ind, setInd] = useStateS("All");
-  const industries = ["All", ...new Set(TENANTS.map(t => t.ind))];
-  const rows = TENANTS.filter(t => (ind==="All" || t.ind===ind) && (q===""||t.co.toLowerCase().includes(q.toLowerCase())));
+
+  useEffectS(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch("/api/bank/portfolio", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store"
+        });
+        const body = await response.json();
+        if (cancelled) return;
+
+        if (!response.ok || !Array.isArray(body?.data?.tenants)) {
+          throw new Error(body?.message || "Unable to load tenant portfolio.");
+        }
+
+        setTenants(body.data.tenants);
+        setError("");
+      } catch (loadError) {
+        if (!cancelled) {
+          setTenants([]);
+          setError(loadError instanceof Error ? loadError.message : "Unable to load tenant portfolio.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const industries = ["All", ...new Set(tenants.map((tenant) => tenant.industry || "Other"))];
+  const rows = tenants.filter((tenant) => {
+    const industry = tenant.industry || "Other";
+    const query = q.trim().toLowerCase();
+    const matchedIndustry = ind === "All" || industry === ind;
+    const matchedQuery = query === ""
+      || String(tenant.tenantName || "").toLowerCase().includes(query)
+      || String(tenant.tenantId || "").toLowerCase().includes(query)
+      || String(tenant.region || "").toLowerCase().includes(query);
+    return matchedIndustry && matchedQuery;
+  });
+
+  const totalTenants = tenants.length;
+  const trendLabel = (trend) => trend === "up" ? "+1" : trend === "down" ? "-1" : "0";
+  const formatTenantCode = (tenantId, index) => {
+    const raw = String(tenantId || "");
+    if (/^T-\d+$/i.test(raw)) return raw.toUpperCase();
+    const digits = raw.replace(/\D/g, "");
+    const serial = (digits ? digits.slice(-5) : String(index + 1)).padStart(5, "0");
+    return `T-${serial}`;
+  };
+  const relativeTime = (value) => {
+    if (!value) return "—";
+    const diff = Date.now() - new Date(value).getTime();
+    if (!Number.isFinite(diff)) return "—";
+    if (diff < 60 * 1000) return "now";
+    if (diff < 60 * 60 * 1000) return `${Math.floor(diff / (60 * 1000))}m ago`;
+    if (diff < 24 * 60 * 60 * 1000) return `${Math.floor(diff / (60 * 60 * 1000))}h ago`;
+    return `${Math.floor(diff / (24 * 60 * 60 * 1000))}d ago`;
+  };
+
   return (
     <div className="page">
       <div className="page-head">
-        <div><h1>All tenants</h1><div className="sub">2 347 active SMBs on SQB Business OS</div></div>
+        <div>
+          <h1>All tenants</h1>
+          <div className="sub">
+            {loading ? "Loading tenant portfolio..." : `${totalTenants} active SMBs on SQB Business OS`}
+          </div>
+        </div>
         <span className="sp"/>
         <Button variant="ghost" icon={<Icon.Filter size={13}/>}>Saved views</Button>
         <Button variant="ghost" icon={<Icon.Download size={13}/>}>Export</Button>
       </div>
+      {error && <Banner tone="warn" title="Tenant portfolio unavailable">{error}</Banner>}
       <div className="card card-pad-0">
         <div className="tbl-toolbar">
           <div className="input-wrap" style={{width:260}}><span className="prefix"><Icon.Search size={13}/></span><input className="input with-prefix" placeholder="Search company or TIN" value={q} onChange={e=>setQ(e.target.value)}/></div>
@@ -166,44 +240,51 @@ function BankTenants({ go }) {
             <span className="chip filter-add"><Icon.Plus size={11}/> Risk</span>
           </div>
           <span className="sp"/>
-          <div className="mono muted" style={{fontSize:11}}>{rows.length} of 2 347</div>
+          <div className="mono muted" style={{fontSize:11}}>
+            {loading ? "Loading..." : `${rows.length} of ${totalTenants}`}
+          </div>
         </div>
         <table className="tbl">
           <thead><tr>
             <th className="check"><input type="checkbox"/></th>
             <th>Company</th><th>Industry</th><th>Region</th>
-            <th style={{width:100}}>Revenue 6mo</th>
+            <th style={{width:100}}>Expected return</th>
             <th>Credit score</th><th>Trend</th><th>Activity</th><th>Flags</th><th/>
           </tr></thead>
-          <tbody>{rows.map(t =>
-            <tr key={t.id} onClick={() => go("/bank/tenant")} style={{cursor:"pointer"}}>
+          <tbody>
+            {loading && <tr><td colSpan="10" className="dim mono">Loading tenants...</td></tr>}
+            {!loading && rows.length === 0 && <tr><td colSpan="10" className="dim mono">No tenants found.</td></tr>}
+            {rows.map((t, rowIndex) => (
+            <tr key={t.tenantId} onClick={() => go("/bank/tenant")} style={{cursor:"pointer"}}>
               <td className="check"><input type="checkbox"/></td>
               <td>
                 <div className="row gap-8">
-                  <div className="avatar sm cool">{t.co.split(" ").map(w=>w[0]).slice(0,2).join("")}</div>
+                  <div className="avatar sm cool">{String(t.tenantName || "").split(" ").map((w) => w[0]).slice(0,2).join("")}</div>
                   <div>
-                    <div style={{color:"var(--ink)", fontWeight:500}}>{t.co}</div>
-                    <div className="id mono" style={{fontSize:10.5}}>{t.id}</div>
+                    <div style={{color:"var(--ink)", fontWeight:500}}>{t.tenantName}</div>
+                    <div className="id mono" style={{fontSize:10.5}}>{formatTenantCode(t.tenantId, rowIndex)}</div>
                   </div>
                 </div>
               </td>
-              <td className="dim">{t.ind}</td>
-              <td className="dim">{t.reg}</td>
-              <td><Sparkline data={t.rev} width={80} height={22}/></td>
-              <td><ScorePill value={t.score} trend={t.trend}/></td>
-              <td className="mono" style={{color: t.trend.startsWith("−") ? "var(--bad)" : "var(--good)"}}>{t.trend}</td>
-              <td className="dim mono" style={{fontSize:11}}>{t.act}</td>
+              <td className="dim">{t.industry || "Other"}</td>
+              <td className="dim">{t.region || "Unknown"}</td>
+              <td className="dim mono">{t.expectedReturnPercent}%</td>
+              <td><ScorePill value={t.creditScore} trend={trendLabel(t.healthTrend)}/></td>
+              <td className="mono" style={{color: t.healthTrend === "down" ? "var(--bad)" : "var(--good)"}}>{String(t.healthTrend || "").toUpperCase()}</td>
+              <td className="dim mono" style={{fontSize:11}}>{relativeTime(t.refreshedAt)}</td>
               <td>
                 <div className="row gap-4">
-                  {t.flags.map((f,i) => (
-                    <Pill key={i} tone={f==="overdue"||f==="cash-flow"?"bad":f==="upsell"||f==="cross-sell"?"ai":"warn"} dot={false}>
-                      {f}
-                    </Pill>
-                  ))}
+                  <Pill tone={t.inventoryRisk === "high" ? "bad" : t.inventoryRisk === "moderate" ? "warn" : "good"} dot={false}>
+                    {t.inventoryRisk}
+                  </Pill>
+                  <Pill tone={t.recommendedAction === "approve" ? "good" : t.recommendedAction === "review" ? "warn" : "bad"} dot={false}>
+                    {t.recommendedAction}
+                  </Pill>
                 </div>
               </td>
               <td className="row-actions"><Icon.ChevRight size={13} className="muted"/></td>
-            </tr>)}</tbody>
+            </tr>))}
+          </tbody>
         </table>
       </div>
     </div>
