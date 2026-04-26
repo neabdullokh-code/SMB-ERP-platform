@@ -1939,18 +1939,26 @@ function ReportsPage() {
 
 function TeamPage() {
   const ROLE_FALLBACKS = [
-    { role:"owner", label:"Owner", defaultPermissionGroups:["tenant_governance","finance_operations","inventory_operations","production_operations","service_operations","audit_compliance"] },
-    { role:"company_admin", label:"Company admin", defaultPermissionGroups:["tenant_governance","finance_operations","inventory_operations","production_operations","service_operations","audit_compliance"] },
-    { role:"manager", label:"Manager", defaultPermissionGroups:["finance_operations","inventory_operations","production_operations","service_operations"] },
-    { role:"operator", label:"Operator", defaultPermissionGroups:["inventory_operations","production_operations","service_operations"] },
+    { role:"owner", label:"Руководитель (legacy)", defaultPermissionGroups:["tenant_governance","finance_operations","inventory_operations","production_operations","service_operations","audit_compliance"] },
+    { role:"company_admin", label:"Администратор предприятия", defaultPermissionGroups:["tenant_governance","finance_operations","inventory_operations","production_operations","service_operations","audit_compliance"] },
+    { role:"warehouse_clerk", label:"Кладовщик", defaultPermissionGroups:["inventory_operations"] },
+    { role:"production_operator", label:"Оператор производства / начальник цеха", defaultPermissionGroups:["production_operations"] },
+    { role:"service_staff", label:"Сотрудник сервиса", defaultPermissionGroups:["service_operations"] },
+    { role:"accountant_economist", label:"Бухгалтер / экономист", defaultPermissionGroups:["finance_operations"] },
+    { role:"executive", label:"Руководитель", defaultPermissionGroups:["executive_oversight","audit_compliance"] },
+    { role:"auditor", label:"Аудитор / контролер", defaultPermissionGroups:["auditor_readonly"] },
+    { role:"manager", label:"Менеджер (legacy)", defaultPermissionGroups:["finance_operations","inventory_operations","production_operations","service_operations"] },
+    { role:"operator", label:"Оператор (legacy)", defaultPermissionGroups:["inventory_operations","production_operations","service_operations"] },
   ];
   const GROUP_FALLBACKS = [
-    { key:"tenant_governance", label:"Tenant governance", summary:"Workspace ownership, settings, and access policy.", permissions:["tenant.read","tenant.manage"] },
-    { key:"finance_operations", label:"Finance operations", summary:"Ledger, invoices, bills, and money workflows.", permissions:["finance.read","finance.manage"] },
-    { key:"inventory_operations", label:"Inventory operations", summary:"Stock movement and warehouse work.", permissions:["inventory.manage"] },
-    { key:"production_operations", label:"Production operations", summary:"Manufacturing and BOM execution.", permissions:["production.manage"] },
-    { key:"service_operations", label:"Service operations", summary:"Service order and workflow execution.", permissions:["service_order.manage"] },
-    { key:"audit_compliance", label:"Audit and compliance", summary:"Audit evidence and compliance review.", permissions:["audit.read"] },
+    { key:"tenant_governance", label:"Администрирование предприятия", summary:"Сотрудники, роли, политики и настройки тенанта.", permissions:["tenant.read","tenant.manage"] },
+    { key:"finance_operations", label:"Бухгалтерия и экономика", summary:"Отчеты, проводки, затраты и финансовый контроль.", permissions:["finance.read","finance.manage"] },
+    { key:"inventory_operations", label:"Складские операции", summary:"Приход/расход, перемещения и инвентаризация.", permissions:["inventory.manage"] },
+    { key:"production_operations", label:"Производственные операции", summary:"Заказы, этапы производства и учет брака.", permissions:["production.manage"] },
+    { key:"service_operations", label:"Сервисные операции", summary:"Сервисные заказы, этапы выполнения и затраты.", permissions:["service_order.manage"] },
+    { key:"executive_oversight", label:"Руководство и KPI", summary:"Управленческий контроль, дашборды и KPI.", permissions:["tenant.read","finance.read"] },
+    { key:"auditor_readonly", label:"Аудиторский read-only", summary:"Только просмотр данных и журналов аудита.", permissions:["tenant.read","finance.read","audit.read"] },
+    { key:"audit_compliance", label:"Аудит и контроль", summary:"Просмотр журналов и контрольных следов (read-only).", permissions:["audit.read"] },
   ];
   const AVATAR_TONES = ["warm","cool","green","plum","warm","cool","green"];
   const [workspace, setWorkspace] = React.useState({ tenant:null, actor:null, users:[], invites:[], accessCatalog:null });
@@ -1962,8 +1970,8 @@ function TeamPage() {
   const [saving, setSaving] = React.useState(false);
   const [exporting, setExporting] = React.useState(false);
   const [selectedMember, setSelectedMember] = React.useState(null);
-  const [inviteForm, setInviteForm] = React.useState({ name:"", email:"", role:"operator", permissionGroups:["inventory_operations","production_operations","service_operations"] });
-  const [memberForm, setMemberForm] = React.useState({ role:"operator", permissionGroups:["inventory_operations","production_operations","service_operations"] });
+  const [inviteForm, setInviteForm] = React.useState({ name:"", email:"", role:"warehouse_clerk", permissionGroups:["inventory_operations"] });
+  const [memberForm, setMemberForm] = React.useState({ role:"warehouse_clerk", permissionGroups:["inventory_operations"] });
 
   const roles = (workspace.accessCatalog && workspace.accessCatalog.workspaceRoles) || ROLE_FALLBACKS;
   const permissionGroups = (workspace.accessCatalog && workspace.accessCatalog.permissionGroups) || GROUP_FALLBACKS;
@@ -2040,7 +2048,7 @@ function TeamPage() {
   };
 
   const openInvite = () => {
-    const role = "operator";
+    const role = "warehouse_clerk";
     setInviteForm({ name:"", email:"", role, permissionGroups: defaultsForRole(role) });
     setInviteOpen(true);
   };
@@ -2061,10 +2069,10 @@ function TeamPage() {
   const openManage = (member) => {
     setSelectedMember(member);
     setMemberForm({
-      role: member.workspaceRole || "operator",
+      role: member.workspaceRole || "warehouse_clerk",
       permissionGroups: Array.isArray(member.permissionGroups) && member.permissionGroups.length
         ? [...member.permissionGroups]
-        : defaultsForRole(member.workspaceRole || "operator")
+        : defaultsForRole(member.workspaceRole || "warehouse_clerk")
     });
     setManageOpen(true);
   };
@@ -2180,7 +2188,7 @@ function TeamPage() {
                     <span style={{color:"var(--ink)", fontWeight:500}}>{member.name}</span>
                   </div>
                 </td>
-                <td><Pill tone={(member.workspaceRole || member.role) === "owner" ? "solid-ink" : "info"} dot={false}>{roleLabel(member.workspaceRole || member.role)}</Pill></td>
+                <td><Pill tone={["owner", "company_admin", "executive"].includes(member.workspaceRole || member.role) ? "solid-ink" : "info"} dot={false}>{roleLabel(member.workspaceRole || member.role)}</Pill></td>
                 <td className="dim mono">{member.email || "—"}</td>
                 <td className="dim mono">{relativeTime(member.lastActiveAt)}</td>
                 <td className="row-actions">

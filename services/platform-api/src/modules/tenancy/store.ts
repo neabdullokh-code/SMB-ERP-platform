@@ -48,7 +48,7 @@ const LEGACY_DEMO_USERS: Array<{
     name: "Jasur Azimov",
     email: "jasur@kamolot.uz",
     phone: "+998901111111",
-    workspaceRole: "owner",
+    workspaceRole: "company_admin",
     permissionGroups: ["tenant_governance", "finance_operations", "inventory_operations", "production_operations", "service_operations", "audit_compliance"],
     lastActiveAt: new Date().toISOString()
   },
@@ -66,8 +66,8 @@ const LEGACY_DEMO_USERS: Array<{
     name: "Bekzod Yusupov",
     email: "bekzod@kamolot.uz",
     phone: "+998903333333",
-    workspaceRole: "operator",
-    permissionGroups: ["inventory_operations", "production_operations", "service_operations"],
+    workspaceRole: "warehouse_clerk",
+    permissionGroups: ["inventory_operations"],
     lastActiveAt: new Date(Date.now() - 60 * 60 * 1000).toISOString()
   },
   {
@@ -75,8 +75,8 @@ const LEGACY_DEMO_USERS: Array<{
     name: "Dilnoza Rashidova",
     email: "dilnoza@kamolot.uz",
     phone: "+998906666666",
-    workspaceRole: "manager",
-    permissionGroups: ["finance_operations", "inventory_operations", "production_operations", "service_operations"],
+    workspaceRole: "accountant_economist",
+    permissionGroups: ["finance_operations"],
     lastActiveAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
   },
   {
@@ -84,8 +84,8 @@ const LEGACY_DEMO_USERS: Array<{
     name: "Sardor Toshev",
     email: "sardor@kamolot.uz",
     phone: "+998908888888",
-    workspaceRole: "operator",
-    permissionGroups: ["inventory_operations", "production_operations", "service_operations"],
+    workspaceRole: "production_operator",
+    permissionGroups: ["production_operations"],
     lastActiveAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
   }
 ];
@@ -95,8 +95,8 @@ const LEGACY_DEMO_INVITES: WorkspaceInvitation[] = [
     id: "00000000-0000-0000-0000-000000000401",
     tenantId: LEGACY_DEMO_TENANT_ID,
     name: "Farhod Juraev",
-    role: "manager",
-    permissionGroups: ["finance_operations", "inventory_operations", "production_operations", "service_operations"],
+    role: "accountant_economist",
+    permissionGroups: ["finance_operations"],
     email: "farhod@kamolot.uz",
     status: "pending",
     invitedAt: new Date().toISOString()
@@ -147,7 +147,7 @@ function ensureDemoWorkspace(tenantId: string) {
           email: user.email,
           phone: user.phone,
           tenantId,
-          workspaceRole: user.workspaceRole ?? "operator",
+          workspaceRole: user.workspaceRole ?? "warehouse_clerk",
           permissionGroups: user.permissionGroups,
           lastActiveAt: user.lastActiveAt
         })
@@ -164,12 +164,18 @@ function ensureDemoWorkspace(tenantId: string) {
 function normalizeWorkspaceRole(role: string): CompanyWorkspaceRole {
   const normalized = role.trim().toLowerCase().replace(/\s+/g, "_");
 
+  if (normalized === "warehouse_clerk" || normalized === "warehouse_manager" || normalized === "кладовщик") return "warehouse_clerk";
+  if (normalized === "production_operator" || normalized === "shop_chief" || normalized === "оператор_производства") return "production_operator";
+  if (normalized === "service_staff" || normalized === "service_operator" || normalized === "сотрудник_сервиса") return "service_staff";
+  if (normalized === "accountant_economist" || normalized === "accountant" || normalized === "economist" || normalized === "бухгалтер" || normalized === "экономист") return "accountant_economist";
+  if (normalized === "executive" || normalized === "rahbar" || normalized === "руководитель") return "executive";
+  if (normalized === "auditor" || normalized === "controller" || normalized === "auditor_controller" || normalized === "аудитор" || normalized === "контролер") return "auditor";
   if (normalized === "owner") return "owner";
   if (normalized === "company_admin" || normalized === "company") return "company_admin";
   if (normalized === "manager" || normalized === "accountant") return "manager";
   if (normalized === "operator" || normalized === "employee" || normalized === "warehouse_manager") return "operator";
 
-  return "operator";
+  return "warehouse_clerk";
 }
 
 function normalizePermissionGroups(role: CompanyWorkspaceRole, permissionGroups?: readonly PermissionGroupKey[]) {
@@ -264,7 +270,7 @@ export function registerWorkspace(input: {
         email: input.adminUser.email,
         phone: input.adminUser.phone,
         tenantId: input.tenantId,
-        workspaceRole: input.adminUser.workspaceRole ?? "owner",
+        workspaceRole: input.adminUser.workspaceRole ?? "company_admin",
         permissionGroups: input.adminUser.permissionGroups,
         lastActiveAt: new Date().toISOString()
       })
@@ -348,8 +354,8 @@ export async function persistWorkspace(input: {
         [
           input.tenantId,
           input.adminUser.id,
-          input.adminUser.workspaceRole ?? "owner",
-          JSON.stringify(normalizePermissionGroups(input.adminUser.workspaceRole ?? "owner", input.adminUser.permissionGroups))
+          input.adminUser.workspaceRole ?? "company_admin",
+          JSON.stringify(normalizePermissionGroups(input.adminUser.workspaceRole ?? "company_admin", input.adminUser.permissionGroups))
         ]
       );
 
@@ -517,9 +523,15 @@ export async function getWorkspaceByTenantId(tenantId?: string) {
          order by case
            when m.role = 'owner' then 1
            when m.role = 'company_admin' then 2
-           when m.role = 'manager' then 3
-           when m.role = 'operator' then 4
-           else 5
+           when m.role = 'executive' then 3
+           when m.role = 'accountant_economist' then 4
+           when m.role = 'warehouse_clerk' then 5
+           when m.role = 'production_operator' then 6
+           when m.role = 'service_staff' then 7
+           when m.role = 'auditor' then 8
+           when m.role = 'manager' then 9
+           when m.role = 'operator' then 10
+           else 11
          end, u.full_name asc`,
         [tenantId]
       );

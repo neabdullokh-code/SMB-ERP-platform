@@ -7,6 +7,12 @@ export type Role =
   | "employee";
 
 export type CompanyWorkspaceRole =
+  | "warehouse_clerk"
+  | "production_operator"
+  | "service_staff"
+  | "accountant_economist"
+  | "executive"
+  | "auditor"
   | "owner"
   | "company_admin"
   | "manager"

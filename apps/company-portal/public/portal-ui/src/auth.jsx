@@ -514,8 +514,8 @@ function OnboardingPage({ go }) {
   const [businessType, setBusinessType] = useStateS("Wholesale");
   const [customBusinessType, setCustomBusinessType] = useStateS("");
   const [invites, setInvites] = useStateS([
-    { name: "Malika Karimova", role: "Company admin", email: "malika@kamolot.uz" },
-    { name: "Bekzod Yusupov", role: "Operator", email: "bekzod@kamolot.uz" }
+    { name: "Malika Karimova", role: "company_admin", email: "malika@kamolot.uz" },
+    { name: "Bekzod Yusupov", role: "warehouse_clerk", email: "bekzod@kamolot.uz" }
   ]);
   const [loading, setLoading] = useStateS(false);
   const [error, setError] = useStateS("");
@@ -700,9 +700,13 @@ function OnboardingPage({ go }) {
                           value={p.role}
                           onChange={(e) => setInvites(invites.map((invite, index) => index === i ? { ...invite, role: e.target.value } : invite))}
                         >
-                          <option>Company admin</option>
-                          <option>Operator</option>
-                          <option>Manager</option>
+                          <option value="company_admin">Администратор предприятия</option>
+                          <option value="warehouse_clerk">Кладовщик</option>
+                          <option value="production_operator">Оператор производства / начальник цеха</option>
+                          <option value="service_staff">Сотрудник сервиса</option>
+                          <option value="accountant_economist">Бухгалтер / экономист</option>
+                          <option value="executive">Руководитель</option>
+                          <option value="auditor">Аудитор / контролер</option>
                         </select>
                       </div>
                     </div>
@@ -711,7 +715,7 @@ function OnboardingPage({ go }) {
                 ))}
                 <Button variant="ghost" size="sm" icon={<Icon.Plus size={13}/>} onClick={() => setInvites([...invites, {
                   name: "",
-                  role: "Operator",
+                  role: "warehouse_clerk",
                   email: ""
                 }])}>Add another</Button>
               </div>
