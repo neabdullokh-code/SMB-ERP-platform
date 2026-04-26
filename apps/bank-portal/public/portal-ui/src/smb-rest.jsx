@@ -1445,6 +1445,7 @@ function ReportsPage() {
   const [error, setError] = useStateS("");
   const [exporting, setExporting] = useStateS(false);
   const [preview, setPreview] = useStateS({ open: false, title: "", csv: "" });
+  const [refreshing, setRefreshing] = useStateS(false);
 
   const parseMoney = (value) => {
     const parsed = Number(value);
@@ -1483,14 +1484,22 @@ function ReportsPage() {
   }, []);
 
   const refreshOverview = async () => {
-    const { response, body } = await fetchPortalJson("/api/finance/overview");
-    if (!response.ok || !body?.data) {
-      setError(body?.error?.message || body?.message || "Не удалось загрузить отчеты.");
+    setRefreshing(true);
+    try {
+      const { response, body } = await fetchPortalJson("/api/finance/overview");
+      if (!response.ok || !body?.data) {
+        setError(body?.error?.message || body?.message || "Не удалось загрузить отчеты.");
+        return false;
+      }
+      setOverview(body.data);
+      setError("");
+      return true;
+    } catch {
+      setError("Не удалось загрузить отчеты.");
       return false;
+    } finally {
+      setRefreshing(false);
     }
-    setOverview(body.data);
-    setError("");
-    return true;
   };
 
   const trialBalance = overview?.trialBalance;
@@ -1551,6 +1560,10 @@ function ReportsPage() {
 
   const downloadReport = (slug) => {
     const rows = getReportRows(slug);
+    if (!rows || rows.length <= 1) {
+      setError("Нет данных для экспорта. Обновите отчеты и попробуйте снова.");
+      return false;
+    }
     const csv = rowsToCsv(rows);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -1561,6 +1574,23 @@ function ReportsPage() {
     link.click();
     link.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return true;
+  };
+
+  const handleExportAll = async () => {
+    setExporting(true);
+    try {
+      let hasData = Boolean(overview);
+      if (!hasData) {
+        hasData = await refreshOverview();
+      }
+      if (!hasData) return;
+      REPORTS.forEach((report) => {
+        downloadReport(report.slug);
+      });
+    } finally {
+      setExporting(false);
+    }
   };
 
   const REPORTS = [
@@ -1576,18 +1606,11 @@ function ReportsPage() {
     <Placeholder
       title="Отчеты"
       headerActions={<>
-        <Button variant="ghost" icon={<Icon.Download size={13}/>} onClick={() => {
-          setExporting(true);
-          try {
-            REPORTS.forEach((report) => downloadReport(report.slug));
-          } finally {
-            setExporting(false);
-          }
-        }} disabled={exporting}>
+        <Button variant="ghost" icon={<Icon.Download size={13}/>} onClick={handleExportAll} disabled={exporting || loading || refreshing}>
           {exporting ? "Экспорт..." : "Экспорт"}
         </Button>
-        <Button variant="primary" icon={<Icon.Plus size={13}/>} onClick={refreshOverview} disabled={loading}>
-          {loading ? "Загрузка..." : "Обновить"}
+        <Button variant="primary" icon={<Icon.Plus size={13}/>} onClick={refreshOverview} disabled={loading || refreshing}>
+          {loading || refreshing ? "Загрузка..." : "Обновить"}
         </Button>
       </>}
     >
@@ -1601,8 +1624,8 @@ function ReportsPage() {
               <div style={{fontSize:14, fontWeight:500, color:"var(--ink)", marginTop:8}}>{r.n}</div>
               <div className="muted mt-4" style={{fontSize:12}}>{r.d}</div>
               <div className="row mt-12">
-                <Button size="sm" variant="ghost" onClick={() => setPreview({ open: true, title: r.n, csv: rowsToCsv(getReportRows(r.slug)) })}>Предпросмотр</Button>
-                <Button size="sm" variant="primary" icon={<Icon.Download size={12}/>} onClick={() => downloadReport(r.slug)}>Сформировать</Button>
+                <Button size="sm" variant="ghost" onClick={() => setPreview({ open: true, title: r.n, csv: rowsToCsv(getReportRows(r.slug)) })} disabled={loading || refreshing}>Предпросмотр</Button>
+                <Button size="sm" variant="primary" icon={<Icon.Download size={12}/>} onClick={() => downloadReport(r.slug)} disabled={loading || refreshing}>Сформировать</Button>
               </div>
             </div>
           );

@@ -35,15 +35,54 @@ function RiskPage() {
     return () => { cancelled = true; };
   }, []);
 
-  const bucketCounts = analytics?.riskBuckets || { low: 0, moderate: 0, high: 0 };
-  const delinquencyData = [
-    [Math.max(0, 100 - (bucketCounts.high + bucketCounts.moderate)), Math.max(0, bucketCounts.moderate), Math.max(0, bucketCounts.high), Math.max(0, Math.round((analytics?.highRiskCount || 0) / Math.max(analytics?.totalTenants || 1, 1) * 100))],
-    [Math.max(0, 96 - bucketCounts.high), Math.max(0, bucketCounts.moderate + 1), Math.max(0, bucketCounts.high), Math.max(0, Math.round((analytics?.highRiskCount || 0) / Math.max(analytics?.totalTenants || 1, 1) * 100))],
-    [Math.max(0, 92 - bucketCounts.high), Math.max(0, bucketCounts.moderate + 2), Math.max(0, bucketCounts.high + 1), Math.max(0, Math.round((analytics?.highRiskCount || 0) / Math.max(analytics?.totalTenants || 1, 1) * 100))],
-    [Math.max(0, 95 - bucketCounts.high), Math.max(0, bucketCounts.moderate + 1), Math.max(0, bucketCounts.high), Math.max(0, Math.round((analytics?.highRiskCount || 0) / Math.max(analytics?.totalTenants || 1, 1) * 100))],
-    [Math.max(0, 94 - bucketCounts.high), Math.max(0, bucketCounts.moderate), Math.max(0, bucketCounts.high), Math.max(0, Math.round((analytics?.highRiskCount || 0) / Math.max(analytics?.totalTenants || 1, 1) * 100))],
-    [Math.max(0, 93 - bucketCounts.high), Math.max(0, bucketCounts.moderate), Math.max(0, bucketCounts.high), Math.max(0, Math.round((analytics?.highRiskCount || 0) / Math.max(analytics?.totalTenants || 1, 1) * 100))]
-  ];
+  const fallbackBucketCounts = portfolio.reduce((acc, tenant) => {
+    const risk = tenant?.inventoryRisk;
+    if (risk === "low" || risk === "moderate" || risk === "high") acc[risk] += 1;
+    return acc;
+  }, { low: 0, moderate: 0, high: 0 });
+
+  const totalTenants = Math.max(Number(analytics?.totalTenants) || 0, portfolio.length);
+  const bucketCounts = (analytics?.riskBuckets?.low ?? analytics?.riskBuckets?.moderate ?? analytics?.riskBuckets?.high) == null
+    ? fallbackBucketCounts
+    : {
+        low: Number(analytics?.riskBuckets?.low) || 0,
+        moderate: Number(analytics?.riskBuckets?.moderate) || 0,
+        high: Number(analytics?.riskBuckets?.high) || 0
+      };
+  const highRiskCount = Math.min(
+    totalTenants,
+    Math.max(0, Number(analytics?.highRiskCount) || bucketCounts.high)
+  );
+  const highRiskShare = totalTenants > 0 ? Math.round((highRiskCount / totalTenants) * 100) : 0;
+  const moderateShare = totalTenants > 0 ? Math.round((bucketCounts.moderate / totalTenants) * 100) : 0;
+  const averageCreditScore = Number.isFinite(Number(analytics?.averageCreditScore))
+    ? Number(analytics.averageCreditScore)
+    : (portfolio.length > 0
+      ? Number((portfolio.reduce((sum, tenant) => sum + (Number(tenant?.creditScore) || 0), 0) / portfolio.length).toFixed(1))
+      : 0);
+  const slaHealthPercent = Number.isFinite(Number(analytics?.slaHealthPercent))
+    ? Number(analytics.slaHealthPercent)
+    : 100;
+  const reviewCount = Number(analytics?.recommendationCounts?.review) || portfolio.filter((tenant) => tenant?.recommendedAction === "review").length;
+
+  const trendByThreshold = (value, threshold, reverse = false) => (
+    reverse ? (value <= threshold ? "up" : "down") : (value >= threshold ? "up" : "down")
+  );
+
+  const buildDelinquencyRow = (highPct, moderatePct) => {
+    const high = Math.max(0, Math.min(100, Math.round(highPct)));
+    const moderate = Math.max(0, Math.min(100 - high, Math.round(moderatePct)));
+    const severe = Math.round(high * 0.58);
+    const defaulted = high - severe;
+    const current = Math.max(0, 100 - moderate - severe - defaulted);
+    return [current, moderate, severe, defaulted];
+  };
+
+  const delinquencyData = [-4, -2, -1, 0, 1, 2].map((delta) => {
+    const projectedHigh = Math.max(0, Math.min(100, highRiskShare + delta));
+    const projectedModerate = Math.max(0, Math.min(100 - projectedHigh, moderateShare + Math.round(delta / 2)));
+    return buildDelinquencyRow(projectedHigh, projectedModerate);
+  });
 
   const concentration = Object.entries(
     portfolio.reduce((acc, tenant) => {
@@ -64,10 +103,10 @@ function RiskPage() {
       </div>
       {error && <Banner tone="warn" title="Risk analytics unavailable">{error}</Banner>}
       <div className="grid grid-4 mb-16">
-        <Kpi label="Всего арендаторов" value={String(analytics?.totalTenants || portfolio.length)} delta={`${analytics?.highRiskCount || 0} высокий риск`} trend="up"/>
-        <Kpi label="Доля высокого риска" value={`${Math.round(((analytics?.highRiskCount || 0) / Math.max(analytics?.totalTenants || 1, 1)) * 100)}%`} delta={`${bucketCounts.high || 0} высокий сегмент`} trend="down"/>
-        <Kpi label="Средний балл" value={String(analytics?.averageCreditScore || 0)} delta={`${bucketCounts.moderate || 0} умеренный риск`} trend="up"/>
-        <Kpi label="Состояние SLA" value={`${analytics?.slaHealthPercent || 0}%`} delta={`${analytics?.recommendationCounts?.review || 0} рекомендаций к проверке`} trend="up"/>
+        <Kpi label="Всего арендаторов" value={String(totalTenants)} delta={`${highRiskCount} высокий риск`} trend={trendByThreshold(highRiskCount, Math.round(totalTenants * 0.2), true)}/>
+        <Kpi label="Доля высокого риска" value={`${highRiskShare}%`} delta={`${bucketCounts.high || 0} высокий сегмент`} trend={trendByThreshold(highRiskShare, 20, true)}/>
+        <Kpi label="Средний балл" value={String(averageCreditScore)} delta={`${bucketCounts.moderate || 0} умеренный риск`} trend={trendByThreshold(averageCreditScore, 70)}/>
+        <Kpi label="Состояние SLA" value={`${slaHealthPercent}%`} delta={`${reviewCount} рекомендаций к проверке`} trend={trendByThreshold(slaHealthPercent, 90)}/>
       </div>
       <div className="grid" style={{gridTemplateColumns:"2fr 1fr", gap:12}}>
         <div className="card card-pad-0">
@@ -89,7 +128,7 @@ function RiskPage() {
           <div className="panel-title">Concentration risk</div>
           <div style={{padding:14}}>
             {concentration.map((entry, i) => {
-              const pct = Math.round((entry[1] / Math.max(analytics?.totalTenants || 1, 1)) * 100);
+              const pct = Math.round((entry[1] / Math.max(totalTenants, 1)) * 100);
               const tone = pct >= 22 ? "warn" : pct >= 12 ? "info" : "good";
               return (
               <div key={i} className="mb-12">
@@ -106,6 +145,107 @@ function RiskPage() {
 }
 
 function AlertsPage({ go }) {
+  const MOCK_ALERTS = [
+    {
+      severity: "critical",
+      type: "workflow_bottleneck",
+      tenantName: "Silk Road Textiles",
+      message: "Обнаружено 4 узких места в процессах, влияющих на SLA поставок и оборот дебиторской задолженности.",
+      triggeredAt: "2026-04-26T07:34:00.000Z"
+    },
+    {
+      severity: "critical",
+      type: "cash_flow_anomaly",
+      tenantName: "Andijon Construction",
+      message: "Снижение чистого входящего потока на 32% при росте обязательств; риск просрочки в ближайшие 10 дней.",
+      triggeredAt: "2026-04-26T06:42:00.000Z"
+    },
+    {
+      severity: "warn",
+      type: "payment_overdue",
+      tenantName: "Ferghana Agro",
+      message: "Платеж на 118 000 000 UZS просрочен на 9 дней, вероятность эскалации в high-risk сегмент.",
+      triggeredAt: "2026-04-26T05:28:00.000Z"
+    },
+    {
+      severity: "warn",
+      type: "inventory_drop",
+      tenantName: "Kamolot Savdo",
+      message: "Критический SKU (baby formula stage 2) ниже минимума 4-й день подряд; ожидается упущенная выручка.",
+      triggeredAt: "2026-04-26T04:50:00.000Z"
+    },
+    {
+      severity: "warn",
+      type: "credit_score_decline",
+      tenantName: "Chorsu Market Co.",
+      message: "Кредитный скор снизился с 74 до 69 за 30 дней из-за роста DSO и частоты частичных оплат.",
+      triggeredAt: "2026-04-26T03:17:00.000Z"
+    },
+    {
+      severity: "warn",
+      type: "exposure_concentration",
+      tenantName: "Navoi Metals",
+      message: "Доля одного контрагента достигла 41% AR; превышен порог концентрации для отрасли mining.",
+      triggeredAt: "2026-04-26T02:42:00.000Z"
+    },
+    {
+      severity: "info",
+      type: "credit_upgrade",
+      tenantName: "Bukhara Pharma",
+      message: "Стабильный рост маржи и оборота: клиент соответствует критериям апгрейда лимита на 20%.",
+      triggeredAt: "2026-04-26T02:05:00.000Z"
+    },
+    {
+      severity: "info",
+      type: "cross_sell_opportunity",
+      tenantName: "Oriental Trade LLC",
+      message: "Паттерн оборота указывает на спрос на trade finance; ожидаемая доп. выручка банка до 24M UZS/кв.",
+      triggeredAt: "2026-04-26T01:38:00.000Z"
+    },
+    {
+      severity: "info",
+      type: "recovery_signal",
+      tenantName: "Khiva Ceramics",
+      message: "Поступления восстановились 3 недели подряд, риск дефолта пересчитан с 11.2% до 7.6%.",
+      triggeredAt: "2026-04-25T23:54:00.000Z"
+    },
+    {
+      severity: "critical",
+      type: "compliance_breach",
+      tenantName: "Samarkand Foods",
+      message: "Повторное нарушение ковенант по долговой нагрузке и марже EBITDA; автоматическая передача в отдел мониторинга.",
+      triggeredAt: "2026-04-25T23:21:00.000Z"
+    },
+    {
+      severity: "warn",
+      type: "payroll_stress",
+      tenantName: "Tashkent Logistics Group",
+      message: "Фонд оплаты труда вырос на 18% при стагнации выручки 2 месяца подряд; риск кассового разрыва увеличивается.",
+      triggeredAt: "2026-04-25T22:46:00.000Z"
+    },
+    {
+      severity: "warn",
+      type: "supplier_delay_cluster",
+      tenantName: "Qarshi Electronics",
+      message: "Зафиксирована серия задержек поставок от 3 ключевых вендоров, прогноз смещения производственного плана на 6 дней.",
+      triggeredAt: "2026-04-25T22:08:00.000Z"
+    },
+    {
+      severity: "info",
+      type: "receivables_stabilizing",
+      tenantName: "Namangan Textile Hub",
+      message: "DSO снизился на 4 дня за последние 2 недели после внедрения нового графика напоминаний по оплатам.",
+      triggeredAt: "2026-04-25T21:33:00.000Z"
+    }
+  ];
+
+  const MOCK_SUMMARY = MOCK_ALERTS.reduce((acc, alert) => {
+    if (alert.severity === "critical") acc.critical += 1;
+    else if (alert.severity === "warn") acc.warn += 1;
+    else acc.info += 1;
+    return acc;
+  }, { critical: 0, warn: 0, info: 0 });
+
   const [alerts, setAlerts] = useStateS([]);
   const [summary, setSummary] = useStateS({ critical: 0, warn: 0, info: 0 });
   const [loading, setLoading] = useStateS(true);
@@ -125,14 +265,25 @@ function AlertsPage({ go }) {
         if (!response.ok || !Array.isArray(body?.data?.alerts)) {
           throw new Error(body?.message || "Unable to load alerts.");
         }
-        setAlerts(body.data.alerts);
-        setSummary(body.data.summary || { critical: 0, warn: 0, info: 0 });
-        setError("");
+
+        const liveAlerts = (body.data.alerts || []).filter((alert) => (
+          alert && alert.severity && alert.type && alert.tenantName && alert.message && alert.triggeredAt
+        ));
+
+        if (liveAlerts.length > 0) {
+          setAlerts(liveAlerts);
+          setSummary(body.data.summary || { critical: 0, warn: 0, info: 0 });
+          setError("");
+        } else {
+          setAlerts(MOCK_ALERTS);
+          setSummary(MOCK_SUMMARY);
+          setError("Показаны демо-оповещения: API вернул пустой набор.");
+        }
       } catch (loadError) {
         if (!cancelled) {
-          setAlerts([]);
-          setSummary({ critical: 0, warn: 0, info: 0 });
-          setError(loadError instanceof Error ? loadError.message : "Unable to load alerts.");
+          setAlerts(MOCK_ALERTS);
+          setSummary(MOCK_SUMMARY);
+          setError(`Показаны демо-оповещения: ${loadError instanceof Error ? loadError.message : "Unable to load alerts."}`);
         }
       } finally {
         if (!cancelled) setLoading(false);

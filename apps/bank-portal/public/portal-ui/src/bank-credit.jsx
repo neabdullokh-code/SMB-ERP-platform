@@ -35,15 +35,15 @@ function CreditQueue({ go }) {
         <div className="chip">Состояние SLA <span style={{color:"var(--good)", marginLeft:6}}>98%</span></div>
         <Button variant="ghost" icon={<Icon.Filter size={13}/>}>Фильтр</Button>
       </div>
-      <div className="split-layout" style={{gridTemplateColumns:"340px 1fr"}}>
-        <div className="card card-pad-0" style={{overflow:"hidden"}}>
+      <div className="split-layout" style={{gridTemplateColumns:"340px 1fr", alignItems:"start", height:"calc(100vh - 170px)", minHeight:620, overflow:"hidden"}}>
+        <div className="card card-pad-0" style={{overflow:"hidden", height:"100%", display:"flex", flexDirection:"column"}}>
           <div className="tbl-toolbar" style={{gap:4}}>
             {filterOptions.map((option) => (
               <button key={option.key} className="chip" onClick={() => setFilter(option.key)}
                 style={{background: filter===option.key ? "var(--ink)":undefined, color:filter===option.key?"var(--surface)":undefined, borderColor:filter===option.key?"var(--ink)":undefined}}>{option.label}</button>
             ))}
           </div>
-          <div style={{maxHeight:"calc(100vh - 220px)", overflowY:"auto"}}>
+          <div style={{flex:1, minHeight:0, overflowY:"auto"}}>
             {queue.map((q, i) => (
               <div key={q.id} onClick={() => setSel(i)}
                 className="hairline-b"
@@ -65,22 +65,113 @@ function CreditQueue({ go }) {
           </div>
         </div>
 
-        <div>
-          <LoanReview app={queue[sel]} go={go}/>
-        </div>
+        <LoanReview app={queue[sel]} go={go} viewportHeight="calc(100vh - 170px)"/>
       </div>
     </div>
   );
 }
 
-function LoanReview({ app, go }) {
+function LoanReview({ app, go, viewportHeight = "calc(100vh - 190px)" }) {
   const [decision, setDecision] = useStateS(null);
+  const [aiAsked, setAiAsked] = useStateS(false);
+  const [editingAmount, setEditingAmount] = useStateS(false);
+  const [showProfit, setShowProfit] = useStateS(false);
+  const [approvedAmount, setApprovedAmount] = useStateS(app.amt);
 
   const score = app.score || 81;
+  const parseAmountM = (value) => {
+    const match = String(value || "").match(/([\d.]+)/);
+    return match ? Number(match[1]) : 0;
+  };
+  const fmtAmountM = (value) => `${Math.max(1, Math.round(value))}M UZS`;
+  const parseRevenueB = (value) => {
+    const match = String(value || "").match(/([\d.]+)/);
+    return match ? Number(match[1]) : 0;
+  };
+  const toPdfLiteral = (value) => String(value).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+  const buildSimplePdf = (lines) => {
+    const content = [
+      "BT",
+      "/F1 11 Tf",
+      "48 790 Td",
+      ...lines.map((line, idx) => `${idx === 0 ? "" : "T*"}(${toPdfLiteral(line)}) Tj`),
+      "ET",
+      ""
+    ].join("\n");
+
+    const objects = [
+      "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
+      "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
+      "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n",
+      "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n",
+      `5 0 obj\n<< /Length ${content.length} >>\nstream\n${content}endstream\nendobj\n`
+    ];
+
+    let pdf = "%PDF-1.4\n";
+    const offsets = [0];
+    objects.forEach((obj) => {
+      offsets.push(pdf.length);
+      pdf += obj;
+    });
+    const xrefPos = pdf.length;
+    pdf += `xref\n0 ${objects.length + 1}\n`;
+    pdf += "0000000000 65535 f \n";
+    offsets.slice(1).forEach((offset) => {
+      pdf += `${String(offset).padStart(10, "0")} 00000 n \n`;
+    });
+    pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefPos}\n%%EOF`;
+    return pdf;
+  };
+  const askAiAmount = () => {
+    const requested = parseAmountM(app.amt);
+    const ratio = score >= 85 ? 1 : score >= 75 ? 0.9 : score >= 65 ? 0.78 : 0.62;
+    const suggested = fmtAmountM(requested * ratio);
+    setApprovedAmount(suggested);
+    setAiAsked(true);
+    setEditingAmount(false);
+    setDecision(null);
+  };
+  const approveChosenAmount = () => {
+    if (!approvedAmount) return;
+    setDecision("approved");
+  };
+  const downloadDecisionPdf = () => {
+    const lines = [
+      "SQB Credit Decision",
+      `Application: ${app.id}`,
+      `Company: ${app.co}`,
+      `Requested amount: ${app.amt}`,
+      `Approved amount: ${approvedAmount}`,
+      `AI requested: ${aiAsked ? "yes" : "no"}`,
+      `Credit score: ${score}`,
+      `Product: ${app.product}`,
+      `Term: ${app.term}`,
+      `Generated: ${new Date().toISOString()}`
+    ];
+    const pdfText = buildSimplePdf(lines);
+    const blob = new Blob([pdfText], { type: "application/pdf" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${app.id}-credit-decision.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
+  const estimatedProfitB = (parseRevenueB(app.revenueTTM) * 0.14).toFixed(2);
+
+  useEffectS(() => {
+    setDecision(null);
+    setAiAsked(false);
+    setEditingAmount(false);
+    setShowProfit(false);
+    setApprovedAmount(app.amt);
+  }, [app.id, app.amt]);
 
   return (
-    <div className="card card-pad-0">
-      <div style={{padding:"14px 18px", borderBottom:"1px solid var(--line)", display:"flex", alignItems:"center", gap:14}}>
+    <div className="card card-pad-0" style={{height: viewportHeight, minHeight:620, overflow:"hidden", display:"flex", flexDirection:"column"}}>
+      <div style={{padding:"14px 18px", borderBottom:"1px solid var(--line)", display:"flex", alignItems:"center", gap:14, flexShrink:0}}>
         <div className="avatar lg warm">{app.co.split(" ").map(w=>w[0]).slice(0,2).join("")}</div>
         <div>
           <div className="eyebrow mb-4">Заявка <span className="mono" style={{color:"var(--ink)"}}>{app.id}</span> · подана {String(app.submitted || "").replace("Today", "Сегодня")}</div>
@@ -94,11 +185,11 @@ function LoanReview({ app, go }) {
         </div>
         <span className="sp"/>
         <Button variant="ghost" icon={<Icon.Mail size={13}/>}>Написать клиенту</Button>
-        <Button variant="ghost" icon={<Icon.FileDoc size={13}/>}>Экспорт PDF</Button>
+        <Button variant="ghost" icon={<Icon.FileDoc size={13}/>} onClick={downloadDecisionPdf}>Скачать PDF</Button>
       </div>
 
-      <div className="grid" style={{gridTemplateColumns:"1.4fr 1fr", gap:0}}>
-        <div style={{padding:18, borderRight:"1px solid var(--line)"}}>
+      <div className="grid" style={{gridTemplateColumns:"1.4fr 1fr", gap:0, flex:1, minHeight:0, overflow:"hidden"}}>
+        <div style={{padding:18, borderRight:"1px solid var(--line)", overflowY:"auto", minHeight:0}}>
           {/* AI Recommendation */}
           <div className="ai-card" style={{padding:16}}>
             <div className="row">
@@ -179,7 +270,7 @@ function LoanReview({ app, go }) {
         </div>
 
         {/* Right — key facts + decision */}
-        <div style={{padding:18}}>
+        <div style={{padding:18, overflowY:"auto", minHeight:0}}>
           <h2>Заявитель</h2>
           <div className="col gap-8 mt-8" style={{fontSize:12.5}}>
             <div className="row"><span className="muted">Компания</span><span className="sp"/><span style={{color:"var(--ink)"}}>{app.co}</span></div>
@@ -205,7 +296,15 @@ function LoanReview({ app, go }) {
           <div className="divider"/>
           <h2>Решение</h2>
           <div className="col gap-8 mt-8">
-            <Field label="Одобренная сумма"><input className="input mono" defaultValue={app.amt}/></Field>
+            <Field label="Одобренная сумма">
+              <input
+                className="input mono"
+                value={approvedAmount}
+                onChange={(e) => setApprovedAmount(e.target.value)}
+                disabled={!editingAmount}
+                style={{opacity: editingAmount ? 1 : 0.8}}
+              />
+            </Field>
             <Field label="Ставка"><input className="input mono" defaultValue="18%"/></Field>
             <Field label="Срок"><input className="input mono" defaultValue={app.term}/></Field>
             <Field label="Комментарий"><textarea className="input" rows={3} placeholder="Необязательный комментарий для клиента..."/></Field>
@@ -213,22 +312,36 @@ function LoanReview({ app, go }) {
 
           <div className="divider"/>
           <div className="col gap-8">
-            <Button variant="primary" className="block" onClick={() => setDecision("approved")}>
-              <Icon.Check size={13}/> Одобрить по рекомендации
+            <Button variant="primary" className="block" onClick={askAiAmount}>
+              <Icon.Check size={13}/> Спросить у ИИ: сколько можно одобрить
             </Button>
-            <Button variant="ghost" className="block" onClick={() => setDecision("counter")}>
-              <Icon.Edit size={13}/> Встречное предложение
+            <Button variant="ghost" className="block" onClick={() => setEditingAmount((prev) => !prev)}>
+              <Icon.Edit size={13}/> {editingAmount ? "Сохранить сумму" : "Редактировать сумму ИИ"}
+            </Button>
+            <Button variant="ghost" className="block" onClick={approveChosenAmount}>
+              <Icon.Check size={13}/> Одобрить сумму {aiAsked ? "от ИИ" : "вручную"}
+            </Button>
+            <Button variant="ghost" className="block" onClick={() => setShowProfit((prev) => !prev)}>
+              <Icon.FileDoc size={13}/> {showProfit ? "Скрыть прибыль компании" : "Посмотреть прибыль компании"}
             </Button>
             <Button variant="ghost" className="block" onClick={() => setDecision("declined")} style={{color:"var(--bad)"}}>
               <Icon.X size={13}/> Отклонить
             </Button>
           </div>
 
+          {showProfit && (
+            <div className="mt-12 card" style={{padding:12}}>
+              <div className="row"><span className="muted">Выручка TTM</span><span className="sp"/><span className="mono">{app.revenueTTM}</span></div>
+              <div className="row mt-8"><span className="muted">Оценка прибыли (14%)</span><span className="sp"/><span className="mono">{estimatedProfitB} B UZS</span></div>
+              <div className="muted mt-8" style={{fontSize:11}}>Оценка рассчитана автоматически на основе TTM и используется как быстрый ориентир при кредитном решении.</div>
+            </div>
+          )}
+
           {decision && (
             <div className="mt-12 banner" style={{background: decision==="declined"?"var(--bad-bg)":"var(--good-bg)", color: decision==="declined"?"var(--bad)":"var(--good)"}}>
               <Icon.Check size={14}/>
               <div style={{flex:1}}>
-                <div className="title">Решение сохранено: {decision === "approved" ? "одобрено" : decision === "counter" ? "встречное предложение" : "отклонено"}</div>
+                <div className="title">Решение сохранено: {decision === "approved" ? `одобрено (${approvedAmount})` : "отклонено"}</div>
                 <div className="desc">Клиент уведомлён через ERP и e-mail. Автовыплата на счёт SQB запланирована в тот же день.</div>
               </div>
             </div>

@@ -35,15 +35,54 @@ function RiskPage() {
     return () => { cancelled = true; };
   }, []);
 
-  const bucketCounts = analytics?.riskBuckets || { low: 0, moderate: 0, high: 0 };
-  const delinquencyData = [
-    [Math.max(0, 100 - (bucketCounts.high + bucketCounts.moderate)), Math.max(0, bucketCounts.moderate), Math.max(0, bucketCounts.high), Math.max(0, Math.round((analytics?.highRiskCount || 0) / Math.max(analytics?.totalTenants || 1, 1) * 100))],
-    [Math.max(0, 96 - bucketCounts.high), Math.max(0, bucketCounts.moderate + 1), Math.max(0, bucketCounts.high), Math.max(0, Math.round((analytics?.highRiskCount || 0) / Math.max(analytics?.totalTenants || 1, 1) * 100))],
-    [Math.max(0, 92 - bucketCounts.high), Math.max(0, bucketCounts.moderate + 2), Math.max(0, bucketCounts.high + 1), Math.max(0, Math.round((analytics?.highRiskCount || 0) / Math.max(analytics?.totalTenants || 1, 1) * 100))],
-    [Math.max(0, 95 - bucketCounts.high), Math.max(0, bucketCounts.moderate + 1), Math.max(0, bucketCounts.high), Math.max(0, Math.round((analytics?.highRiskCount || 0) / Math.max(analytics?.totalTenants || 1, 1) * 100))],
-    [Math.max(0, 94 - bucketCounts.high), Math.max(0, bucketCounts.moderate), Math.max(0, bucketCounts.high), Math.max(0, Math.round((analytics?.highRiskCount || 0) / Math.max(analytics?.totalTenants || 1, 1) * 100))],
-    [Math.max(0, 93 - bucketCounts.high), Math.max(0, bucketCounts.moderate), Math.max(0, bucketCounts.high), Math.max(0, Math.round((analytics?.highRiskCount || 0) / Math.max(analytics?.totalTenants || 1, 1) * 100))]
-  ];
+  const fallbackBucketCounts = portfolio.reduce((acc, tenant) => {
+    const risk = tenant?.inventoryRisk;
+    if (risk === "low" || risk === "moderate" || risk === "high") acc[risk] += 1;
+    return acc;
+  }, { low: 0, moderate: 0, high: 0 });
+
+  const totalTenants = Math.max(Number(analytics?.totalTenants) || 0, portfolio.length);
+  const bucketCounts = (analytics?.riskBuckets?.low ?? analytics?.riskBuckets?.moderate ?? analytics?.riskBuckets?.high) == null
+    ? fallbackBucketCounts
+    : {
+        low: Number(analytics?.riskBuckets?.low) || 0,
+        moderate: Number(analytics?.riskBuckets?.moderate) || 0,
+        high: Number(analytics?.riskBuckets?.high) || 0
+      };
+  const highRiskCount = Math.min(
+    totalTenants,
+    Math.max(0, Number(analytics?.highRiskCount) || bucketCounts.high)
+  );
+  const highRiskShare = totalTenants > 0 ? Math.round((highRiskCount / totalTenants) * 100) : 0;
+  const moderateShare = totalTenants > 0 ? Math.round((bucketCounts.moderate / totalTenants) * 100) : 0;
+  const averageCreditScore = Number.isFinite(Number(analytics?.averageCreditScore))
+    ? Number(analytics.averageCreditScore)
+    : (portfolio.length > 0
+      ? Number((portfolio.reduce((sum, tenant) => sum + (Number(tenant?.creditScore) || 0), 0) / portfolio.length).toFixed(1))
+      : 0);
+  const slaHealthPercent = Number.isFinite(Number(analytics?.slaHealthPercent))
+    ? Number(analytics.slaHealthPercent)
+    : 100;
+  const reviewCount = Number(analytics?.recommendationCounts?.review) || portfolio.filter((tenant) => tenant?.recommendedAction === "review").length;
+
+  const trendByThreshold = (value, threshold, reverse = false) => (
+    reverse ? (value <= threshold ? "up" : "down") : (value >= threshold ? "up" : "down")
+  );
+
+  const buildDelinquencyRow = (highPct, moderatePct) => {
+    const high = Math.max(0, Math.min(100, Math.round(highPct)));
+    const moderate = Math.max(0, Math.min(100 - high, Math.round(moderatePct)));
+    const severe = Math.round(high * 0.58);
+    const defaulted = high - severe;
+    const current = Math.max(0, 100 - moderate - severe - defaulted);
+    return [current, moderate, severe, defaulted];
+  };
+
+  const delinquencyData = [-4, -2, -1, 0, 1, 2].map((delta) => {
+    const projectedHigh = Math.max(0, Math.min(100, highRiskShare + delta));
+    const projectedModerate = Math.max(0, Math.min(100 - projectedHigh, moderateShare + Math.round(delta / 2)));
+    return buildDelinquencyRow(projectedHigh, projectedModerate);
+  });
 
   const concentration = Object.entries(
     portfolio.reduce((acc, tenant) => {
@@ -64,10 +103,10 @@ function RiskPage() {
       </div>
       {error && <Banner tone="warn" title="Аналитика рисков недоступна">{error}</Banner>}
       <div className="grid grid-4 mb-16">
-        <Kpi label="Всего арендаторов" value={String(analytics?.totalTenants || portfolio.length)} delta={`${analytics?.highRiskCount || 0} высокий риск`} trend="up"/>
-        <Kpi label="Доля высокого риска" value={`${Math.round(((analytics?.highRiskCount || 0) / Math.max(analytics?.totalTenants || 1, 1)) * 100)}%`} delta={`${bucketCounts.high || 0} высокий сегмент`} trend="down"/>
-        <Kpi label="Средний балл" value={String(analytics?.averageCreditScore || 0)} delta={`${bucketCounts.moderate || 0} умеренный риск`} trend="up"/>
-        <Kpi label="Состояние SLA" value={`${analytics?.slaHealthPercent || 0}%`} delta={`${analytics?.recommendationCounts?.review || 0} рекомендаций к проверке`} trend="up"/>
+        <Kpi label="Всего арендаторов" value={String(totalTenants)} delta={`${highRiskCount} высокий риск`} trend={trendByThreshold(highRiskCount, Math.round(totalTenants * 0.2), true)}/>
+        <Kpi label="Доля высокого риска" value={`${highRiskShare}%`} delta={`${bucketCounts.high || 0} высокий сегмент`} trend={trendByThreshold(highRiskShare, 20, true)}/>
+        <Kpi label="Средний балл" value={String(averageCreditScore)} delta={`${bucketCounts.moderate || 0} умеренный риск`} trend={trendByThreshold(averageCreditScore, 70)}/>
+        <Kpi label="Состояние SLA" value={`${slaHealthPercent}%`} delta={`${reviewCount} рекомендаций к проверке`} trend={trendByThreshold(slaHealthPercent, 90)}/>
       </div>
       <div className="grid" style={{gridTemplateColumns:"2fr 1fr", gap:12}}>
         <div className="card card-pad-0">
@@ -89,7 +128,7 @@ function RiskPage() {
           <div className="panel-title">Риск концентрации</div>
           <div style={{padding:14}}>
             {concentration.map((entry, i) => {
-              const pct = Math.round((entry[1] / Math.max(analytics?.totalTenants || 1, 1)) * 100);
+              const pct = Math.round((entry[1] / Math.max(totalTenants, 1)) * 100);
               const tone = pct >= 22 ? "warn" : pct >= 12 ? "info" : "good";
               return (
               <div key={i} className="mb-12">
