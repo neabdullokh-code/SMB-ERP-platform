@@ -646,12 +646,50 @@ function AskCopilotFAB({ go, lang = "en", target = "/smb/copilot", hidden = fals
   );
 }
 
+/* ---------------- Markdown renderer (for AI copilot messages) ---------------- */
+function renderMarkdown(text) {
+  if (!text) return null;
+  const lines = text.split('\n');
+  const result = [];
+  let listBuffer = [];
+  let k = 0;
+
+  const flushList = () => {
+    if (!listBuffer.length) return;
+    result.push(<ul key={k++} style={{ margin: '4px 0 6px', paddingLeft: 20, listStyle: 'disc' }}>{listBuffer}</ul>);
+    listBuffer = [];
+  };
+
+  const bold = (str) => {
+    const parts = str.split(/\*\*(.+?)\*\*/g);
+    if (parts.length === 1) return str;
+    return parts.map((p, i) => i % 2 === 1 ? <strong key={i}>{p}</strong> : p);
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const listMatch = line.match(/^[ \t]*[*\-]\s+(.*)/);
+    if (listMatch) {
+      listBuffer.push(<li key={i} style={{ marginBottom: 2 }}>{bold(listMatch[1])}</li>);
+    } else {
+      flushList();
+      if (line.trim() === '') {
+        if (result.length > 0) result.push(<div key={k++} style={{ height: 6 }}/>);
+      } else {
+        result.push(<div key={k++}>{bold(line)}</div>);
+      }
+    }
+  }
+  flushList();
+  return result;
+}
+
 /* expose */
 Object.assign(window, {
   I, Icon, fmtUZS, fmtShort,
   Button, Pill, ScorePill, AIChip, Toggle, Field, Banner,
   Sparkline, LineChart, BarChart, StackedBar, Donut, Kpi,
-  Modal, Drawer, Tabs, useHashRoute, AskCopilotFAB,
+  Modal, Drawer, Tabs, useHashRoute, AskCopilotFAB, renderMarkdown,
   PortalUIRouter: {
     appHostsBankSurface,
     originForSurface,
