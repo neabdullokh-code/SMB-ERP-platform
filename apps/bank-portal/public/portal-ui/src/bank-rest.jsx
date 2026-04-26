@@ -1023,11 +1023,14 @@ const BANK_COPILOT_I18N = {
     older: "Ранее",
     noThreads: "Чатов пока нет",
     groundedInErp: "ОСНОВАНО НА ДАННЫХ ПОРТФЕЛЯ · БАНК",
+    export: "Экспорт",
+    composerPlaceholder: "Спросите о кредитных рисках, клиентах, очереди заявок или концентрации портфеля...",
+    attach: "Прикрепить",
+    portfolioData: "Данные портфеля",
     send: "Отправить",
     stop: "Остановить",
     modelTag: "SQB AI · анализ",
     groundedNote: "Ответы основаны на актуальных данных портфеля. Проверяйте перед принятием кредитных решений.",
-    composerPlaceholder: "Спросите о кредитных рисках, клиентах, очереди заявок или концентрации портфеля...",
     suggestions: [
       "Какие клиенты имеют наибольший кредитный риск?",
       "Что стоит за текущими критическими алертами?",
@@ -1040,7 +1043,6 @@ const BANK_COPILOT_I18N = {
     errorAuth: "Сессия истекла. Войдите заново.",
     deleteThread: "Удалить",
     confirmDelete: "Удалить этот чат?",
-    portfolioData: "Данные портфеля",
   },
 };
 
@@ -1154,7 +1156,15 @@ async function fetchBankCopilotContext() {
 
 function BankCopilotPage({ go, lang = "ru" }) {
   const t = BANK_COPILOT_I18N[lang] || BANK_COPILOT_I18N.ru;
-  const userId = (window.AuthRuntime && window.AuthRuntime.getCachedSession && window.AuthRuntime.getCachedSession()?.userId) || "bank-default";
+  const session = window.AuthRuntime && window.AuthRuntime.getCachedSession && window.AuthRuntime.getCachedSession();
+  const userId = session?.userId || "bank-default";
+  const userInitials = (() => {
+    const name = session?.name || session?.email || "";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    if (parts[0]) return parts[0].slice(0, 2).toUpperCase();
+    return "BA";
+  })();
 
   const [store, setStore] = useStateS(() => bankCopilotLoadStore(userId));
   const [draft, setDraft] = useStateS("");
@@ -1288,24 +1298,52 @@ function BankCopilotPage({ go, lang = "ru" }) {
     }
   }
 
-  function renderMessage(m, i) {
+  const renderThreadRow = (th) => {
+    const title = bankCopilotThreadTitle(th);
+    const isActive = th.id === activeThreadId;
+    return (
+      <div
+        key={th.id}
+        className={`nav-item ${isActive ? "active" : ""}`}
+        style={{ fontSize: 12.5, gap: 8, position: "relative", paddingRight: 26 }}
+        onClick={() => selectThread(th.id)}
+        title={title}
+      >
+        <span className="ico">
+          {isActive ? <Icon.Sparkle size={12} style={{ color: "var(--ai)" }}/> : <Icon.Hash size={12}/>}
+        </span>
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{title}</span>
+        <button
+          className="icon-btn"
+          aria-label={t.deleteThread}
+          onClick={(e) => { e.stopPropagation(); if (window.confirm(t.confirmDelete)) deleteThread(th.id); }}
+          style={{ position: "absolute", right: 4, top: "50%", transform: "translateY(-50%)", padding: 2 }}
+        >
+          <Icon.Trash size={11}/>
+        </button>
+      </div>
+    );
+  };
+
+  const renderMessage = (m, i) => {
     if (m.role === "user") {
       return (
         <div key={i} className="row" style={{ justifyContent: "flex-end", marginBottom: 16 }}>
-          <div style={{
-            background: "var(--ink)", color: "var(--surface)", borderRadius: "16px 16px 4px 16px",
-            padding: "10px 14px", maxWidth: "72%", fontSize: 14, lineHeight: 1.5, whiteSpace: "pre-wrap",
-          }}>{m.content}</div>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "14px 14px 2px 14px", padding: "10px 14px", maxWidth: 520, whiteSpace: "pre-wrap" }}>
+            {m.content}
+          </div>
+          <div className="avatar warm" style={{ width: 28, height: 28, marginLeft: 10 }}>{userInitials}</div>
         </div>
       );
     }
     return (
-      <div key={i} style={{ marginBottom: 20 }}>
+      <div key={i} style={{ display: "grid", gridTemplateColumns: "28px 1fr", gap: 10, marginBottom: 16 }}>
+        <div className="avatar" style={{ background: "var(--ai-bg)", color: "var(--ai)", width: 28, height: 28 }}>
+          <Icon.Sparkle size={13}/>
+        </div>
         <div className="ai-card" style={{ padding: "10px 14px 14px", position: "relative" }}>
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
-            <span className="ai-tag" style={{ position: "static" }}>
-              <Icon.Sparkle size={10}/> {t.modelTag}
-            </span>
+            <span className="ai-tag" style={{ position: "static" }}><Icon.Sparkle size={10}/> {t.modelTag}</span>
           </div>
           <div style={{ fontSize: 14, lineHeight: 1.55, color: "var(--fg)", whiteSpace: "pre-wrap" }}>
             {m.content || (m.pending ? "" : "")}
@@ -1314,152 +1352,105 @@ function BankCopilotPage({ go, lang = "ru" }) {
         </div>
       </div>
     );
-  }
+  };
 
-  const messages = activeThread ? activeThread.messages : [];
-  const isEmpty = messages.length === 0;
+  const isEmpty = !activeThread || activeThread.messages.length === 0;
 
   return (
-    <div className="page" style={{ display: "flex", gap: 0, padding: 0, height: "100%", overflow: "hidden" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", height: "calc(100vh - var(--topbar-h))" }}>
       {/* Sidebar */}
-      <div style={{
-        width: 240, borderRight: "1px solid var(--line)", display: "flex", flexDirection: "column",
-        flexShrink: 0, overflowY: "auto", background: "var(--surface)",
-      }}>
-        <div style={{ padding: "16px 12px 8px" }}>
-          <button
-            onClick={newThread}
-            style={{
-              width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
-              borderRadius: 8, border: "1px dashed var(--line)", background: "transparent",
-              color: "var(--ink)", fontSize: 13, cursor: "pointer", fontFamily: "var(--sans)",
-            }}>
-            <Icon.Plus size={13}/> {t.newChat}
-          </button>
+      <div className="hairline-r" style={{ padding: 12, overflowY: "auto", background: "var(--surface-2)" }}>
+        <div className="row mb-12">
+          <Button variant="primary" size="sm" className="block" icon={<Icon.Plus size={12}/>} onClick={newThread}>
+            {t.newChat}
+          </Button>
         </div>
 
-        {[["today", t.today], ["lastWeek", t.lastWeek], ["older", t.older]].map(([key, label]) =>
-          grouped[key].length > 0 && (
-            <div key={key}>
-              <div className="eyebrow" style={{ padding: "8px 16px 4px", fontSize: 10 }}>{label}</div>
-              {grouped[key].map((th) => (
-                <div
-                  key={th.id}
-                  onClick={() => selectThread(th.id)}
-                  style={{
-                    padding: "8px 12px", cursor: "pointer", fontSize: 13, lineHeight: 1.4,
-                    borderRadius: 6, margin: "1px 6px",
-                    background: th.id === activeThreadId ? "var(--ai-bg)" : "transparent",
-                    color: th.id === activeThreadId ? "var(--ai)" : "var(--fg)",
-                    display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 4,
-                  }}>
-                  <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {bankCopilotThreadTitle(th)}
-                  </span>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); if (window.confirm(t.confirmDelete)) deleteThread(th.id); }}
-                    style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: 2, flexShrink: 0 }}>
-                    <Icon.Trash size={11}/>
-                  </button>
-                </div>
-              ))}
-            </div>
-          )
+        {threads.length === 0 ? (
+          <div className="muted" style={{ fontSize: 12, padding: "12px 6px" }}>{t.noThreads}</div>
+        ) : (
+          <>
+            {grouped.today.length > 0 && (<><div className="eyebrow mb-4">{t.today}</div>{grouped.today.map(renderThreadRow)}</>)}
+            {grouped.lastWeek.length > 0 && (<><div className="eyebrow mt-12 mb-4">{t.lastWeek}</div>{grouped.lastWeek.map(renderThreadRow)}</>)}
+            {grouped.older.length > 0 && (<><div className="eyebrow mt-12 mb-4">{t.older}</div>{grouped.older.map(renderThreadRow)}</>)}
+          </>
         )}
-
-        {threads.length === 0 && (
-          <div className="muted" style={{ padding: "12px 16px", fontSize: 12 }}>{t.noThreads}</div>
-        )}
-
-        <div style={{ marginTop: "auto", padding: "12px 16px", borderTop: "1px solid var(--line)", fontSize: 11, color: "var(--muted)", lineHeight: 1.4 }}>
-          {t.groundedNote}
-        </div>
       </div>
 
-      {/* Main area */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      {/* Main */}
+      <div style={{ display: "flex", flexDirection: "column", minWidth: 0, background: "var(--bg)" }}>
+        {/* Header */}
+        <div className="hairline-b" style={{ padding: "10px 20px", background: "var(--surface)", display: "flex", alignItems: "center", gap: 10 }}>
+          <div className="avatar" style={{ background: "var(--ai-bg)", color: "var(--ai)", width: 26, height: 26 }}>
+            <Icon.Sparkle size={14}/>
+          </div>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>{t.copilotName} <AIChip/></div>
+            <div className="mono muted" style={{ fontSize: 10 }}>{t.groundedInErp}</div>
+          </div>
+          <span className="sp"/>
+          <Button variant="ghost" size="sm" icon={<Icon.Download size={12}/>}>{t.export}</Button>
+        </div>
+
         {/* Messages */}
-        <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "24px 32px" }}>
+        <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "24px 20px 24px", maxWidth: 880, margin: "0 auto", width: "100%" }}>
           {isEmpty ? (
-            <div style={{ maxWidth: 560, margin: "40px auto", textAlign: "center" }}>
-              <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--ai-bg)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-                <Icon.Sparkle size={22} style={{ color: "var(--ai)" }}/>
+            <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--muted)" }}>
+              <div style={{ width: 48, height: 48, borderRadius: 12, background: "var(--ai-bg)", color: "var(--ai)", display: "inline-grid", placeItems: "center", marginBottom: 14 }}>
+                <Icon.Sparkle size={22}/>
               </div>
-              <div style={{ fontSize: 20, fontWeight: 600, color: "var(--ink)", marginBottom: 8 }}>{t.emptyTitle}</div>
-              <div className="muted" style={{ fontSize: 13, marginBottom: 28 }}>{t.emptyHint}</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
+              <div style={{ fontSize: 18, color: "var(--ink)", fontWeight: 500, marginBottom: 6 }}>{t.emptyTitle}</div>
+              <div style={{ fontSize: 13, marginBottom: 20 }}>{t.emptyHint}</div>
+              <div className="row" style={{ flexWrap: "wrap", gap: 8, justifyContent: "center", maxWidth: 640, margin: "0 auto" }}>
                 {t.suggestions.map((s, i) => (
-                  <button key={i} onClick={() => sendMessage(s)}
-                    style={{
-                      padding: "8px 14px", borderRadius: 20, border: "1px solid var(--line)",
-                      background: "var(--surface)", color: "var(--fg)", fontSize: 12,
-                      cursor: "pointer", fontFamily: "var(--sans)",
-                    }}>{s}</button>
+                  <button key={i} className="chip" style={{ cursor: "pointer", fontSize: 12.5 }} onClick={() => sendMessage(s)}>
+                    {s} <Icon.Arrow size={10} className="muted"/>
+                  </button>
                 ))}
               </div>
-              {bankContext && (
-                <div style={{ marginTop: 24, padding: "10px 14px", borderRadius: 8, background: "var(--ai-bg)", border: "1px solid var(--ai-line)", fontSize: 12, color: "var(--ai)", textAlign: "left" }}>
-                  <Icon.Database size={12} style={{ verticalAlign: "middle", marginRight: 6 }}/>
-                  {t.portfolioData}: {bankContext.analytics ? `${bankContext.analytics.totalTenants} клиентов · ср. рейтинг ${bankContext.analytics.averageCreditScore}` : "загружено"}
-                  {bankContext.alertsSummary && bankContext.alertsSummary.critical > 0 && (
-                    <span style={{ marginLeft: 8, color: "var(--bad)" }}>· {bankContext.alertsSummary.critical} критических алертов</span>
-                  )}
-                </div>
-              )}
             </div>
           ) : (
-            <div style={{ maxWidth: 720, margin: "0 auto" }}>
-              {messages.map(renderMessage)}
+            <>
+              {activeThread.messages.map(renderMessage)}
               {errorKey && (
-                <div className="banner warn" style={{ marginTop: 8 }}>
-                  <Icon.Alert size={14}/>
-                  <div className="desc">{errorKey === "auth" ? t.errorAuth : t.errorOffline}</div>
+                <div className="banner bad" style={{ maxWidth: 860, margin: "8px auto 0" }}>
+                  <span className="ico"><Icon.Alert size={15}/></span>
+                  <div style={{ flex: 1 }}>
+                    <div className="desc">{errorKey === "auth" ? t.errorAuth : t.errorOffline}</div>
+                  </div>
                 </div>
               )}
-            </div>
+            </>
           )}
         </div>
 
         {/* Composer */}
-        <div style={{ borderTop: "1px solid var(--line)", padding: "16px 32px", background: "var(--surface)" }}>
-          <div style={{ maxWidth: 720, margin: "0 auto" }}>
-            <div style={{ display: "flex", gap: 10, alignItems: "flex-end", border: "1px solid var(--line)", borderRadius: 12, padding: "8px 12px", background: "var(--bg)" }}>
-              <textarea
-                ref={textareaRef}
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={onKeyDown}
-                placeholder={t.composerPlaceholder}
-                rows={1}
-                style={{
-                  flex: 1, border: "none", background: "transparent", resize: "none",
-                  fontFamily: "var(--sans)", fontSize: 14, color: "var(--fg)", outline: "none",
-                  lineHeight: 1.5, maxHeight: 160, overflowY: "auto",
-                }}
-              />
+        <div style={{ position: "sticky", bottom: 0, background: "var(--bg)", padding: "14px 20px 20px", borderTop: "1px solid var(--line)" }}>
+          <div className="hairline" style={{ background: "var(--surface)", borderRadius: 8, padding: 10, maxWidth: 860, margin: "0 auto" }}>
+            <textarea
+              ref={textareaRef}
+              className="input"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={onKeyDown}
+              placeholder={t.composerPlaceholder}
+              rows={2}
+              disabled={streaming}
+              style={{ border: 0, boxShadow: "none", resize: "none" }}
+            />
+            <div className="row" style={{ gap: 8, borderTop: "1px solid var(--line-2)", paddingTop: 8 }}>
+              <Button variant="ghost" size="sm" icon={<Icon.Paperclip size={12}/>} disabled>{t.attach}</Button>
+              <Button variant="ghost" size="sm" icon={<Icon.Database size={12}/>} disabled>{t.portfolioData}</Button>
+              <span className="sp"/>
+              <span className="mono muted" style={{ fontSize: 10 }}>{t.modelTag}</span>
               {streaming ? (
-                <button onClick={stopStream}
-                  style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "var(--line)", color: "var(--fg)", fontSize: 13, cursor: "pointer", fontFamily: "var(--sans)", flexShrink: 0 }}>
-                  {t.stop}
-                </button>
+                <Button variant="ghost" size="sm" icon={<Icon.X size={12}/>} onClick={stopStream}>{t.stop}</Button>
               ) : (
-                <button onClick={() => sendMessage(draft)} disabled={!draft.trim()}
-                  style={{
-                    padding: "6px 14px", borderRadius: 8, border: "none",
-                    background: draft.trim() ? "var(--ai)" : "var(--line)",
-                    color: draft.trim() ? "#fff" : "var(--muted)",
-                    fontSize: 13, cursor: draft.trim() ? "pointer" : "default",
-                    fontFamily: "var(--sans)", flexShrink: 0, transition: "background .15s",
-                  }}>
-                  {t.send}
-                </button>
+                <Button variant="primary" size="sm" icon={<Icon.Arrow size={12}/>} onClick={() => sendMessage(draft)} disabled={!draft.trim()}>{t.send}</Button>
               )}
             </div>
-            <div style={{ marginTop: 6, fontSize: 11, color: "var(--muted)", textAlign: "center" }}>
-              <Icon.Sparkle size={10} style={{ verticalAlign: "middle", color: "var(--ai)" }}/>{" "}
-              {t.groundedInErp}
-            </div>
           </div>
+          <div style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: "var(--muted)" }}>{t.groundedNote}</div>
         </div>
       </div>
     </div>
