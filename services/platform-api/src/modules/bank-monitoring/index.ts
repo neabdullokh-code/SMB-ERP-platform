@@ -6,6 +6,7 @@ import { requireGlobalPermission } from "../../lib/permissions.js";
 import {
   assignCreditApplication,
   getBankPortfolioAnalytics,
+  getCollateralSummary,
   getCreditApplicationDetail,
   listBankPortfolio,
   listCreditQueue,
@@ -117,6 +118,20 @@ export async function bankMonitoringModule(app: FastifyInstance) {
 
     const analytics = await getBankPortfolioAnalytics();
     return ok({ analytics });
+  });
+
+  // ── Collateral valuation across tenants (inventory × WAC from ledger) ───
+  app.get("/bank/portfolio/collateral", async (request, reply) => {
+    const auth = await requireGlobalPermission(
+      request,
+      reply,
+      "bank.monitor",
+      "Bank monitoring access is restricted to bank monitoring permissions."
+    );
+    if (!auth) return;
+
+    const collateral = await getCollateralSummary();
+    return ok({ collateral });
   });
 
   // ── Active alerts ─────────────────────────────────────────────────────────

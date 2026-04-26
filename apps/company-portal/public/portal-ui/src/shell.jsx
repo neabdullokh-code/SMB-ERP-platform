@@ -7,12 +7,20 @@ const SMB_NAV = [
     { path: "/smb/home",      label: "Dashboard",   icon: "Home" },
     { path: "/smb/copilot",   label: "AI Copilot",  icon: "Sparkle", ai: true },
   ]},
-  { section: "Operations", items: [
-    { path: "/smb/inventory", label: "Inventory",   icon: "Box" },
-    { path: "/smb/production",label: "Production",  icon: "Factory" },
+  { section: "📦 Warehouse", items: [
+    { path: "/smb/inventory",                          label: "Inventory",           icon: "Box", count: 312 },
+    { path: "/smb/documents/goods-receipts",           label: "Goods receipts",      icon: "Download" },
+    { path: "/smb/documents/goods-issues",             label: "Goods issues",        icon: "Upload" },
+    { path: "/smb/documents/inventory-transfers",      label: "Inventory transfers", icon: "Arrow" },
+  ]},
+  { section: "🏭 Production", items: [
+    { path: "/smb/production",                        label: "BOMs",               icon: "Factory" },
+    { path: "/smb/documents/production-orders",       label: "Production orders",  icon: "FileDoc" },
+  ]},
+  { section: "🛠 Services", items: [
     { path: "/smb/services",  label: "Services",    icon: "Wrench" },
   ]},
-  { section: "Finance", items: [
+  { section: "💰 Finance", items: [
     { path: "/smb/finance/ledger",   label: "General ledger", icon: "Ledger" },
     { path: "/smb/finance/invoices", label: "Invoices",       icon: "Doc" },
     { path: "/smb/finance/bills",    label: "Bills",          icon: "File" },
@@ -22,7 +30,7 @@ const SMB_NAV = [
   { section: "Growth", items: [
     { path: "/smb/credit",    label: "Credit & Financing", icon: "Handshake", ai: true },
   ]},
-  { section: "Admin", items: [
+  { section: "⚙️ Admin", items: [
     { path: "/smb/team",      label: "Team",       icon: "Users" },
     { path: "/smb/settings",  label: "Settings",   icon: "Gear" },
   ]},

@@ -334,6 +334,28 @@ function Kpi({ label, value, unit, delta, deltaLabel, spark, trend="up" }) {
   );
 }
 
+/* ---------------- Arc gauge (simple SVG) ---------------- */
+function ArcGauge({ value=0, max=100, size=80, thickness=8, color="var(--ai)", trackColor="var(--line)", label }) {
+  const r = (size - thickness) / 2;
+  const c = 2 * Math.PI * r;
+  const pct = Math.max(0, Math.min(1, value / max));
+  const dash = c * pct;
+  return (
+    <div style={{position:"relative", width:size, height:size}}>
+      <svg width={size} height={size}>
+        <circle cx={size/2} cy={size/2} r={r} stroke={trackColor} strokeWidth={thickness} fill="none"/>
+        <circle cx={size/2} cy={size/2} r={r} stroke={color} strokeWidth={thickness} fill="none"
+          strokeDasharray={`${dash} ${c - dash}`} strokeDashoffset={c * 0.25} strokeLinecap="round"
+          style={{transition:"stroke-dasharray 400ms ease"}}/>
+      </svg>
+      <div style={{position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column"}}>
+        <div style={{fontSize: size * 0.26, fontWeight:600, color:"var(--ink)"}}>{value}</div>
+        {label && <div style={{fontSize:10, color:"var(--muted)"}}>{label}</div>}
+      </div>
+    </div>
+  );
+}
+
 /* ---------------- Modal / Drawer ---------------- */
 function Modal({ open, onClose, title, footer, children, size }) {
   useEffect(() => {
@@ -430,6 +452,14 @@ const CLEAN_ROUTE_PATHS = {
   "/smb/finance/invoices": "/app/finance/invoices",
   "/smb/finance/bills": "/app/finance/bills",
   "/smb/finance/cash": "/app/finance/cash",
+  "/smb/documents/goods-receipts": "/app/documents/goods-receipts",
+  "/smb/documents/goods-receipts/new": "/app/documents/goods-receipts/new",
+  "/smb/documents/goods-issues": "/app/documents/goods-issues",
+  "/smb/documents/goods-issues/new": "/app/documents/goods-issues/new",
+  "/smb/documents/inventory-transfers": "/app/documents/inventory-transfers",
+  "/smb/documents/inventory-transfers/new": "/app/documents/inventory-transfers/new",
+  "/smb/documents/production-orders": "/app/documents/production-orders",
+  "/smb/documents/production-orders/new": "/app/documents/production-orders/new",
   "/smb/reports": "/app/reports",
   "/smb/credit": "/app/credit",
   "/smb/loan": "/app/loan",
@@ -612,7 +642,7 @@ function useHashRoute() {
 Object.assign(window, {
   I, Icon, fmtUZS, fmtShort,
   Button, Pill, ScorePill, AIChip, Toggle, Field, Banner,
-  Sparkline, LineChart, BarChart, StackedBar, Donut, Kpi,
+  Sparkline, LineChart, BarChart, StackedBar, Donut, Kpi, KpiAnimated: Kpi, ArcGauge,
   Modal, Drawer, Tabs, useHashRoute,
   PortalUIRouter: {
     appHostsBankSurface,
