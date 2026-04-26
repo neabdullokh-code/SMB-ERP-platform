@@ -14,7 +14,7 @@ function formatRelativeTime(iso) {
 
 function mapInventoryItem(item, movements) {
   const latestMovement = [...movements].find((movement) => movement.itemId === item.id);
-  const status = item.onHand <= 0 ? "Out of stock" : item.onHand <= item.reorderPoint ? "Low stock" : "In stock";
+  const status = item.onHand <= 0 ? "Нет в наличии" : item.onHand <= item.reorderPoint ? "Мало на складе" : "В наличии";
   return {
     id: item.id,
     sku: item.sku,
@@ -130,12 +130,16 @@ function buildStockHistorySeries(currentOnHand, movements, horizonMonths) {
 function InventoryList({ go }) {
   const [q, setQ] = useStateS("");
   const [cat, setCat] = useStateS("All");
+  const [warehouseFilter, setWarehouseFilter] = useStateS("all");
+  const [supplierFilter, setSupplierFilter] = useStateS("all");
   const [summary, setSummary] = useStateS(null);
   const [loading, setLoading] = useStateS(true);
   const [error, setError] = useStateS("");
   const [addOpen, setAddOpen] = useStateS(false);
   const [saving, setSaving] = useStateS(false);
   const [addError, setAddError] = useStateS("");
+  const [warehouseOpen, setWarehouseOpen] = useStateS(false);
+  const [warehouseError, setWarehouseError] = useStateS("");
   const [warehouseForm, setWarehouseForm] = useStateS({ code: "", name: "", location: "" });
   const [warehouseSaving, setWarehouseSaving] = useStateS(false);
   const [importing, setImporting] = useStateS(false);
@@ -146,6 +150,8 @@ function InventoryList({ go }) {
   const [actionError, setActionError] = useStateS("");
   const [actionBusy, setActionBusy] = useStateS(false);
   const [toolbarMenuOpen, setToolbarMenuOpen] = useStateS(false);
+  const [stocktakeOpen, setStocktakeOpen] = useStateS(false);
+  const [stocktakeDraft, setStocktakeDraft] = useStateS([]);
   const importInputRef = React.useRef(null);
   const [addForm, setAddForm] = useStateS({
     warehouseId: "",
@@ -205,16 +211,28 @@ function InventoryList({ go }) {
   }, [warehouses, addForm.warehouseId]);
   const items = rawItems.map((item) => mapInventoryItem(item, movements));
   const categories = ["All", ...new Set(items.map((item) => item.category))];
-  const rows = items.filter((item) => (cat === "All" || item.category === cat) && (q === "" || item.name.toLowerCase().includes(q.toLowerCase()) || item.sku.toLowerCase().includes(q)));
+  const suppliers = ["all", ...new Set((rawItems || []).map((item) => item.supplierName || item.supplier || "Не указан"))];
+  const rows = items.filter((item) => {
+    const itemRaw = rawItems.find((raw) => raw.id === item.id);
+    const itemSupplier = itemRaw?.supplierName || itemRaw?.supplier || "Не указан";
+    const byCategory = cat === "All" || item.category === cat;
+    const byWarehouse = warehouseFilter === "all" || itemRaw?.warehouseId === warehouseFilter;
+    const bySupplier = supplierFilter === "all" || itemSupplier === supplierFilter;
+    const byQuery = q === "" || item.name.toLowerCase().includes(q.toLowerCase()) || item.sku.toLowerCase().includes(q);
+    return byCategory && byWarehouse && bySupplier && byQuery;
+  });
   const totalValue = items.reduce((sum, item) => sum + item.valuationUzs, 0);
   const lowStock = items.filter((item) => item.onHand > 0 && item.onHand <= item.reorderPoint).length;
   const outOfStock = items.filter((item) => item.onHand <= 0).length;
   const canCreateProduct = warehouses.length > 0;
+  const movementRows = [...movements]
+    .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
+    .slice(0, 8);
 
   const openAddProduct = () => {
     if (!canCreateProduct) {
-      setAddError("Create a warehouse first or connect to the live database before adding products.");
-      setAddOpen(true);
+      setWarehouseError("Сначала добавьте склад, чтобы можно было принимать товар.");
+      setWarehouseOpen(true);
       return;
     }
     setAddError("");
@@ -280,15 +298,20 @@ function InventoryList({ go }) {
     }
   };
 
+  const openCreateWarehouse = () => {
+    setWarehouseError("");
+    setWarehouseOpen(true);
+  };
+
   const submitCreateWarehouse = async (event) => {
     event.preventDefault();
     if (!warehouseForm.code.trim() || !warehouseForm.name.trim() || !warehouseForm.location.trim()) {
-      setAddError("Warehouse code, name, and location are required.");
+      setWarehouseError("Код, название и локация склада обязательны.");
       return;
     }
 
     setWarehouseSaving(true);
-    setAddError("");
+    setWarehouseError("");
     try {
       const response = await fetch("/api/inventory/warehouses", {
         method: "POST",
@@ -302,14 +325,15 @@ function InventoryList({ go }) {
       });
       const body = await response.json();
       if (!response.ok || !body.data?.warehouse) {
-        setAddError(body.message || body.error?.message || "Unable to create warehouse.");
+        setWarehouseError(body.message || body.error?.message || "Не удалось создать склад.");
         return;
       }
       setWarehouseForm({ code: "", name: "", location: "" });
       setAddForm((prev) => ({ ...prev, warehouseId: body.data.warehouse.id }));
+      setWarehouseOpen(false);
       await reloadSummary();
     } catch {
-      setAddError("Unable to create warehouse.");
+      setWarehouseError("Не удалось создать склад.");
     } finally {
       setWarehouseSaving(false);
     }
@@ -484,6 +508,26 @@ function InventoryList({ go }) {
     setActionOpen(true);
   };
 
+  const openStocktake = () => {
+    setStocktakeDraft(rows.slice(0, 12).map((item) => ({
+      id: item.id,
+      sku: item.sku,
+      name: item.name,
+      planned: item.onHand,
+      actual: item.onHand
+    })));
+    setStocktakeOpen(true);
+  };
+
+  const stocktakeSummary = stocktakeDraft.reduce((acc, row) => {
+    const diff = (Number(row.actual) || 0) - row.planned;
+    return {
+      lines: acc.lines + 1,
+      delta: acc.delta + diff,
+      withVariance: acc.withVariance + (diff !== 0 ? 1 : 0)
+    };
+  }, { lines: 0, delta: 0, withVariance: 0 });
+
   const deleteItem = async () => {
     if (!actionTarget) return;
     setActionBusy(true);
@@ -511,93 +555,108 @@ function InventoryList({ go }) {
     <div className="page">
       <div className="page-head">
         <div>
-          <h1>Inventory</h1>
+          <h1>Склад</h1>
           <div className="sub">
-            {items.length} SKUs across {categories.length - 1} categories · value{" "}
+            {items.length} SKU по {categories.length - 1} группам · сумма{" "}
             <span className="mono" style={{ color: "var(--ink)" }}>{fmtUZS(totalValue)} UZS</span>
           </div>
         </div>
         <span className="sp" />
-        <Button variant="ai" icon={<Icon.Scan size={13} />} onClick={() => go("/smb/inventory/scan")}>Scan waybill</Button>
-        <Button
-          variant="ghost"
-          icon={<Icon.Upload size={13} />}
-          onClick={() => importInputRef.current?.click()}
-          disabled={importing}
-        >
-          {importing ? "Importing..." : "Import Excel"}
-        </Button>
-        <input
-          ref={importInputRef}
-          type="file"
-          accept=".xlsx,.xls,.csv,.tsv,.txt"
-          style={{ display: "none" }}
-          onChange={handleImportFile}
-        />
-        <Button variant="primary" icon={<Icon.Plus size={13} />} onClick={openAddProduct}>Add product</Button>
+        <div className="row gap-8">
+          <Button variant="ai" icon={<Icon.Scan size={13} />} onClick={() => go("/smb/inventory/scan")}>Загрузить накладную (OCR)</Button>
+          <Button
+            variant="ghost"
+            icon={<Icon.Upload size={13} />}
+            onClick={() => importInputRef.current?.click()}
+            disabled={importing}
+          >
+            {importing ? "Импорт..." : "Импорт Excel"}
+          </Button>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv,.tsv,.txt"
+            style={{ display: "none" }}
+            onChange={handleImportFile}
+          />
+        </div>
+        <div className="row gap-8" style={{ marginLeft: 8, paddingLeft: 10, borderLeft: "1px solid var(--line)" }}>
+          <Button variant="ghost" icon={<Icon.Database size={13} />} onClick={openCreateWarehouse}>Добавить склад</Button>
+          <Button variant="ghost" icon={<Icon.Plus size={13} />} onClick={openAddProduct}>Принять товар</Button>
+          <Button variant="ghost" icon={<Icon.Trash size={13} />} onClick={() => setActionError("Списание доступно из карточки товара через Adjust stock.")}>Списать</Button>
+          <Button variant="ghost" icon={<Icon.ArrowUpR size={13} />} onClick={() => setActionError("Перемещение между складами выполняется из карточки товара.")}>Переместить</Button>
+        </div>
+        <div className="row gap-8" style={{ marginLeft: 8, paddingLeft: 10, borderLeft: "1px solid var(--line)" }}>
+          <Button variant="primary" icon={<Icon.Scan size={13} />} onClick={openStocktake}>Начать инвентаризацию</Button>
+        </div>
       </div>
 
       {error && (
-        <Banner tone="warn" title="Live inventory unavailable">
-          Live inventory could not be loaded. {error}
+        <Banner tone="warn" title="Данные склада недоступны">
+          Не удалось загрузить остатки с backend. {error}
         </Banner>
       )}
 
       {loading && !error && (
-        <Banner tone="info" title="Loading live inventory">
-          Fetching inventory rows from the backend.
+        <Banner tone="info" title="Загрузка остатков">
+          Получаем актуальные остатки со стороны backend.
         </Banner>
       )}
       {importMessage && (
-        <Banner tone="info" title="Import completed">
+        <Banner tone="info" title="Импорт завершен">
           {importMessage}
         </Banner>
       )}
       {importError && (
-        <Banner tone="warn" title="Import failed">
+        <Banner tone="warn" title="Ошибка импорта">
           {importError}
+        </Banner>
+      )}
+      {actionError && (
+        <Banner tone="info" title="Операция склада">
+          {actionError}
         </Banner>
       )}
 
       <div className="grid grid-4 mb-16">
-        <Kpi label="Total SKUs" value={String(items.length)} delta={loading ? "Loading..." : "Live from backend"} trend="up" />
-        <Kpi label="Low stock" value={String(lowStock)} delta="At or below reorder point" trend="up" />
-        <Kpi label="Out of stock" value={String(outOfStock)} delta="Zero on-hand" trend="down" />
-        <Kpi label="Total valuation" value={fmtUZS(Math.round(totalValue / 1_000_000))} unit="M UZS" delta="At cost" trend="up" />
+        <Kpi label="Всего SKU" value={String(items.length)} delta={loading ? "Загрузка..." : "Актуально из backend"} trend="up" />
+        <Kpi label="Низкий остаток" value={String(lowStock)} delta="Ниже точки заказа" trend="up" />
+        <Kpi label="Нет в наличии" value={String(outOfStock)} delta="Нулевой остаток" trend="down" />
+        <Kpi label="Оценка склада" value={fmtUZS(Math.round(totalValue / 1_000_000))} unit="M UZS" delta="По себестоимости" trend="up" />
       </div>
 
       <div className="card card-pad-0">
         <div className="tbl-toolbar">
           <div className="input-wrap" style={{ width: 280 }}>
             <span className="prefix"><Icon.Search size={13} /></span>
-            <input className="input with-prefix" placeholder="Search SKU or name" value={q} onChange={(e) => setQ(e.target.value)} />
+            <input className="input with-prefix" placeholder="Поиск SKU или названия" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
-          <div className="row gap-4">
-            {categories.slice(0, 6).map((category) => (
-              <button
-                key={category}
-                className="chip"
-                onClick={() => setCat(category)}
-                style={{
-                  background: cat === category ? "var(--ink)" : undefined,
-                  color: cat === category ? "var(--surface)" : undefined,
-                  borderColor: cat === category ? "var(--ink)" : undefined
-                }}
-              >
-                {category}
-              </button>
-            ))}
-            <span className="chip filter-add"><Icon.Plus size={11} /> Add filter</span>
+          <div className="row gap-8">
+            <select className="select" value={cat} onChange={(e) => setCat(e.target.value)}>
+              {categories.map((category) => <option key={category} value={category}>{category === "All" ? "Все группы" : category}</option>)}
+            </select>
+            <select className="select" value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)}>
+              <option value="all">Все склады</option>
+              {warehouses.map((warehouse) => (
+                <option key={warehouse.id} value={warehouse.id}>{warehouse.code} · {warehouse.name}</option>
+              ))}
+            </select>
+            <select className="select" value={supplierFilter} onChange={(e) => setSupplierFilter(e.target.value)}>
+              <option value="all">Все поставщики</option>
+              {suppliers.filter((name) => name !== "all").map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
           </div>
           <span className="sp" />
-          <div className="mono muted" style={{ fontSize: 11 }}>{rows.length} results</div>
-          <Button variant="ghost" size="sm" icon={<Icon.Download size={12} />} onClick={handleExport}>Export</Button>
+          <div className="mono muted" style={{ fontSize: 11 }}>{rows.length} позиций</div>
+          <Button variant="ghost" size="sm" icon={<Icon.Download size={12} />} onClick={handleExport}>Экспорт</Button>
           <div style={{ position: "relative" }}>
             <Button variant="ghost" size="sm" icon={<Icon.More size={13} />} onClick={() => setToolbarMenuOpen((prev) => !prev)} />
             {toolbarMenuOpen && (
               <div className="hairline" style={{ position: "absolute", right: 0, top: 34, background: "var(--surface)", borderRadius: 8, minWidth: 180, zIndex: 8, boxShadow: "0 8px 20px rgba(0,0,0,.08)" }}>
-                <button className="btn ghost sm" style={{ width: "100%", justifyContent: "flex-start", border: 0, borderRadius: 0 }} onClick={() => { setToolbarMenuOpen(false); handleExport(); }}>Export filtered rows</button>
-                <button className="btn ghost sm" style={{ width: "100%", justifyContent: "flex-start", border: 0, borderRadius: 0 }} onClick={async () => { setToolbarMenuOpen(false); await reloadSummary(); }}>Refresh data</button>
+                <button className="btn ghost sm" style={{ width: "100%", justifyContent: "flex-start", border: 0, borderRadius: 0 }} onClick={() => { setToolbarMenuOpen(false); handleExport(); }}>Экспорт отфильтрованных строк</button>
+                <button className="btn ghost sm" style={{ width: "100%", justifyContent: "flex-start", border: 0, borderRadius: 0 }} onClick={async () => { setToolbarMenuOpen(false); await reloadSummary(); }}>Обновить данные</button>
               </div>
             )}
           </div>
@@ -608,14 +667,14 @@ function InventoryList({ go }) {
               <tr>
                 <th className="check"><input type="checkbox" /></th>
                 <th>SKU</th>
-                <th>Product</th>
-                <th>Category</th>
-                <th className="tr">Stock</th>
-                <th className="tr">Min</th>
-                <th className="tr">Unit price</th>
-                <th className="tr">Value</th>
-                <th>Last movement</th>
-                <th>Status</th>
+                <th>Товар</th>
+                <th>Группа</th>
+                <th className="tr">Остаток</th>
+                <th className="tr">Мин.</th>
+                <th className="tr">Цена</th>
+                <th className="tr">Сумма</th>
+                <th>Последнее движение</th>
+                <th>Статус</th>
                 <th style={{ width: 40 }} />
               </tr>
             </thead>
@@ -623,11 +682,11 @@ function InventoryList({ go }) {
               {loading && rows.length === 0 ? (
                 <tr>
                   <td colSpan={11} className="muted" style={{ padding: "18px 16px" }}>
-                    Loading live inventory rows...
+                    Загружаем строки остатков...
                   </td>
                 </tr>
               ) : rows.map((item) => {
-                const tone = item.status === "In stock" ? "good" : item.status === "Low stock" ? "warn" : "bad";
+                const tone = item.status === "В наличии" ? "good" : item.status === "Мало на складе" ? "warn" : "bad";
                 return (
                   <tr key={item.sku} onClick={() => openItemDetail(item)} style={{ cursor: "pointer" }}>
                     <td className="check"><input type="checkbox" /></td>
@@ -649,24 +708,25 @@ function InventoryList({ go }) {
         </div>
       </div>
 
-      <div className="grid" style={{ gridTemplateColumns: "1.3fr 1fr", gap: 12 }}>
+      <div className="grid" style={{ gridTemplateColumns: "1.3fr 1fr", gap: 12, marginTop: 12 }}>
         <div className="card card-pad-0">
-          <div className="panel-title">Warehouses</div>
-          {warehouses.length === 0 ? (
+          <div className="panel-title">История движений</div>
+          {movementRows.length === 0 ? (
             <div className="empty" style={{ minHeight: 180 }}>
               <Icon.Database size={24} />
-              <h3>No warehouses</h3>
-              <div>The backend did not return warehouse rows yet.</div>
+              <h3>Нет движений</h3>
+              <div>История по приходам, перемещениям и списаниям пока пуста.</div>
             </div>
           ) : (
             <table className="tbl">
-              <thead><tr><th>Code</th><th>Name</th><th>Location</th></tr></thead>
+              <thead><tr><th>Дата</th><th>SKU</th><th>Тип</th><th className="tr">Кол-во</th></tr></thead>
               <tbody>
-                {warehouses.map((warehouse) => (
-                  <tr key={warehouse.id}>
-                    <td className="id">{warehouse.code}</td>
-                    <td>{warehouse.name}</td>
-                    <td className="dim">{warehouse.location}</td>
+                {movementRows.map((movement) => (
+                  <tr key={movement.id}>
+                    <td className="mono">{(movement.occurredAt || "").slice(0, 10)}</td>
+                    <td className="id">{rawItems.find((item) => item.id === movement.itemId)?.sku || "—"}</td>
+                    <td className="dim">{movement.movementType === "inbound" ? "Приход" : movement.movementType === "transfer" ? "Перемещение" : movement.movementType === "outbound" ? "Списание" : "Корректировка"}</td>
+                    <td className="num">{Number.parseFloat(String(movement.quantity || 0)).toLocaleString("en-US").replace(/,/g, " ")}</td>
                   </tr>
                 ))}
               </tbody>
@@ -674,22 +734,22 @@ function InventoryList({ go }) {
           )}
         </div>
         <div className="card card-pad-0">
-          <div className="panel-title">Latest stocktake</div>
+          <div className="panel-title">Сверка инвентаризации</div>
           {stocktakes.length === 0 ? (
             <div className="empty" style={{ minHeight: 180 }}>
               <Icon.Scan size={24} />
-              <h3>No stocktakes</h3>
-              <div>The backend has not recorded a stocktake yet.</div>
+              <h3>Нет данных сверки</h3>
+              <div>Запустите инвентаризацию, чтобы получить план/факт и акт расхождений.</div>
             </div>
           ) : (
             <table className="tbl">
-              <thead><tr><th>Warehouse</th><th>Started</th><th>Completed</th><th className="tr">Variance</th></tr></thead>
+              <thead><tr><th>Склад</th><th>Начало</th><th>Завершено</th><th className="tr">Расхождений</th></tr></thead>
               <tbody>
                 {stocktakes.map((stocktake) => (
                   <tr key={stocktake.id}>
                     <td className="id">{warehouses.find((warehouse) => warehouse.id === stocktake.warehouseId)?.code || stocktake.warehouseId.slice(0, 8)}</td>
-                    <td className="mono">{stocktake.startedAt.slice(0, 10)}</td>
-                    <td className="mono">{stocktake.completedAt ? stocktake.completedAt.slice(0, 10) : "Open"}</td>
+                    <td className="mono">{(stocktake.startedAt || "").slice(0, 10)}</td>
+                    <td className="mono">{stocktake.completedAt ? stocktake.completedAt.slice(0, 10) : "Открыта"}</td>
                     <td className="num">{stocktake.varianceCount}</td>
                   </tr>
                 ))}
@@ -698,6 +758,113 @@ function InventoryList({ go }) {
           )}
         </div>
       </div>
+      <Modal
+        open={stocktakeOpen}
+        onClose={() => setStocktakeOpen(false)}
+        title="Инвентаризация: план и факт"
+        size="lg"
+        footer={
+          <>
+            <div className="muted" style={{ fontSize: 12 }}>
+              Строк: {stocktakeSummary.lines} · С расхождением: {stocktakeSummary.withVariance} · Итого: {stocktakeSummary.delta > 0 ? `+${stocktakeSummary.delta}` : stocktakeSummary.delta}
+            </div>
+            <span className="sp" />
+            <Button variant="ghost" type="button" onClick={() => setStocktakeOpen(false)}>Отмена</Button>
+            <Button variant="primary" type="button" onClick={() => setStocktakeOpen(false)}>Сформировать акт</Button>
+          </>
+        }
+      >
+        <div style={{ overflowX: "auto" }}>
+          <table className="tbl compact">
+            <thead>
+              <tr>
+                <th>SKU</th>
+                <th>Товар</th>
+                <th className="tr">Плановый остаток</th>
+                <th className="tr">Фактический остаток</th>
+                <th className="tr">Расхождение</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stocktakeDraft.map((row) => {
+                const diff = (Number(row.actual) || 0) - row.planned;
+                return (
+                  <tr key={row.id}>
+                    <td className="id">{row.sku}</td>
+                    <td>{row.name}</td>
+                    <td className="num">{row.planned}</td>
+                    <td className="num">
+                      <input
+                        className="input"
+                        type="number"
+                        min="0"
+                        value={row.actual}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          setStocktakeDraft((prev) => prev.map((entry) => (
+                            entry.id === row.id ? { ...entry, actual: value } : entry
+                          )));
+                        }}
+                        style={{ width: 120, marginLeft: "auto" }}
+                      />
+                    </td>
+                    <td className="num" style={{ color: diff === 0 ? "var(--muted)" : diff > 0 ? "var(--good)" : "var(--bad)" }}>{diff > 0 ? `+${diff}` : diff}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Modal>
+
+      <Modal
+        open={warehouseOpen}
+        onClose={() => {
+          if (warehouseSaving) return;
+          setWarehouseOpen(false);
+          setWarehouseError("");
+        }}
+        title="Добавить склад"
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" type="button" onClick={() => setWarehouseOpen(false)} disabled={warehouseSaving}>Отмена</Button>
+            <span className="sp" />
+            <Button variant="primary" type="submit" form="create-warehouse-form" icon={<Icon.Check size={13} />} disabled={warehouseSaving}>
+              {warehouseSaving ? "Сохраняем..." : "Создать склад"}
+            </Button>
+          </>
+        }
+      >
+        <form id="create-warehouse-form" onSubmit={submitCreateWarehouse}>
+          <div className="grid grid-3" style={{ gap: 8 }}>
+            <input
+              className="input"
+              placeholder="Код (например, MAIN)"
+              value={warehouseForm.code}
+              onChange={(e) => setWarehouseForm((prev) => ({ ...prev, code: e.target.value }))}
+            />
+            <input
+              className="input"
+              placeholder="Название"
+              value={warehouseForm.name}
+              onChange={(e) => setWarehouseForm((prev) => ({ ...prev, name: e.target.value }))}
+            />
+            <input
+              className="input"
+              placeholder="Локация"
+              value={warehouseForm.location}
+              onChange={(e) => setWarehouseForm((prev) => ({ ...prev, location: e.target.value }))}
+            />
+          </div>
+          {warehouseError && (
+            <div className="banner warn mt-12">
+              <span className="ico"><Icon.Alert size={16} /></span>
+              <div className="desc">{warehouseError}</div>
+            </div>
+          )}
+        </form>
+      </Modal>
 
       <Modal
         open={addOpen}
@@ -715,49 +882,6 @@ function InventoryList({ go }) {
         }
       >
         <form id="add-product-form" onSubmit={submitAddProduct}>
-          {!canCreateProduct && (
-            <div className="banner warn mb-12">
-              <span className="ico"><Icon.Alert size={16} /></span>
-              <div className="desc">No warehouse found. Create one first.</div>
-            </div>
-          )}
-          {!canCreateProduct && (
-            <div className="hairline" style={{ borderRadius: 8, padding: 12, marginBottom: 12 }}>
-              <div className="eyebrow mb-8">Create warehouse</div>
-              <div className="grid grid-3" style={{ gap: 8 }}>
-                <input
-                  className="input"
-                  placeholder="Code (e.g. MAIN)"
-                  value={warehouseForm.code}
-                  onChange={(e) => setWarehouseForm((prev) => ({ ...prev, code: e.target.value }))}
-                />
-                <input
-                  className="input"
-                  placeholder="Name"
-                  value={warehouseForm.name}
-                  onChange={(e) => setWarehouseForm((prev) => ({ ...prev, name: e.target.value }))}
-                />
-                <input
-                  className="input"
-                  placeholder="Location"
-                  value={warehouseForm.location}
-                  onChange={(e) => setWarehouseForm((prev) => ({ ...prev, location: e.target.value }))}
-                />
-              </div>
-              <div className="row mt-8">
-                <span className="sp" />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  icon={<Icon.Plus size={12} />}
-                  onClick={submitCreateWarehouse}
-                  disabled={warehouseSaving}
-                >
-                  {warehouseSaving ? "Creating..." : "Create warehouse"}
-                </Button>
-              </div>
-            </div>
-          )}
           <div className="grid grid-2" style={{ gap: 12 }}>
             <Field label="Warehouse" required>
               <select
@@ -965,7 +1089,7 @@ function InventoryDetail({ go }) {
   const onHand = item ? Number(item.onHand || 0) : 0;
   const valuationUzs = item ? Number(item.valuationUzs || 0) : 0;
   const unitPrice = onHand > 0 ? Math.round(valuationUzs / onHand) : 0;
-  const status = item ? (onHand <= 0 ? "Out of stock" : onHand <= item.reorderPoint ? "Low stock" : "In stock") : "—";
+  const status = item ? (onHand <= 0 ? "Нет в наличии" : onHand <= item.reorderPoint ? "Мало на складе" : "В наличии") : "—";
   const turnover = itemMovements.length > 0 ? `${Math.max(1, Math.round((itemMovements.length / Math.max(1, horizon)) * 10) / 10)}x` : "0x";
   const history = buildStockHistorySeries(onHand, itemMovements, horizon);
   const targetWarehouses = item ? warehouses.filter((warehouse) => warehouse.id !== item.warehouseId) : [];
@@ -1094,7 +1218,7 @@ function InventoryDetail({ go }) {
             <span className="sep-dot" />
             <span className="muted">{itemWarehouse ? `Warehouse ${itemWarehouse.code} · ${itemWarehouse.name}` : "Warehouse not assigned"}</span>
             <span className="sep-dot" />
-            <Pill tone={status === "In stock" ? "good" : status === "Low stock" ? "warn" : "bad"}>{status}</Pill>
+            <Pill tone={status === "В наличии" ? "good" : status === "Мало на складе" ? "warn" : "bad"}>{status}</Pill>
           </div>
         </div>
         <span className="sp" />

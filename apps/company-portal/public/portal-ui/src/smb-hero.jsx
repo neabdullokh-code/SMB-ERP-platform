@@ -162,44 +162,52 @@ const SMB_DASHBOARD_I18N = {
 /* ─── Pulse Stories ──────────────────────────────────────── */
 const PULSE_STORIES = [
   {
-    id: "tax", tone: "bad",
+    id: "tax", tone: "bad", icon: "Alert",
     ru: { label: "НДС к уплате", emoji: "⚠️", title: "Налог НДС к уплате", subtitle: "Срок: 20 апреля", amount: "14 200 000 UZS", action: "Оплатить сейчас", chart: null, path: "/smb/finance/bills" },
     en: { label: "VAT Due",      emoji: "⚠️", title: "VAT tax due",         subtitle: "Deadline: Apr 20", amount: "14 200 000 UZS", action: "Pay now",          chart: null, path: "/smb/finance/bills" },
     uz: { label: "QQS to'lovi", emoji: "⚠️", title: "QQS to'lovi",          subtitle: "Muddat: 20-aprel", amount: "14 200 000 UZS", action: "Hozir to'lash",    chart: null, path: "/smb/finance/bills" },
   },
   {
-    id: "growth", tone: "good",
+    id: "growth", tone: "good", icon: "Chart",
     ru: { label: "Рост продаж",    emoji: "📈", title: "Лучший март за 3 года", subtitle: "+38% к прошлому году · Март 278 млн", action: "Посмотреть",     chart: [182,204,221,198,246,278], path: "/smb/finance/invoices" },
     en: { label: "Sales Growth",   emoji: "📈", title: "Best March in 3 years",  subtitle: "+38% vs last year · Mar 278M",         action: "View details",   chart: [182,204,221,198,246,278], path: "/smb/finance/invoices" },
     uz: { label: "Savdo o'sishi",  emoji: "📈", title: "3 yildagi eng yaxshi mart", subtitle: "O'tgan yilga +38% · Mart 278M",      action: "Ko'rish",       chart: [182,204,221,198,246,278], path: "/smb/finance/invoices" },
   },
   {
-    id: "offer", tone: "ai",
+    id: "offer", tone: "ai", icon: "Bank",
     ru: { label: "Предложение банка", emoji: "🏦", title: "Предодобренный кредит", subtitle: "SQB · до 240 млн UZS · ставка 18%", amount: "240 000 000 UZS", action: "Узнать подробнее", chart: null, path: "/smb/credit" },
     en: { label: "Bank Offer",        emoji: "🏦", title: "Pre-approved credit",   subtitle: "SQB · up to UZS 240M · rate 18%",    amount: "240 000 000 UZS", action: "Learn more",       chart: null, path: "/smb/credit" },
     uz: { label: "Bank taklifi",      emoji: "🏦", title: "Oldindan ma'qullangan kredit", subtitle: "SQB · 240M UZS gacha · 18%",  amount: "240 000 000 UZS", action: "Batafsil",         chart: null, path: "/smb/credit" },
   },
   {
-    id: "overdue", tone: "warn",
+    id: "overdue", tone: "warn", icon: "Doc",
     ru: { label: "3 счета просроч.", emoji: "📋", title: "Просроченные счета", subtitle: "Нужно срочно: 3 счёта не оплачены", amount: "28 400 000 UZS", action: "Отправить напоминания", chart: null, path: "/smb/finance/invoices" },
     en: { label: "3 Overdue",         emoji: "📋", title: "Overdue invoices",  subtitle: "Action needed: 3 invoices unpaid",    amount: "28 400 000 UZS", action: "Send reminders",       chart: null, path: "/smb/finance/invoices" },
     uz: { label: "3 muddati o'tgan",  emoji: "📋", title: "Muddati o'tgan hisoblar", subtitle: "Kerak: 3 ta hisob to'lanmagan", amount: "28 400 000 UZS", action: "Eslatma yuborish",    chart: null, path: "/smb/finance/invoices" },
   },
 ];
 
-function PulseStories({ go, lang }) {
+function PulseStories({ go, lang = "ru" }) {
   const [open, setOpen] = useStateS(null); // story id
   const story = open ? PULSE_STORIES.find(s => s.id === open) : null;
-  const sd = story ? (story[lang] || story.en) : null;
+  const sd = story ? (story[lang] || story.ru || story.en) : null;
+  const StoryIcon = story ? (Icon[story.icon] || Icon.Info) : null;
+  const toneLabels = {
+    ru: { bad: "Срочно", warn: "Внимание", good: "Позитив", ai: "AI" },
+    en: { bad: "Urgent", warn: "Attention", good: "Positive", ai: "AI" },
+    uz: { bad: "Shoshilinch", warn: "Diqqat", good: "Ijobiy", ai: "AI" },
+  };
+  const toneText = (toneLabels[lang] || toneLabels.ru);
   return (
     <>
       <div className="stories-bar">
         {PULSE_STORIES.map(s => {
-          const d = s[lang] || s.en;
+          const d = s[lang] || s.ru || s.en;
+          const BubbleIcon = Icon[s.icon] || Icon.Info;
           return (
             <div key={s.id} className="story-bubble-wrap" onClick={() => setOpen(s.id)}>
               <div className={`story-ring tone-${s.tone}`}>
-                <div className="story-ring-inner">{d.emoji}</div>
+                <div className="story-ring-inner"><BubbleIcon size={14}/></div>
               </div>
               <span className="story-label">{d.label}</span>
             </div>
@@ -210,11 +218,11 @@ function PulseStories({ go, lang }) {
         <div className="story-panel-scrim" onClick={() => setOpen(null)}>
           <div className="story-panel" onClick={e => e.stopPropagation()}>
             <button className="story-panel-close" onClick={() => setOpen(null)}><Icon.X size={12}/></button>
-            <span className="story-panel-emoji">{sd.emoji}</span>
+            <span className="story-panel-emoji">{StoryIcon && <StoryIcon size={18}/>}</span>
             <div style={{marginBottom:6}}>
               <span className={`pill ${story.tone === "bad" ? "bad" : story.tone === "ai" ? "ai" : story.tone === "warn" ? "warn" : "good"}`} style={{fontSize:10, display:"inline-flex", alignItems:"center", gap:4}}>
                 <span className="dot"/>
-                {story.tone === "bad" ? "Urgent" : story.tone === "warn" ? "Attention" : story.tone === "good" ? "Positive" : "AI"}
+                {story.tone === "bad" ? toneText.bad : story.tone === "warn" ? toneText.warn : story.tone === "good" ? toneText.good : toneText.ai}
               </span>
             </div>
             <div style={{fontSize:18, fontWeight:600, color:"var(--ink)", marginBottom:4}}>{sd.title}</div>
@@ -267,8 +275,8 @@ const FEED_ITEMS_I18N = {
   ],
 };
 
-function BusinessFeed({ go, lang }) {
-  const items = FEED_ITEMS_I18N[lang] || FEED_ITEMS_I18N.en;
+function BusinessFeed({ go, lang = "ru" }) {
+  const items = FEED_ITEMS_I18N[lang] || FEED_ITEMS_I18N.ru || FEED_ITEMS_I18N.en;
   const [dismissed, setDismissed] = useStateS(new Set());
   const [done, setDone] = useStateS(new Set());
 
@@ -341,7 +349,7 @@ const REVENUE_PERIODS = {
   "1Y": { data: [140,155,168,175,182,204,221,198,210,224,246,278], labels: ["Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan","Feb","Mar"] },
 };
 
-function SMBDashboard({ go, lang }) {
+function SMBDashboard({ go, lang = "ru" }) {
   const t = SMB_DASHBOARD_I18N[lang] || SMB_DASHBOARD_I18N.ru;
   const [period, setPeriod] = useStateS("6M");
   const chartData = REVENUE_PERIODS[period] || REVENUE_PERIODS["6M"];
