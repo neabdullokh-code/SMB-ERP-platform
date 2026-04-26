@@ -84,16 +84,22 @@ set name = excluded.name,
 
 insert into memberships (tenant_id, user_id, role, permission_groups)
 values
-  ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000201', 'owner', '["tenant_governance","finance_operations","inventory_operations","production_operations","service_operations","audit_compliance"]'::jsonb),
+  ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000201', 'company_admin', '["tenant_governance","finance_operations","inventory_operations","production_operations","service_operations","audit_compliance"]'::jsonb),
   ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000207', 'company_admin', '["tenant_governance","finance_operations","inventory_operations","production_operations","service_operations","audit_compliance"]'::jsonb),
-  ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000202', 'operator', '["inventory_operations","production_operations","service_operations"]'::jsonb),
-  ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000208', 'manager', '["finance_operations","inventory_operations","production_operations","service_operations"]'::jsonb),
-  ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000209', 'operator', '["inventory_operations","production_operations","service_operations"]'::jsonb),
-  (null, '00000000-0000-0000-0000-000000000203', 'bank_admin', '[]'::jsonb),
-  (null, '00000000-0000-0000-0000-000000000204', 'super_admin', '[]'::jsonb),
-  (null, '00000000-0000-0000-0000-000000000205', 'super_admin', '[]'::jsonb),
-  (null, '00000000-0000-0000-0000-000000000206', 'super_admin', '[]'::jsonb)
+  ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000202', 'warehouse_clerk', '["inventory_operations"]'::jsonb),
+  ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000208', 'executive', '["executive_oversight","audit_compliance"]'::jsonb),
+  ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000209', 'production_operator', '["production_operations"]'::jsonb)
 on conflict do nothing;
+
+insert into bank_staff_memberships (user_id, role)
+values
+  ('00000000-0000-0000-0000-000000000203', 'bank_admin'),
+  ('00000000-0000-0000-0000-000000000204', 'super_admin'),
+  ('00000000-0000-0000-0000-000000000205', 'super_admin'),
+  ('00000000-0000-0000-0000-000000000206', 'super_admin')
+on conflict (user_id) do update
+set role = excluded.role,
+    updated_at = now();
 
 insert into credentials (
   user_id,
@@ -161,8 +167,8 @@ values
     '00000000-0000-0000-0000-000000000101',
     'Farhod Juraev',
     'farhod@kamolot.uz',
-    'manager',
-    '["finance_operations","inventory_operations","production_operations","service_operations"]'::jsonb,
+    'executive',
+    '["executive_oversight","audit_compliance"]'::jsonb,
     'demo-team-invite-token',
     'pending',
     now() - interval '20 minutes'

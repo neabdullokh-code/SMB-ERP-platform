@@ -55,16 +55,22 @@ set full_name = excluded.full_name,
 
 insert into memberships (tenant_id, user_id, role, permission_groups)
 values
-  ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000201', 'owner', '["tenant_governance","finance_operations","inventory_operations","production_operations","service_operations","audit_compliance"]'::jsonb),
+  ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000201', 'company_admin', '["tenant_governance","finance_operations","inventory_operations","production_operations","service_operations","audit_compliance"]'::jsonb),
   ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000207', 'company_admin', '["tenant_governance","finance_operations","inventory_operations","production_operations","service_operations","audit_compliance"]'::jsonb),
-  ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000202', 'operator', '["inventory_operations","production_operations","service_operations"]'::jsonb),
-  ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000208', 'manager', '["finance_operations","inventory_operations","production_operations","service_operations"]'::jsonb),
-  ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000209', 'operator', '["inventory_operations","production_operations","service_operations"]'::jsonb),
-  (null, '00000000-0000-0000-0000-000000000203', 'bank_admin', '[]'::jsonb),
-  (null, '00000000-0000-0000-0000-000000000204', 'super_admin', '[]'::jsonb),
-  (null, '00000000-0000-0000-0000-000000000205', 'super_admin', '[]'::jsonb),
-  (null, '00000000-0000-0000-0000-000000000206', 'super_admin', '[]'::jsonb)
+  ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000202', 'warehouse_clerk', '["inventory_operations"]'::jsonb),
+  ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000208', 'executive', '["executive_oversight","audit_compliance"]'::jsonb),
+  ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000209', 'production_operator', '["production_operations"]'::jsonb)
 on conflict do nothing;
+
+insert into bank_staff_memberships (user_id, role)
+values
+  ('00000000-0000-0000-0000-000000000203', 'bank_admin'),
+  ('00000000-0000-0000-0000-000000000204', 'super_admin'),
+  ('00000000-0000-0000-0000-000000000205', 'super_admin'),
+  ('00000000-0000-0000-0000-000000000206', 'super_admin')
+on conflict (user_id) do update
+set role = excluded.role,
+    updated_at = now();
 
 insert into warehouses (
   id,
@@ -200,8 +206,8 @@ values
     '00000000-0000-0000-0000-000000000101',
     'Farhod Juraev',
     'farhod@kamolot.uz',
-    'manager',
-    '["finance_operations","inventory_operations","production_operations","service_operations"]'::jsonb,
+    'executive',
+    '["executive_oversight","audit_compliance"]'::jsonb,
     'demo-team-invite-token',
     'pending',
     now() - interval '20 minutes'
@@ -575,6 +581,131 @@ set tenant_id = excluded.tenant_id,
     updated_by = excluded.updated_by,
     updated_at = now();
 
+-- Seed monthly cash movement journals so /finance/cash-flow has DB-backed values.
+with month_plan(month_offset, inflow_uzs, outflow_uzs) as (
+  values
+    (5, 98000000::numeric, 74200000::numeric),
+    (4, 104000000::numeric, 76900000::numeric),
+    (3, 112500000::numeric, 80600000::numeric),
+    (2, 118000000::numeric, 84400000::numeric),
+    (1, 126500000::numeric, 91200000::numeric),
+    (0, 132000000::numeric, 95500000::numeric)
+),
+batch_rows as (
+  select
+    uuid_generate_v5('00000000-0000-0000-0000-000000000999'::uuid, format('seed-cash-in-%s', month_offset)) as id,
+    '00000000-0000-0000-0000-000000000101'::uuid as tenant_id,
+    'manual_adjustment'::text as source_type,
+    null::uuid as source_id,
+    format('Seed cash inflow month offset %s', month_offset) as memo,
+    (date_trunc('month', now()) - (month_offset || ' months')::interval + interval '10 days') as posted_at,
+    '00000000-0000-0000-0000-000000000201'::uuid as created_by
+  from month_plan
+  union all
+  select
+    uuid_generate_v5('00000000-0000-0000-0000-000000000999'::uuid, format('seed-cash-out-%s', month_offset)) as id,
+    '00000000-0000-0000-0000-000000000101'::uuid as tenant_id,
+    'manual_adjustment'::text as source_type,
+    null::uuid as source_id,
+    format('Seed cash outflow month offset %s', month_offset) as memo,
+    (date_trunc('month', now()) - (month_offset || ' months')::interval + interval '18 days') as posted_at,
+    '00000000-0000-0000-0000-000000000201'::uuid as created_by
+  from month_plan
+),
+line_rows as (
+  -- Inflow: DR cash(1001), CR sales revenue(4000)
+  select
+    uuid_generate_v5('00000000-0000-0000-0000-000000000999'::uuid, format('seed-cash-in-debit-%s', month_offset)) as id,
+    uuid_generate_v5('00000000-0000-0000-0000-000000000999'::uuid, format('seed-cash-in-%s', month_offset)) as batch_id,
+    '1001'::text as account_code,
+    'debit'::text as entry_side,
+    inflow_uzs as amount,
+    format('Seed inflow month offset %s', month_offset) as memo
+  from month_plan
+  union all
+  select
+    uuid_generate_v5('00000000-0000-0000-0000-000000000999'::uuid, format('seed-cash-in-credit-%s', month_offset)) as id,
+    uuid_generate_v5('00000000-0000-0000-0000-000000000999'::uuid, format('seed-cash-in-%s', month_offset)) as batch_id,
+    '4000'::text as account_code,
+    'credit'::text as entry_side,
+    inflow_uzs as amount,
+    format('Seed inflow month offset %s', month_offset) as memo
+  from month_plan
+  union all
+  -- Outflow: DR operating expense(5100), CR cash(1001)
+  select
+    uuid_generate_v5('00000000-0000-0000-0000-000000000999'::uuid, format('seed-cash-out-debit-%s', month_offset)) as id,
+    uuid_generate_v5('00000000-0000-0000-0000-000000000999'::uuid, format('seed-cash-out-%s', month_offset)) as batch_id,
+    '5100'::text as account_code,
+    'debit'::text as entry_side,
+    outflow_uzs as amount,
+    format('Seed outflow month offset %s', month_offset) as memo
+  from month_plan
+  union all
+  select
+    uuid_generate_v5('00000000-0000-0000-0000-000000000999'::uuid, format('seed-cash-out-credit-%s', month_offset)) as id,
+    uuid_generate_v5('00000000-0000-0000-0000-000000000999'::uuid, format('seed-cash-out-%s', month_offset)) as batch_id,
+    '1001'::text as account_code,
+    'credit'::text as entry_side,
+    outflow_uzs as amount,
+    format('Seed outflow month offset %s', month_offset) as memo
+  from month_plan
+),
+inserted_batches as (
+  insert into finance_journal_batches (
+    id,
+    tenant_id,
+    source_type,
+    source_id,
+    memo,
+    posted_at,
+    created_by
+  )
+  select
+    b.id,
+    b.tenant_id,
+    b.source_type,
+    b.source_id,
+    b.memo,
+    b.posted_at,
+    b.created_by
+  from batch_rows b
+  on conflict (id) do update
+  set memo = excluded.memo,
+      posted_at = excluded.posted_at,
+      created_by = excluded.created_by
+  returning id
+)
+insert into finance_journal_lines (
+  id,
+  tenant_id,
+  batch_id,
+  account_id,
+  counterparty_id,
+  entry_side,
+  amount,
+  memo
+)
+select
+  l.id,
+  '00000000-0000-0000-0000-000000000101'::uuid as tenant_id,
+  l.batch_id,
+  a.id as account_id,
+  null::uuid as counterparty_id,
+  l.entry_side,
+  l.amount,
+  l.memo
+from line_rows l
+join finance_accounts a
+  on a.tenant_id = '00000000-0000-0000-0000-000000000101'::uuid
+ and a.code = l.account_code
+on conflict (id) do update
+set batch_id = excluded.batch_id,
+    account_id = excluded.account_id,
+    entry_side = excluded.entry_side,
+    amount = excluded.amount,
+    memo = excluded.memo;
+
 
 -- File: db\seeds\service.sql
 
@@ -894,6 +1025,78 @@ insert into audit_events (
 values
   ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000203', 'bank_admin', 'audit', 'viewed_audit_log', 'tenant', '00000000-0000-0000-0000-000000000101', '{"screen":"bank/audit-log"}'::jsonb)
 on conflict do nothing;
+
+
+-- File: db\seeds\bank-audit-log-bulk.sql
+
+-- Bank portal: Audit log (bulk mock data)
+-- Generates a large, realistic timeline for audit dashboards.
+
+do $$
+declare
+  v_seed_batch constant text := 'bank_audit_mock_v1';
+begin
+  if exists (
+    select 1
+    from audit_events
+    where metadata ->> 'seed_batch' = v_seed_batch
+  ) then
+    return;
+  end if;
+
+  insert into audit_events (
+    tenant_id,
+    actor_user_id,
+    actor_role,
+    category,
+    action,
+    resource_type,
+    resource_id,
+    metadata,
+    occurred_at
+  )
+  select
+    case
+      when gs % 9 = 0 then '00000000-0000-0000-0000-000000000102'::uuid
+      else '00000000-0000-0000-0000-000000000101'::uuid
+    end as tenant_id,
+    case
+      when gs % 11 = 0 then '00000000-0000-0000-0000-000000000204'::uuid
+      else '00000000-0000-0000-0000-000000000203'::uuid
+    end as actor_user_id,
+    case
+      when gs % 11 = 0 then 'super_admin'
+      else 'bank_admin'
+    end as actor_role,
+    (array['audit', 'risk', 'portfolio', 'credit', 'access', 'compliance'])[(gs % 6) + 1] as category,
+    (array[
+      'viewed_audit_log',
+      'tenant_reviewed',
+      'credit_application_scored',
+      'risk_flag_created',
+      'policy_override_requested',
+      'alert_acknowledged',
+      'report_exported',
+      'user_permission_checked'
+    ])[(gs % 8) + 1] as action,
+    (array['tenant', 'credit_application', 'session', 'report', 'alert'])[(gs % 5) + 1] as resource_type,
+    case
+      when gs % 5 = 0 then ('APP-' || lpad(gs::text, 6, '0'))
+      when gs % 5 = 1 then ('TENANT-' || lpad(((gs % 2) + 1)::text, 3, '0'))
+      when gs % 5 = 2 then ('SESSION-' || lpad(gs::text, 8, '0'))
+      when gs % 5 = 3 then ('REPORT-' || lpad(gs::text, 6, '0'))
+      else ('ALERT-' || lpad(gs::text, 6, '0'))
+    end as resource_id,
+    jsonb_build_object(
+      'seed_batch', v_seed_batch,
+      'sequence', gs,
+      'severity', (array['info', 'low', 'medium', 'high'])[(gs % 4) + 1],
+      'source', (array['rule_engine', 'risk_job', 'bank_ui', 'system'])[(gs % 4) + 1],
+      'note', 'Synthetic audit event for UI and analytics testing'
+    ) as metadata,
+    now() - (gs * interval '4 minutes') as occurred_at
+  from generate_series(1, 1500) as gs;
+end $$;
 
 
 -- File: db\seeds\bank-products.sql

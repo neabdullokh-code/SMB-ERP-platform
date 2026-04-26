@@ -678,8 +678,8 @@ async function loadPersistedAccountByIdentifier(identifier: string, password: st
          u.email,
          u.phone,
          case
-           when m.role = 'super_admin' then 'super_admin'
-           when m.role = 'bank_admin' then 'bank_admin'
+           when bsm.role = 'super_admin' then 'super_admin'
+           when bsm.role = 'bank_admin' then 'bank_admin'
            when m.role in ('owner', 'company_admin') then 'company_admin'
            else 'employee'
          end as role,
@@ -709,7 +709,8 @@ async function loadPersistedAccountByIdentifier(identifier: string, password: st
          om.secret as otp_secret
        from users u
        join credentials c on c.user_id = u.id
-       join memberships m on m.user_id = u.id
+       left join bank_staff_memberships bsm on bsm.user_id = u.id
+       left join memberships m on m.user_id = u.id and m.tenant_id is not null
        left join lateral (
          select id, method_type, provider_name, destination, secret
          from otp_methods
@@ -718,10 +719,11 @@ async function loadPersistedAccountByIdentifier(identifier: string, password: st
          order by is_primary desc, created_at asc
          limit 1
        ) om on true
-       where lower(coalesce(u.email, '')) = $1 or u.phone = $2
+       where (lower(coalesce(u.email, '')) = $1 or u.phone = $2)
+         and (bsm.user_id is not null or m.user_id is not null)
        order by case
-         when m.role = 'super_admin' then 1
-         when m.role = 'bank_admin' then 2
+         when bsm.role = 'super_admin' then 1
+         when bsm.role = 'bank_admin' then 2
          when m.role = 'owner' then 3
          when m.role = 'company_admin' then 4
          when m.role = 'manager' then 5
@@ -758,8 +760,8 @@ async function loadPersistedAccountById(userId: string) {
          u.email,
          u.phone,
          case
-           when m.role = 'super_admin' then 'super_admin'
-           when m.role = 'bank_admin' then 'bank_admin'
+           when bsm.role = 'super_admin' then 'super_admin'
+           when bsm.role = 'bank_admin' then 'bank_admin'
            when m.role in ('owner', 'company_admin') then 'company_admin'
            else 'employee'
          end as role,
@@ -789,7 +791,8 @@ async function loadPersistedAccountById(userId: string) {
          om.secret as otp_secret
        from users u
        join credentials c on c.user_id = u.id
-       join memberships m on m.user_id = u.id
+       left join bank_staff_memberships bsm on bsm.user_id = u.id
+       left join memberships m on m.user_id = u.id and m.tenant_id is not null
        left join lateral (
          select id, method_type, provider_name, destination, secret
          from otp_methods
@@ -799,9 +802,10 @@ async function loadPersistedAccountById(userId: string) {
          limit 1
        ) om on true
        where u.id = $1
+         and (bsm.user_id is not null or m.user_id is not null)
        order by case
-         when m.role = 'super_admin' then 1
-         when m.role = 'bank_admin' then 2
+         when bsm.role = 'super_admin' then 1
+         when bsm.role = 'bank_admin' then 2
          when m.role = 'owner' then 3
          when m.role = 'company_admin' then 4
          when m.role = 'manager' then 5
@@ -896,24 +900,53 @@ export async function listPlatformStaffDirectory() {
       phone: string;
       role: Role;
     }>(
-      `select
-         u.id as user_id,
-         u.full_name,
-         u.email,
-         u.phone,
-         case
-           when m.role = 'super_admin' then 'super_admin'
-           else 'bank_admin'
-         end as role
-       from users u
-       join memberships m on m.user_id = u.id
-       where m.tenant_id is null
-         and m.role in ('super_admin', 'bank_admin')
-       order by case
-         when m.role = 'super_admin' then 1
-         when m.role = 'bank_admin' then 2
-         else 3
-       end, u.full_name asc`
+      `with staff_rows as (
+         select
+           u.id as user_id,
+           u.full_name,
+           u.email,
+           u.phone,
+           case
+             when bsm.role = 'super_admin' then 'super_admin'
+             else 'bank_admin'
+           end::text as role,
+           case
+             when bsm.role = 'super_admin' then 1
+             when bsm.role = 'bank_admin' then 2
+             else 3
+           end as rank
+         from users u
+         join bank_staff_memberships bsm on bsm.user_id = u.id
+
+         union all
+
+         select
+           u.id as user_id,
+           u.full_name,
+           u.email,
+           u.phone,
+           case
+             when m.role = 'super_admin' then 'super_admin'
+             else 'bank_admin'
+           end::text as role,
+           case
+             when m.role = 'super_admin' then 1
+             when m.role = 'bank_admin' then 2
+             else 3
+           end as rank
+         from users u
+         join memberships m on m.user_id = u.id
+         where m.tenant_id is null
+           and m.role in ('super_admin', 'bank_admin')
+       )
+       select distinct on (user_id)
+         user_id,
+         full_name,
+         email,
+         phone,
+         role::text as role
+       from staff_rows
+       order by user_id, rank, full_name asc`
     );
 
     const users = await Promise.all(result.rows.map(async (row) => ({

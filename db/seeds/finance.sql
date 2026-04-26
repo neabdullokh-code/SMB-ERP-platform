@@ -101,3 +101,128 @@ set tenant_id = excluded.tenant_id,
     created_by = excluded.created_by,
     updated_by = excluded.updated_by,
     updated_at = now();
+
+-- Seed monthly cash movement journals so /finance/cash-flow has DB-backed values.
+with month_plan(month_offset, inflow_uzs, outflow_uzs) as (
+  values
+    (5, 98000000::numeric, 74200000::numeric),
+    (4, 104000000::numeric, 76900000::numeric),
+    (3, 112500000::numeric, 80600000::numeric),
+    (2, 118000000::numeric, 84400000::numeric),
+    (1, 126500000::numeric, 91200000::numeric),
+    (0, 132000000::numeric, 95500000::numeric)
+),
+batch_rows as (
+  select
+    uuid_generate_v5('00000000-0000-0000-0000-000000000999'::uuid, format('seed-cash-in-%s', month_offset)) as id,
+    '00000000-0000-0000-0000-000000000101'::uuid as tenant_id,
+    'manual_adjustment'::text as source_type,
+    null::uuid as source_id,
+    format('Seed cash inflow month offset %s', month_offset) as memo,
+    (date_trunc('month', now()) - (month_offset || ' months')::interval + interval '10 days') as posted_at,
+    '00000000-0000-0000-0000-000000000201'::uuid as created_by
+  from month_plan
+  union all
+  select
+    uuid_generate_v5('00000000-0000-0000-0000-000000000999'::uuid, format('seed-cash-out-%s', month_offset)) as id,
+    '00000000-0000-0000-0000-000000000101'::uuid as tenant_id,
+    'manual_adjustment'::text as source_type,
+    null::uuid as source_id,
+    format('Seed cash outflow month offset %s', month_offset) as memo,
+    (date_trunc('month', now()) - (month_offset || ' months')::interval + interval '18 days') as posted_at,
+    '00000000-0000-0000-0000-000000000201'::uuid as created_by
+  from month_plan
+),
+line_rows as (
+  -- Inflow: DR cash(1001), CR sales revenue(4000)
+  select
+    uuid_generate_v5('00000000-0000-0000-0000-000000000999'::uuid, format('seed-cash-in-debit-%s', month_offset)) as id,
+    uuid_generate_v5('00000000-0000-0000-0000-000000000999'::uuid, format('seed-cash-in-%s', month_offset)) as batch_id,
+    '1001'::text as account_code,
+    'debit'::text as entry_side,
+    inflow_uzs as amount,
+    format('Seed inflow month offset %s', month_offset) as memo
+  from month_plan
+  union all
+  select
+    uuid_generate_v5('00000000-0000-0000-0000-000000000999'::uuid, format('seed-cash-in-credit-%s', month_offset)) as id,
+    uuid_generate_v5('00000000-0000-0000-0000-000000000999'::uuid, format('seed-cash-in-%s', month_offset)) as batch_id,
+    '4000'::text as account_code,
+    'credit'::text as entry_side,
+    inflow_uzs as amount,
+    format('Seed inflow month offset %s', month_offset) as memo
+  from month_plan
+  union all
+  -- Outflow: DR operating expense(5100), CR cash(1001)
+  select
+    uuid_generate_v5('00000000-0000-0000-0000-000000000999'::uuid, format('seed-cash-out-debit-%s', month_offset)) as id,
+    uuid_generate_v5('00000000-0000-0000-0000-000000000999'::uuid, format('seed-cash-out-%s', month_offset)) as batch_id,
+    '5100'::text as account_code,
+    'debit'::text as entry_side,
+    outflow_uzs as amount,
+    format('Seed outflow month offset %s', month_offset) as memo
+  from month_plan
+  union all
+  select
+    uuid_generate_v5('00000000-0000-0000-0000-000000000999'::uuid, format('seed-cash-out-credit-%s', month_offset)) as id,
+    uuid_generate_v5('00000000-0000-0000-0000-000000000999'::uuid, format('seed-cash-out-%s', month_offset)) as batch_id,
+    '1001'::text as account_code,
+    'credit'::text as entry_side,
+    outflow_uzs as amount,
+    format('Seed outflow month offset %s', month_offset) as memo
+  from month_plan
+),
+inserted_batches as (
+  insert into finance_journal_batches (
+    id,
+    tenant_id,
+    source_type,
+    source_id,
+    memo,
+    posted_at,
+    created_by
+  )
+  select
+    b.id,
+    b.tenant_id,
+    b.source_type,
+    b.source_id,
+    b.memo,
+    b.posted_at,
+    b.created_by
+  from batch_rows b
+  on conflict (id) do update
+  set memo = excluded.memo,
+      posted_at = excluded.posted_at,
+      created_by = excluded.created_by
+  returning id
+)
+insert into finance_journal_lines (
+  id,
+  tenant_id,
+  batch_id,
+  account_id,
+  counterparty_id,
+  entry_side,
+  amount,
+  memo
+)
+select
+  l.id,
+  '00000000-0000-0000-0000-000000000101'::uuid as tenant_id,
+  l.batch_id,
+  a.id as account_id,
+  null::uuid as counterparty_id,
+  l.entry_side,
+  l.amount,
+  l.memo
+from line_rows l
+join finance_accounts a
+  on a.tenant_id = '00000000-0000-0000-0000-000000000101'::uuid
+ and a.code = l.account_code
+on conflict (id) do update
+set batch_id = excluded.batch_id,
+    account_id = excluded.account_id,
+    entry_side = excluded.entry_side,
+    amount = excluded.amount,
+    memo = excluded.memo;

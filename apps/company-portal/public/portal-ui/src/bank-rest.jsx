@@ -524,15 +524,20 @@ function BankAuditPage() {
         cache: "no-store"
       });
       const eventsBody = await eventsResponse.json();
+      const loadedEvents = Array.isArray(eventsBody?.events)
+        ? eventsBody.events
+        : Array.isArray(eventsBody?.data)
+          ? eventsBody.data
+          : [];
 
-      if (!eventsResponse.ok || !Array.isArray(eventsBody.events)) {
+      if (!eventsResponse.ok) {
         setError(eventsBody.message || "Не удалось загрузить события аудита.");
         setEvents([]);
         setBreakGlassEvents([]);
         return;
       }
 
-      setEvents(eventsBody.events);
+      setEvents(loadedEvents);
 
       if (isSuperAdmin) {
         const breakGlassResponse = await fetch("/api/audit/break-glass", {

@@ -130,7 +130,7 @@ export async function getAuditEvents(
     limit?: number;
   }
 ) {
-  return platformRequest<{ events: AuditEvent[] }>(`/audit/events${buildQuery(query ?? {})}`, {
+  return platformRequest<{ events?: AuditEvent[]; data?: AuditEvent[] }>(`/audit/events${buildQuery(query ?? {})}`, {
     method: "GET"
   }, sessionToken);
 }

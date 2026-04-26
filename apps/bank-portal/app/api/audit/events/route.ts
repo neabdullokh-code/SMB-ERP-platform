@@ -28,5 +28,16 @@ export async function GET(request: Request) {
     limit: searchParams.get("limit") ? Number(searchParams.get("limit")) : undefined
   });
 
-  return NextResponse.json(result.body, { status: result.status });
+  const body = result.body as Record<string, unknown>;
+  const events = Array.isArray(body.events)
+    ? body.events
+    : Array.isArray(body.data)
+      ? body.data
+      : [];
+
+  if (!result.ok) {
+    return NextResponse.json(body, { status: result.status });
+  }
+
+  return NextResponse.json({ events }, { status: result.status });
 }
