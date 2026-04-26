@@ -15,7 +15,8 @@ export const BANK_ROUTE_TO_PATH: Record<string, string> = {
   "/bank/reports": "/app/reports",
   "/bank/team": "/app/team",
   "/bank/settings": "/app/settings",
-  "/bank/audit": "/app/audit"
+  "/bank/audit": "/app/audit",
+  "/bank/copilot": "/app/copilot"
 };
 
 export const COMPANY_ROUTE_TO_PATH: Record<string, string> = {
@@ -82,7 +83,8 @@ export const BANK_PROTECTED_PORTAL_PATHS = new Set([
   "/app/reports",
   "/app/team",
   "/app/settings",
-  "/app/audit"
+  "/app/audit",
+  "/app/copilot"
 ]);
 
 export const COMPANY_PUBLIC_PORTAL_PATHS = new Set([

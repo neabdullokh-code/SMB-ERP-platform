@@ -447,6 +447,7 @@ const CLEAN_ROUTE_PATHS = {
   "/bank/profile": "/app/profile",
   "/bank/settings": "/app/settings",
   "/bank/audit": "/app/audit",
+  "/bank/copilot": "/app/copilot",
 };
 
 const CLEAN_PATH_ROUTES = Object.fromEntries(

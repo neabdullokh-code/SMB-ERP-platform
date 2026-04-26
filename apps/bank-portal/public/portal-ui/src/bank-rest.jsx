@@ -1010,4 +1010,460 @@ function NotFound() {
   );
 }
 
-Object.assign(window, { RiskPage, AlertsPage, ProductsPage, BankTeam, BankAuditPage, BankSettings, NotificationsPage, SearchPage, NotFound });
+/* ============================================================
+   Bank Copilot
+   ============================================================ */
+
+const BANK_COPILOT_I18N = {
+  ru: {
+    copilotName: "SQB Bank Copilot",
+    newChat: "Новый чат",
+    today: "Сегодня",
+    lastWeek: "Прошлая неделя",
+    older: "Ранее",
+    noThreads: "Чатов пока нет",
+    groundedInErp: "ОСНОВАНО НА ДАННЫХ ПОРТФЕЛЯ · БАНК",
+    send: "Отправить",
+    stop: "Остановить",
+    modelTag: "SQB AI · анализ",
+    groundedNote: "Ответы основаны на актуальных данных портфеля. Проверяйте перед принятием кредитных решений.",
+    composerPlaceholder: "Спросите о кредитных рисках, клиентах, очереди заявок или концентрации портфеля...",
+    suggestions: [
+      "Какие клиенты имеют наибольший кредитный риск?",
+      "Что стоит за текущими критическими алертами?",
+      "Как выглядит концентрация рисков по отраслям?",
+      "Кому рекомендуется одобрить кредит прямо сейчас?",
+    ],
+    emptyTitle: "Чем помочь сегодня?",
+    emptyHint: "Я вижу данные вашего портфеля, кредитную очередь, алерты и аналитику рисков. Спросите что-нибудь.",
+    errorOffline: "Copilot недоступен. Проверьте API-ключ и попробуйте снова.",
+    errorAuth: "Сессия истекла. Войдите заново.",
+    deleteThread: "Удалить",
+    confirmDelete: "Удалить этот чат?",
+    portfolioData: "Данные портфеля",
+  },
+};
+
+function bankCopilotLsKey(userId) {
+  return `sqb.bank.copilot.threads.${userId || "default"}`;
+}
+
+function bankCopilotLoadStore(userId) {
+  try {
+    const raw = window.localStorage.getItem(bankCopilotLsKey(userId));
+    if (!raw) return { threads: [], activeThreadId: null };
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed.threads)) return { threads: [], activeThreadId: null };
+    return parsed;
+  } catch {
+    return { threads: [], activeThreadId: null };
+  }
+}
+
+function bankCopilotSaveStore(userId, store) {
+  try {
+    const trimmed = {
+      ...store,
+      threads: store.threads.slice(-30).map((th) => ({
+        ...th,
+        messages: th.messages.slice(-80),
+      })),
+    };
+    window.localStorage.setItem(bankCopilotLsKey(userId), JSON.stringify(trimmed));
+  } catch { /* quota exceeded — ignore */ }
+}
+
+function bankCopilotMakeThread() {
+  return { id: `th-${Date.now()}`, messages: [], createdAt: Date.now() };
+}
+
+function bankCopilotGroupThreads(threads) {
+  const now = Date.now();
+  const dayMs = 86400000;
+  const groups = { today: [], lastWeek: [], older: [] };
+  for (const th of [...threads].reverse()) {
+    const age = now - th.createdAt;
+    if (age < dayMs) groups.today.push(th);
+    else if (age < 7 * dayMs) groups.lastWeek.push(th);
+    else groups.older.push(th);
+  }
+  return groups;
+}
+
+function bankCopilotThreadTitle(thread) {
+  const first = thread.messages.find((m) => m.role === "user");
+  if (first && first.content) {
+    const trimmed = first.content.trim().replace(/\s+/g, " ");
+    return trimmed.length > 42 ? trimmed.slice(0, 42) + "…" : trimmed;
+  }
+  return "Новый чат";
+}
+
+async function bankCopilotStream({ messages, context, locale, signal, onToken, onDone, onError }) {
+  try {
+    const res = await fetch("/api/copilot/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages, context, locale }),
+      signal,
+    });
+    if (res.status === 401) { onError({ kind: "auth" }); return; }
+    if (!res.ok) {
+      let detail = "";
+      try { detail = await res.text(); } catch {}
+      let parsed = null;
+      try { parsed = JSON.parse(detail); } catch {}
+      onError({ kind: "http", status: res.status, detail: parsed?.message || detail });
+      return;
+    }
+    if (!res.body) { onError({ kind: "no-stream" }); return; }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      if (chunk) onToken(chunk);
+    }
+    onDone();
+  } catch (e) {
+    if (e && e.name === "AbortError") { onDone(); return; }
+    onError({ kind: "network", message: e && e.message });
+  }
+}
+
+async function fetchBankCopilotContext() {
+  try {
+    const [analyticsRes, alertsRes] = await Promise.all([
+      fetch("/api/bank/portfolio/analytics", { credentials: "include", cache: "no-store" }),
+      fetch("/api/bank/portfolio/alerts", { credentials: "include", cache: "no-store" }),
+    ]);
+    const [analyticsBody, alertsBody] = await Promise.all([
+      analyticsRes.ok ? analyticsRes.json() : Promise.resolve(null),
+      alertsRes.ok ? alertsRes.json() : Promise.resolve(null),
+    ]);
+    return {
+      analytics: analyticsBody?.data?.analytics ?? null,
+      alerts: alertsBody?.data?.alerts?.slice(0, 20) ?? [],
+      alertsSummary: alertsBody?.data?.summary ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function BankCopilotPage({ go, lang = "ru" }) {
+  const t = BANK_COPILOT_I18N[lang] || BANK_COPILOT_I18N.ru;
+  const userId = (window.AuthRuntime && window.AuthRuntime.getCachedSession && window.AuthRuntime.getCachedSession()?.userId) || "bank-default";
+
+  const [store, setStore] = useStateS(() => bankCopilotLoadStore(userId));
+  const [draft, setDraft] = useStateS("");
+  const [streaming, setStreaming] = useStateS(false);
+  const [errorKey, setErrorKey] = useStateS(null);
+  const [bankContext, setBankContext] = useStateS(null);
+  const abortRef = useRef(null);
+  const scrollRef = useRef(null);
+  const textareaRef = useRef(null);
+
+  const { threads, activeThreadId } = store;
+  const activeThread = threads.find((x) => x.id === activeThreadId) || null;
+  const grouped = bankCopilotGroupThreads(threads);
+
+  useEffectS(() => { bankCopilotSaveStore(userId, store); }, [userId, store]);
+
+  useEffectS(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [activeThread && activeThread.messages.length]);
+
+  // Fetch bank context once on mount
+  useEffectS(() => {
+    fetchBankCopilotContext().then(setBankContext);
+  }, []);
+
+  function updateStore(fn) { setStore((x) => fn(x)); }
+
+  function selectThread(id) {
+    updateStore((x) => ({ ...x, activeThreadId: id }));
+  }
+
+  function newThread() {
+    const th = bankCopilotMakeThread();
+    updateStore((x) => ({ threads: [...x.threads, th], activeThreadId: th.id }));
+  }
+
+  function deleteThread(id) {
+    updateStore((x) => {
+      const threads = x.threads.filter((t) => t.id !== id);
+      const activeThreadId = x.activeThreadId === id ? (threads[threads.length - 1]?.id || null) : x.activeThreadId;
+      return { threads, activeThreadId };
+    });
+  }
+
+  async function sendMessage(text) {
+    if (!text.trim() || streaming) return;
+    let thread = activeThread;
+    if (!thread) {
+      thread = bankCopilotMakeThread();
+      updateStore((x) => ({ threads: [...x.threads, thread], activeThreadId: thread.id }));
+    }
+
+    const userMsg = { role: "user", content: text.trim(), ts: Date.now() };
+    const assistantMsg = { role: "assistant", content: "", ts: Date.now(), pending: true };
+
+    updateStore((x) => {
+      const threads = x.threads.map((th) =>
+        th.id === thread.id ? { ...th, messages: [...th.messages, userMsg, assistantMsg] } : th
+      );
+      return { ...x, threads };
+    });
+
+    setDraft("");
+    setStreaming(true);
+    setErrorKey(null);
+
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
+    const allMessages = [...(thread.messages || []), userMsg].map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    await bankCopilotStream({
+      messages: allMessages,
+      context: bankContext,
+      locale: lang,
+      signal: ctrl.signal,
+      onToken(tok) {
+        updateStore((x) => {
+          const threads = x.threads.map((th) => {
+            if (th.id !== thread.id) return th;
+            const msgs = [...th.messages];
+            const last = msgs[msgs.length - 1];
+            if (!last || last.role !== "assistant") return th;
+            msgs[msgs.length - 1] = { ...last, content: last.content + tok };
+            return { ...th, messages: msgs };
+          });
+          return { ...x, threads };
+        });
+      },
+      onDone() {
+        updateStore((x) => {
+          const threads = x.threads.map((th) => {
+            if (th.id !== thread.id) return th;
+            const msgs = th.messages.map((m, i) =>
+              i === th.messages.length - 1 && m.pending ? { ...m, pending: false } : m
+            );
+            return { ...th, messages: msgs };
+          });
+          return { ...x, threads };
+        });
+        setStreaming(false);
+        abortRef.current = null;
+      },
+      onError(err) {
+        setErrorKey(err.kind === "auth" ? "auth" : "offline");
+        updateStore((x) => {
+          const threads = x.threads.map((th) => {
+            if (th.id !== thread.id) return th;
+            return { ...th, messages: th.messages.filter((m) => !m.pending) };
+          });
+          return { ...x, threads };
+        });
+        setStreaming(false);
+        abortRef.current = null;
+      },
+    });
+  }
+
+  function stopStream() {
+    if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
+    setStreaming(false);
+  }
+
+  function onKeyDown(e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage(draft);
+    }
+  }
+
+  function renderMessage(m, i) {
+    if (m.role === "user") {
+      return (
+        <div key={i} className="row" style={{ justifyContent: "flex-end", marginBottom: 16 }}>
+          <div style={{
+            background: "var(--ink)", color: "var(--surface)", borderRadius: "16px 16px 4px 16px",
+            padding: "10px 14px", maxWidth: "72%", fontSize: 14, lineHeight: 1.5, whiteSpace: "pre-wrap",
+          }}>{m.content}</div>
+        </div>
+      );
+    }
+    return (
+      <div key={i} style={{ marginBottom: 20 }}>
+        <div className="ai-card" style={{ padding: "10px 14px 14px", position: "relative" }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
+            <span className="ai-tag" style={{ position: "static" }}>
+              <Icon.Sparkle size={10}/> {t.modelTag}
+            </span>
+          </div>
+          <div style={{ fontSize: 14, lineHeight: 1.55, color: "var(--fg)", whiteSpace: "pre-wrap" }}>
+            {m.content || (m.pending ? "" : "")}
+            {m.pending && <span className="caret"/>}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const messages = activeThread ? activeThread.messages : [];
+  const isEmpty = messages.length === 0;
+
+  return (
+    <div className="page" style={{ display: "flex", gap: 0, padding: 0, height: "100%", overflow: "hidden" }}>
+      {/* Sidebar */}
+      <div style={{
+        width: 240, borderRight: "1px solid var(--line)", display: "flex", flexDirection: "column",
+        flexShrink: 0, overflowY: "auto", background: "var(--surface)",
+      }}>
+        <div style={{ padding: "16px 12px 8px" }}>
+          <button
+            onClick={newThread}
+            style={{
+              width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
+              borderRadius: 8, border: "1px dashed var(--line)", background: "transparent",
+              color: "var(--ink)", fontSize: 13, cursor: "pointer", fontFamily: "var(--sans)",
+            }}>
+            <Icon.Plus size={13}/> {t.newChat}
+          </button>
+        </div>
+
+        {[["today", t.today], ["lastWeek", t.lastWeek], ["older", t.older]].map(([key, label]) =>
+          grouped[key].length > 0 && (
+            <div key={key}>
+              <div className="eyebrow" style={{ padding: "8px 16px 4px", fontSize: 10 }}>{label}</div>
+              {grouped[key].map((th) => (
+                <div
+                  key={th.id}
+                  onClick={() => selectThread(th.id)}
+                  style={{
+                    padding: "8px 12px", cursor: "pointer", fontSize: 13, lineHeight: 1.4,
+                    borderRadius: 6, margin: "1px 6px",
+                    background: th.id === activeThreadId ? "var(--ai-bg)" : "transparent",
+                    color: th.id === activeThreadId ? "var(--ai)" : "var(--fg)",
+                    display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 4,
+                  }}>
+                  <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {bankCopilotThreadTitle(th)}
+                  </span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); if (window.confirm(t.confirmDelete)) deleteThread(th.id); }}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: 2, flexShrink: 0 }}>
+                    <Icon.Trash size={11}/>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )
+        )}
+
+        {threads.length === 0 && (
+          <div className="muted" style={{ padding: "12px 16px", fontSize: 12 }}>{t.noThreads}</div>
+        )}
+
+        <div style={{ marginTop: "auto", padding: "12px 16px", borderTop: "1px solid var(--line)", fontSize: 11, color: "var(--muted)", lineHeight: 1.4 }}>
+          {t.groundedNote}
+        </div>
+      </div>
+
+      {/* Main area */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        {/* Messages */}
+        <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "24px 32px" }}>
+          {isEmpty ? (
+            <div style={{ maxWidth: 560, margin: "40px auto", textAlign: "center" }}>
+              <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--ai-bg)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                <Icon.Sparkle size={22} style={{ color: "var(--ai)" }}/>
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 600, color: "var(--ink)", marginBottom: 8 }}>{t.emptyTitle}</div>
+              <div className="muted" style={{ fontSize: 13, marginBottom: 28 }}>{t.emptyHint}</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
+                {t.suggestions.map((s, i) => (
+                  <button key={i} onClick={() => sendMessage(s)}
+                    style={{
+                      padding: "8px 14px", borderRadius: 20, border: "1px solid var(--line)",
+                      background: "var(--surface)", color: "var(--fg)", fontSize: 12,
+                      cursor: "pointer", fontFamily: "var(--sans)",
+                    }}>{s}</button>
+                ))}
+              </div>
+              {bankContext && (
+                <div style={{ marginTop: 24, padding: "10px 14px", borderRadius: 8, background: "var(--ai-bg)", border: "1px solid var(--ai-line)", fontSize: 12, color: "var(--ai)", textAlign: "left" }}>
+                  <Icon.Database size={12} style={{ verticalAlign: "middle", marginRight: 6 }}/>
+                  {t.portfolioData}: {bankContext.analytics ? `${bankContext.analytics.totalTenants} клиентов · ср. рейтинг ${bankContext.analytics.averageCreditScore}` : "загружено"}
+                  {bankContext.alertsSummary && bankContext.alertsSummary.critical > 0 && (
+                    <span style={{ marginLeft: 8, color: "var(--bad)" }}>· {bankContext.alertsSummary.critical} критических алертов</span>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ maxWidth: 720, margin: "0 auto" }}>
+              {messages.map(renderMessage)}
+              {errorKey && (
+                <div className="banner warn" style={{ marginTop: 8 }}>
+                  <Icon.Alert size={14}/>
+                  <div className="desc">{errorKey === "auth" ? t.errorAuth : t.errorOffline}</div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Composer */}
+        <div style={{ borderTop: "1px solid var(--line)", padding: "16px 32px", background: "var(--surface)" }}>
+          <div style={{ maxWidth: 720, margin: "0 auto" }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "flex-end", border: "1px solid var(--line)", borderRadius: 12, padding: "8px 12px", background: "var(--bg)" }}>
+              <textarea
+                ref={textareaRef}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={onKeyDown}
+                placeholder={t.composerPlaceholder}
+                rows={1}
+                style={{
+                  flex: 1, border: "none", background: "transparent", resize: "none",
+                  fontFamily: "var(--sans)", fontSize: 14, color: "var(--fg)", outline: "none",
+                  lineHeight: 1.5, maxHeight: 160, overflowY: "auto",
+                }}
+              />
+              {streaming ? (
+                <button onClick={stopStream}
+                  style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "var(--line)", color: "var(--fg)", fontSize: 13, cursor: "pointer", fontFamily: "var(--sans)", flexShrink: 0 }}>
+                  {t.stop}
+                </button>
+              ) : (
+                <button onClick={() => sendMessage(draft)} disabled={!draft.trim()}
+                  style={{
+                    padding: "6px 14px", borderRadius: 8, border: "none",
+                    background: draft.trim() ? "var(--ai)" : "var(--line)",
+                    color: draft.trim() ? "#fff" : "var(--muted)",
+                    fontSize: 13, cursor: draft.trim() ? "pointer" : "default",
+                    fontFamily: "var(--sans)", flexShrink: 0, transition: "background .15s",
+                  }}>
+                  {t.send}
+                </button>
+              )}
+            </div>
+            <div style={{ marginTop: 6, fontSize: 11, color: "var(--muted)", textAlign: "center" }}>
+              <Icon.Sparkle size={10} style={{ verticalAlign: "middle", color: "var(--ai)" }}/>{" "}
+              {t.groundedInErp}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { RiskPage, AlertsPage, ProductsPage, BankTeam, BankAuditPage, BankSettings, NotificationsPage, SearchPage, NotFound, BankCopilotPage });

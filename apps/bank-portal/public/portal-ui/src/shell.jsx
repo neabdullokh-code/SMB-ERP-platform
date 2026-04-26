@@ -32,6 +32,7 @@ const BANK_NAV = [
   { section: "Overview", items: [
     { path: "/bank/home",      label: "Portfolio",    icon: "Home" },
     { path: "/bank/alerts",    label: "Alerts",       icon: "Alert" },
+    { path: "/bank/copilot",   label: "AI Copilot",   icon: "Sparkle", ai: true },
   ]},
   { section: "Tenants", items: [
     { path: "/bank/tenants",   label: "All tenants",  icon: "Database" },
