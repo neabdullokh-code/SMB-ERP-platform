@@ -17,6 +17,10 @@ const AUTH_PUBLIC_ROUTES = new Set(["/login", "/otp", "/forgot", "/onboarding", 
 const CURRENT_TERMS_VERSION = "2026-04";
 const ROUTE_PERMISSIONS = [
   { match: (path) => path.startsWith("/smb/inventory"), permissions: ["inventory.manage"] },
+  { match: (path) => path.startsWith("/smb/documents/goods-receipts"), permissions: ["inventory.manage"] },
+  { match: (path) => path.startsWith("/smb/documents/goods-issues"), permissions: ["inventory.manage"] },
+  { match: (path) => path.startsWith("/smb/documents/inventory-transfers"), permissions: ["inventory.manage"] },
+  { match: (path) => path.startsWith("/smb/documents/production-orders"), permissions: ["production.manage"] },
   { match: (path) => path.startsWith("/smb/production"), permissions: ["production.manage"] },
   { match: (path) => path.startsWith("/smb/services"), permissions: ["service_order.manage"] },
   { match: (path) => path.startsWith("/smb/finance"), permissions: ["finance.read"] },
@@ -399,6 +403,7 @@ function OtpPage({ go }) {
 function ForgotPage({ go }) {
   const [sent, setSent] = useStateS(false);
   const [identifier, setIdentifier] = useStateS("jasur@kamolot.uz");
+  const [error, setError] = useStateS("");
   return (
     <div className="auth-bg">
       <div className="auth-card">
@@ -410,10 +415,14 @@ function ForgotPage({ go }) {
             <Field label="Email or phone">
               <input className="input" value={identifier} onChange={(e) => setIdentifier(e.target.value)}/>
             </Field>
+            {error && <div className="muted" style={{fontSize:12, color:"var(--bad)", marginTop:8}}>{error}</div>}
             <div className="row mt-16" style={{gap:8}}>
               <Button variant="ghost" onClick={() => go("/login")}>Cancel</Button>
               <span className="sp"/>
-              <Button variant="primary" onClick={async () => { await authRequest("/password/reset/request", { identifier }); setSent(true); }}>Send reset link</Button>
+              <Button variant="primary" onClick={async () => {
+                const result = await authRequest("/password/reset/request", { identifier });
+                if (result.ok) { setSent(true); } else { setError(result.body?.message || "Unable to send reset link."); }
+              }}>Send reset link</Button>
             </div>
           </>
         ) : (

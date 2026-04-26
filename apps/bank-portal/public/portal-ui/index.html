@@ -232,9 +232,6 @@
         const authenticatedPath = sessionState.session.requiresTermsAcceptance ? "/terms" : sessionState.session.redirectPath;
 
         if (isPublic) {
-          if (path === "/login") {
-            return;
-          }
           if (auth.redirectToSurface(authenticatedPath)) return;
           if (authenticatedPath !== path) go(authenticatedPath);
           return;

@@ -54,6 +54,14 @@ export const COMPANY_ROUTE_TO_PATH: Record<string, string> = {
   "/smb/finance/reports": "/app/finance/reports",
   "/smb/finance/counterparties": "/app/finance/counterparties",
   "/smb/finance/payments": "/app/finance/payments",
+  "/smb/documents/goods-receipts": "/app/documents/goods-receipts",
+  "/smb/documents/goods-receipts/new": "/app/documents/goods-receipts/new",
+  "/smb/documents/goods-issues": "/app/documents/goods-issues",
+  "/smb/documents/goods-issues/new": "/app/documents/goods-issues/new",
+  "/smb/documents/inventory-transfers": "/app/documents/inventory-transfers",
+  "/smb/documents/inventory-transfers/new": "/app/documents/inventory-transfers/new",
+  "/smb/documents/production-orders": "/app/documents/production-orders",
+  "/smb/documents/production-orders/new": "/app/documents/production-orders/new",
   "/smb/reports": "/app/reports",
   "/smb/credit": "/app/credit",
   "/smb/loan": "/app/loan",
@@ -124,6 +132,14 @@ export const COMPANY_PROTECTED_PORTAL_PATHS = new Set([
   "/app/finance/reports",
   "/app/finance/counterparties",
   "/app/finance/payments",
+  "/app/documents/goods-receipts",
+  "/app/documents/goods-receipts/new",
+  "/app/documents/goods-issues",
+  "/app/documents/goods-issues/new",
+  "/app/documents/inventory-transfers",
+  "/app/documents/inventory-transfers/new",
+  "/app/documents/production-orders",
+  "/app/documents/production-orders/new",
   "/app/reports",
   "/app/credit",
   "/app/loan",
@@ -156,6 +172,7 @@ export function mapCompanyRedirectPath(path?: string | null) {
   const normalized = normalizePath(path);
   if (!normalized) return "/app/dashboard";
   if (normalized in COMPANY_ROUTE_TO_PATH) return COMPANY_ROUTE_TO_PATH[normalized];
+  if (normalized.startsWith("/smb/")) return "/app/dashboard";
   if (normalized === "/search" || normalized.startsWith("/app/") || normalized.startsWith("/bank/")) return normalized;
   return "/app/dashboard";
 }

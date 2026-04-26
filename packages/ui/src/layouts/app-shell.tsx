@@ -5,54 +5,93 @@ export interface NavItem {
   label: string;
 }
 
+export interface NavGroup {
+  label: string;
+  icon?: string;
+  items: NavItem[];
+}
+
 export function AppShell({
   title,
   subtitle,
   navItems,
+  navGroups,
   children
 }: {
   title: string;
   subtitle: string;
-  navItems: NavItem[];
+  navItems?: NavItem[];
+  navGroups?: NavGroup[];
   children: ReactNode;
 }) {
+  const groups: NavGroup[] = navGroups ?? [
+    {
+      label: "Workspace",
+      items: navItems ?? []
+    }
+  ];
+
   return (
     <div
       style={{
         minHeight: "100vh",
-        background: "linear-gradient(180deg, #f4f7fb 0%, #eef4f8 100%)",
-        color: "#10243d"
+        background: "linear-gradient(180deg, #0b1220 0%, #101a2c 100%)",
+        color: "#e7edf5"
       }}
     >
       <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", minHeight: "100vh" }}>
         <aside
           style={{
-            borderRight: "1px solid #dbe5ef",
+            borderRight: "1px solid #1e2a40",
             padding: "1.5rem 1.25rem",
-            background: "rgba(255,255,255,0.7)",
-            backdropFilter: "blur(12px)"
+            background: "rgba(14,23,38,0.82)",
+            backdropFilter: "blur(12px)",
+            overflowY: "auto"
           }}
         >
           <div style={{ marginBottom: "2rem" }}>
             <div style={{ fontWeight: 800, fontSize: "1.1rem" }}>SQB Business OS</div>
-            <p style={{ margin: "0.35rem 0 0", color: "#5f7083" }}>{subtitle}</p>
+            <p style={{ margin: "0.35rem 0 0", color: "#8a94a7" }}>{subtitle}</p>
           </div>
-          <nav style={{ display: "grid", gap: "0.5rem" }}>
-            {navItems.map((item) => (
-              <a
-                key={item.href}
-                href={item.href}
-                style={{
-                  padding: "0.8rem 0.9rem",
-                  borderRadius: "0.85rem",
-                  color: "#10243d",
-                  textDecoration: "none",
-                  background: "#ffffff",
-                  border: "1px solid #dde6f0"
-                }}
-              >
-                {item.label}
-              </a>
+          <nav style={{ display: "grid", gap: "1.25rem" }}>
+            {groups.map((group) => (
+              <div key={group.label} style={{ display: "grid", gap: "0.4rem" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    padding: "0 0.25rem",
+                    color: "#8a94a7",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em"
+                  }}
+                >
+                  {group.icon ? <span aria-hidden="true">{group.icon}</span> : null}
+                  <span>{group.label}</span>
+                </div>
+                <div style={{ display: "grid", gap: "0.35rem" }}>
+                  {group.items.map((item) => (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      style={{
+                        padding: "0.65rem 0.85rem",
+                        borderRadius: "0.75rem",
+                        color: "#e7edf5",
+                        textDecoration: "none",
+                        background: "#101a2c",
+                        border: "1px solid #1e2a40",
+                        fontSize: "0.9rem"
+                      }}
+                    >
+                      {item.label}
+                    </a>
+                  ))}
+                </div>
+              </div>
             ))}
           </nav>
         </aside>
@@ -62,8 +101,8 @@ export function AppShell({
               style={{
                 padding: "1rem 1.25rem",
                 borderRadius: "1rem",
-                background: "#0d3b66",
-                color: "#ffffff"
+                background: "linear-gradient(135deg, #0e2a47 0%, #d18a2b 100%)",
+                color: "#fff8ed"
               }}
             >
               <div style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.8 }}>Active workspace</div>
@@ -76,4 +115,3 @@ export function AppShell({
     </div>
   );
 }
-

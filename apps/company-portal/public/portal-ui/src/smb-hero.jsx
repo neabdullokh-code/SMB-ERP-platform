@@ -335,6 +335,27 @@ function BusinessFeed({ go, lang }) {
   );
 }
 
+function AskCopilotFAB({ go, lang }) {
+  const label = ({
+    ru: "Спросить Copilot",
+    en: "Ask Copilot",
+    uz: "Copilotdan so'rash"
+  })[lang] || "Ask Copilot";
+
+  return (
+    <div style={{ position: "fixed", right: 24, bottom: 24, zIndex: 40 }}>
+      <Button
+        variant="primary"
+        icon={<Icon.Sparkle size={14}/>}
+        onClick={() => go("/smb/copilot")}
+        style={{ boxShadow: "0 18px 50px rgba(0,0,0,0.28)" }}
+      >
+        {label}
+      </Button>
+    </div>
+  );
+}
+
 const REVENUE_PERIODS = {
   "3M": { data: [198, 246, 278], labels: ["Jan","Feb","Mar"] },
   "6M": { data: [182, 204, 221, 198, 246, 278], labels: ["Oct","Nov","Dec","Jan","Feb","Mar"] },

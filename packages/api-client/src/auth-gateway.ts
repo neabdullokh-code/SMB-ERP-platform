@@ -18,11 +18,16 @@ import type {
   PasswordLoginResponse,
   PasswordResetConsumeRequest,
   RefreshTokenResponse,
+  ConfirmEmailChangeResponse,
+  RequestEmailChangeRequest,
+  RequestEmailChangeResponse,
   TermsAcceptRequest,
   TermsAcceptance,
   AuditEvent,
+  UpdateProfileRequest,
   UpdateWorkspaceMemberAccessRequest,
-  UpdateAuthSecuritySettingsRequest
+  UpdateAuthSecuritySettingsRequest,
+  UserProfile
 } from "@sqb/domain-types";
 
 const DEFAULT_PLATFORM_API_URL = "http://localhost:4000";
@@ -156,6 +161,22 @@ export async function getBankPortfolioAnalytics(sessionToken: string) {
   }, sessionToken);
 }
 
+export async function getBankCollateral(sessionToken: string) {
+  return platformRequest<{
+    collateral: {
+      totalCollateralUzs: string;
+      tenantCount: number;
+      tenants: Array<{
+        tenantId: string;
+        tenantName: string;
+        totalCollateralUzs: string;
+        distinctItems: number;
+        distinctWarehouses: number;
+      }>;
+    };
+  }>("/bank/portfolio/collateral", { method: "GET" }, sessionToken);
+}
+
 export async function getCreditQueue(
   sessionToken: string,
   query?: {
@@ -195,6 +216,46 @@ export async function getBreakGlassEvents(sessionToken: string) {
   return platformRequest<{ events: AuditEvent[] }>("/audit/break-glass", {
     method: "GET"
   }, sessionToken);
+}
+
+export async function getMyProfile(sessionToken: string) {
+  return platformRequest<{ profile: UserProfile }>("/profile/me", {
+    method: "GET"
+  }, sessionToken);
+}
+
+export async function updateMyProfile(sessionToken: string, payload: UpdateProfileRequest) {
+  return platformRequest<{ profile: UserProfile }>("/profile/me", {
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  }, sessionToken);
+}
+
+export async function listProfiles(sessionToken: string) {
+  return platformRequest<{ users: UserProfile[] }>("/profile/users", {
+    method: "GET"
+  }, sessionToken);
+}
+
+export async function updateProfileByAdmin(sessionToken: string, userId: string, payload: UpdateProfileRequest) {
+  return platformRequest<{ profile: UserProfile }>(`/profile/users/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  }, sessionToken);
+}
+
+export async function requestEmailChange(sessionToken: string, payload: RequestEmailChangeRequest) {
+  return platformRequest<RequestEmailChangeResponse>("/profile/me/email-change/request", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  }, sessionToken);
+}
+
+export async function confirmEmailChange(payload: { token: string }) {
+  return platformRequest<ConfirmEmailChangeResponse>("/profile/me/email-change/confirm", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
 }
 
 export async function logoutSession(sessionToken: string) {

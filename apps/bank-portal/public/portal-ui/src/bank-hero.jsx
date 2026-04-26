@@ -1,6 +1,85 @@
 // Bank — Dashboard, All Tenants, Tenant Detail
 const UZ_MAP = "M10,30 L40,20 L70,25 L120,15 L180,20 L220,30 L260,25 L320,30 L340,50 L330,80 L300,95 L250,100 L200,110 L150,115 L110,108 L80,100 L50,90 L30,75 L10,55 Z";
 
+function useBankCollateral() {
+  const [data, setData] = React.useState(null);
+  const [error, setError] = React.useState(null);
+  React.useEffect(() => {
+    let cancelled = false;
+    fetch("/api/bank/portfolio/collateral", { cache: "no-store" })
+      .then(async (res) => {
+        const body = await res.json().catch(() => null);
+        if (cancelled) return;
+        if (!res.ok) {
+          setError((body && body.error && body.error.message) || `HTTP ${res.status}`);
+          return;
+        }
+        const payload = body && body.data ? body.data.collateral : body && body.collateral;
+        if (payload) setData(payload);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(String(err));
+      });
+    return () => { cancelled = true; };
+  }, []);
+  return { data, error };
+}
+
+function BankCollateralCard() {
+  const { data, error } = useBankCollateral();
+  if (error) {
+    return (
+      <Kpi label="Cross-tenant collateral" value="—" delta={error} trend="down" />
+    );
+  }
+  if (!data) {
+    return <Kpi label="Cross-tenant collateral" value="…" delta="loading" trend="up" />;
+  }
+  const total = Number(data.totalCollateralUzs || 0);
+  return (
+    <Kpi
+      label="Cross-tenant collateral"
+      value={fmtShort(total)}
+      unit="UZS"
+      delta={`${data.tenantCount || (data.tenants || []).length} tenants`}
+      trend="up"
+    />
+  );
+}
+
+function BankCollateralPanel() {
+  const { data, error } = useBankCollateral();
+  return (
+    <div className="card card-pad-0">
+      <div className="panel-title">Tenant collateral valuation</div>
+      <div style={{padding: 12}}>
+        {error && <Banner tone="bad" title="Cannot load collateral">{error}</Banner>}
+        {!data && !error && <div className="muted" style={{fontSize:12}}>Loading…</div>}
+        {data && (
+          <table className="tbl compact">
+            <thead>
+              <tr>
+                <th>Tenant</th>
+                <th className="tr">Items</th>
+                <th className="tr">Value (UZS)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(data.tenants || []).map((t) => (
+                <tr key={t.tenantId}>
+                  <td style={{color:"var(--ink)"}}>{t.tenantName || t.tenantId.slice(0, 8)}</td>
+                  <td className="num">{t.itemCount ?? "—"}</td>
+                  <td className="num">{fmtUZS(Number(t.inventoryValueUzs || 0))}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function BankDashboard({ go }) {
   return (
     <div className="page">
@@ -25,6 +104,12 @@ function BankDashboard({ go }) {
         <Kpi label="Alerts · attention" value="17" delta="6 high severity" trend="down"
           spark={<div className="sparkbars">{[3,5,4,6,8,5,7,9,6,8,7,10].map((h,i)=><span key={i} style={{height:h*1.6+"px", background:"var(--bad)"}}/>)}</div>}/>
       </div>
+
+      <div className="grid grid-4 mb-16">
+        <BankCollateralCard/>
+      </div>
+
+      <div className="mb-16"><BankCollateralPanel/></div>
 
       <div className="grid" style={{gridTemplateColumns:"2fr 1fr", gap:12}}>
         <div className="card card-pad-0">

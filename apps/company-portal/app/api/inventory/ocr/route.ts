@@ -285,8 +285,8 @@ async function rasterizePdfFirstPage(fileBuffer: Buffer): Promise<Buffer | null>
 }
 
 async function extractTextFromPdf(fileBuffer: Buffer): Promise<OcrExtractResult> {
-  const module = await import("pdf-parse");
-  const parser = new module.PDFParse({ data: fileBuffer });
+  const pdfParseModule = await import("pdf-parse");
+  const parser = new pdfParseModule.PDFParse({ data: fileBuffer });
 
   try {
     const parsed = await parser.getText();

@@ -46,6 +46,18 @@ export async function getDocumentUrl(key: string, expirySeconds = 3600): Promise
   return getClient().presignedGetObject(BUCKET, key, expirySeconds);
 }
 
+export async function uploadProfileAvatar(
+  key: string,
+  buffer: Buffer,
+  mimeType: string
+): Promise<void> {
+  return uploadDocument(key, buffer, mimeType);
+}
+
+export async function getProfileAvatarUrl(key: string, expirySeconds = 3600): Promise<string> {
+  return getDocumentUrl(key, expirySeconds);
+}
+
 export async function deleteDocument(key: string): Promise<void> {
   await ensureBucket();
   await getClient().removeObject(BUCKET, key);

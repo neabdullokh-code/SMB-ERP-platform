@@ -900,3 +900,70 @@ export async function recordCreditDecision(
     return getCreditApplicationDetail(applicationId);
   });
 }
+
+// ── Collateral / inventory valuation ───────────────────────────────────────
+// Aggregates v_inventory_on_hand × WAC unit cost per tenant, cross-tenant.
+// Bank monitoring roles operate above RLS so this intentionally runs without
+// withTenantTx.
+
+export interface TenantCollateralRow {
+  tenantId: string;
+  tenantName: string;
+  totalCollateralUzs: string;
+  distinctItems: number;
+  distinctWarehouses: number;
+  refreshedAt: string;
+}
+
+export interface CollateralSummary {
+  totalCollateralUzs: string;
+  tenantCount: number;
+  tenants: TenantCollateralRow[];
+}
+
+export async function getCollateralSummary(): Promise<CollateralSummary> {
+  const rows = await withDb(async (pool) => {
+    const response = await pool.query<{
+      tenant_id: string;
+      tenant_name: string;
+      total_uzs: string;
+      distinct_items: string;
+      distinct_warehouses: string;
+    }>(
+      `select
+         t.id                                 as tenant_id,
+         t.name                               as tenant_name,
+         coalesce(sum(v.on_hand * v.wac_unit_cost_uzs), 0)::text as total_uzs,
+         count(distinct v.item_id)::text      as distinct_items,
+         count(distinct v.warehouse_id)::text as distinct_warehouses
+       from tenants t
+       left join v_inventory_on_hand v on v.tenant_id = t.id and v.on_hand > 0
+       where t.status = 'active'
+       group by t.id, t.name
+       order by t.name asc`
+    );
+    return response.rows;
+  });
+
+  if (rows === null) {
+    return { totalCollateralUzs: "0", tenantCount: 0, tenants: [] };
+  }
+
+  const refreshedAt = new Date().toISOString();
+  const tenants: TenantCollateralRow[] = rows.map((row) => ({
+    tenantId: row.tenant_id,
+    tenantName: row.tenant_name,
+    totalCollateralUzs: row.total_uzs,
+    distinctItems: Number(row.distinct_items),
+    distinctWarehouses: Number(row.distinct_warehouses),
+    refreshedAt
+  }));
+
+  const total = tenants.reduce((s, t) => s + Number(t.totalCollateralUzs || 0), 0);
+
+  return {
+    totalCollateralUzs: Math.round(total).toString(),
+    tenantCount: tenants.length,
+    tenants
+  };
+}
