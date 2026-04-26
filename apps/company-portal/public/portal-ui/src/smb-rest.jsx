@@ -47,6 +47,21 @@ function ProductionBOMs() {
   const [creating, setCreating] = useStateS(false);
   const [createError, setCreateError] = useStateS("");
   const [exporting, setExporting] = useStateS(false);
+  const [localOrders, setLocalOrders] = useStateS([]);
+  const [orderForm, setOrderForm] = useStateS({
+    bomId: "",
+    plannedUnits: "1"
+  });
+  const [orderFormError, setOrderFormError] = useStateS("");
+  const [orderSaving, setOrderSaving] = useStateS(false);
+  const [materialBalances, setMaterialBalances] = useStateS({});
+  const [localScrap, setLocalScrap] = useStateS([]);
+  const [scrapForm, setScrapForm] = useStateS({
+    productionOrderId: "",
+    quantity: "1",
+    reason: ""
+  });
+  const [scrapFormError, setScrapFormError] = useStateS("");
   const [createForm, setCreateForm] = useStateS({
     code: "",
     outputSku: "",
@@ -71,7 +86,7 @@ function ProductionBOMs() {
         const { response, body } = await fetchPortalJson("/api/production/overview");
         if (cancelled) return;
         if (!response.ok || !body.data) {
-          setError(body.error?.message || body.message || "Unable to load production data.");
+          setError(body.error?.message || body.message || "Не удалось загрузить данные производства.");
           setOverview(null);
           return;
         }
@@ -79,7 +94,7 @@ function ProductionBOMs() {
         setError("");
       } catch {
         if (!cancelled) {
-          setError("Unable to load production data.");
+          setError("Не удалось загрузить данные производства.");
           setOverview(null);
         }
       } finally {
@@ -109,7 +124,7 @@ function ProductionBOMs() {
       });
       if (!response.ok) {
         const body = await response.json();
-        throw new Error(body?.message || body?.error?.message || "Unable to export production data.");
+        throw new Error(body?.message || body?.error?.message || "Не удалось выгрузить данные производства.");
       }
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
@@ -121,7 +136,7 @@ function ProductionBOMs() {
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (exportError) {
-      setError(exportError instanceof Error ? exportError.message : "Unable to export production data.");
+      setError(exportError instanceof Error ? exportError.message : "Не удалось выгрузить данные производства.");
     } finally {
       setExporting(false);
     }
@@ -138,11 +153,11 @@ function ProductionBOMs() {
       .filter((material) => material.sku && material.unit && Number.isFinite(material.quantity) && material.quantity > 0);
 
     if (!createForm.code.trim() || !createForm.outputSku.trim() || !createForm.version.trim()) {
-      setCreateError("Code, output SKU, and version are required.");
+      setCreateError("Код, SKU выпуска и версия обязательны.");
       return;
     }
     if (materials.length === 0) {
-      setCreateError("Add at least one material row.");
+      setCreateError("Добавьте хотя бы один материал.");
       return;
     }
 
@@ -162,14 +177,14 @@ function ProductionBOMs() {
       });
       const body = await response.json();
       if (!response.ok || !body.data) {
-        throw new Error(body?.message || body?.error?.message || "Unable to create BOM.");
+        throw new Error(body?.message || body?.error?.message || "Не удалось создать норму BOM.");
       }
 
       setCreateOpen(false);
       resetCreateForm();
       await refreshOverview();
     } catch (createBomError) {
-      setCreateError(createBomError instanceof Error ? createBomError.message : "Unable to create BOM.");
+      setCreateError(createBomError instanceof Error ? createBomError.message : "Не удалось создать норму BOM.");
     } finally {
       setCreating(false);
     }
@@ -198,95 +213,353 @@ function ProductionBOMs() {
   };
 
   const boms = overview?.boms || [];
-  const orders = overview?.orders || [];
-  const scrap = overview?.scrap || [];
+  const orders = [...(overview?.orders || []), ...localOrders];
+  const scrap = [...(overview?.scrap || []), ...localScrap];
   const totalProduced = orders.reduce((sum, order) => sum + Number(order.producedUnits || 0), 0);
   const totalPlanned = orders.reduce((sum, order) => sum + Number(order.plannedUnits || 0), 0);
   const totalScrap = scrap.reduce((sum, record) => sum + Number(record.quantity || 0), 0);
   const scrapRate = totalPlanned > 0 ? `${((totalScrap / totalPlanned) * 100).toFixed(1)}%` : "0.0%";
+  const translateOrderStatus = (status) => {
+    switch (status) {
+      case "completed":
+        return "Завершён";
+      case "in_progress":
+        return "В работе";
+      case "blocked":
+        return "Заблокирован";
+      case "draft":
+        return "Черновик";
+      case "planned":
+        return "Запланирован";
+      default:
+        return status ? status.replace(/_/g, " ") : "—";
+    }
+  };
+  const statusTone = (status) => {
+    if (status === "completed") return "good";
+    if (status === "in_progress") return "ai";
+    if (status === "blocked") return "bad";
+    return "info";
+  };
+  const planFactRows = [];
+  orders.forEach((order) => {
+    const bom = boms.find((candidate) => candidate.id === order.bomId);
+    if (!bom || !Array.isArray(bom.materials)) return;
+    const orderScrap = scrap
+      .filter((record) => record.productionOrderId === order.id)
+      .reduce((sum, record) => sum + Number(record.quantity || 0), 0);
+    const factualUnits = Number(order.producedUnits || 0) + orderScrap;
+    bom.materials.forEach((material) => {
+      const ratio = Number(material.quantity || 0);
+      if (!Number.isFinite(ratio) || ratio <= 0) return;
+      const plannedQty = Number(order.plannedUnits || 0) * ratio;
+      const actualQty = factualUnits * ratio;
+      planFactRows.push({
+        id: `${order.id}-${material.sku}`,
+        materialSku: material.sku || "—",
+        unit: material.unit || "ед.",
+        orderCode: formatEntityCode(order.id, "PO"),
+        plannedQty,
+        actualQty,
+        delta: actualQty - plannedQty
+      });
+    });
+  });
+  const getMaterialBalance = (sku) => {
+    if (!sku) return 0;
+    if (Number.isFinite(materialBalances[sku])) return Number(materialBalances[sku]);
+    return 1000; // фронтовой демо-остаток, если backend не отдал склад
+  };
+  const submitCreateOrder = (event) => {
+    event.preventDefault();
+    const planned = Number.parseFloat(orderForm.plannedUnits);
+    if (!orderForm.bomId) {
+      setOrderFormError("Выберите норму BOM для заказа.");
+      return;
+    }
+    if (!Number.isFinite(planned) || planned <= 0) {
+      setOrderFormError("План выпуска должен быть больше 0.");
+      return;
+    }
+    const bom = boms.find((item) => item.id === orderForm.bomId);
+    if (!bom || !Array.isArray(bom.materials) || bom.materials.length === 0) {
+      setOrderFormError("Для выбранной BOM нет материалов.");
+      return;
+    }
+    const requirements = bom.materials
+      .map((material) => {
+        const perUnit = Number(material.quantity || 0);
+        if (!Number.isFinite(perUnit) || perUnit <= 0) return null;
+        const required = perUnit * planned;
+        const available = getMaterialBalance(material.sku);
+        return {
+          sku: material.sku,
+          unit: material.unit || "ед.",
+          required,
+          available
+        };
+      })
+      .filter(Boolean);
+    const deficits = requirements.filter((row) => row.required > row.available);
+    if (deficits.length > 0) {
+      const shortageText = deficits
+        .slice(0, 3)
+        .map((row) => `${row.sku}: не хватает ${(row.required - row.available).toFixed(3)} ${row.unit}`)
+        .join("; ");
+      setOrderFormError(`Недостаточно остатков сырья: ${shortageText}`);
+      return;
+    }
+
+    setOrderSaving(true);
+    setOrderFormError("");
+    const now = Date.now();
+    setLocalOrders((prev) => [
+      {
+        id: `local-po-${now}`,
+        bomId: orderForm.bomId,
+        plannedUnits: planned,
+        producedUnits: 0,
+        status: "in_progress"
+      },
+      ...prev
+    ]);
+    setMaterialBalances((prev) => {
+      const next = { ...prev };
+      requirements.forEach((row) => {
+        next[row.sku] = row.available - row.required;
+      });
+      return next;
+    });
+    setOrderForm({
+      bomId: "",
+      plannedUnits: "1"
+    });
+    setOrderSaving(false);
+    window.toast && window.toast.good("Производственный заказ создан, сырьё зарезервировано.");
+  };
+  const markOrderCompleted = (orderId) => {
+    setLocalOrders((prev) => prev.map((order) => {
+      if (order.id !== orderId) return order;
+      return {
+        ...order,
+        status: "completed",
+        producedUnits: Number(order.plannedUnits || 0)
+      };
+    }));
+    window.toast && window.toast.good("Заказ завершён, выпуск оприходован.");
+  };
+  const submitScrapRecord = (event) => {
+    event.preventDefault();
+    const qty = Number.parseFloat(scrapForm.quantity);
+    if (!scrapForm.productionOrderId) {
+      setScrapFormError("Выберите производственный заказ.");
+      return;
+    }
+    if (!Number.isFinite(qty) || qty <= 0) {
+      setScrapFormError("Количество брака должно быть больше 0.");
+      return;
+    }
+    if (!scrapForm.reason.trim()) {
+      setScrapFormError("Укажите причину брака.");
+      return;
+    }
+    const now = new Date().toISOString();
+    setLocalScrap((prev) => [
+      {
+        id: `local-scrap-${Date.now()}`,
+        productionOrderId: scrapForm.productionOrderId,
+        quantity: qty,
+        reason: scrapForm.reason.trim(),
+        recordedAt: now
+      },
+      ...prev
+    ]);
+    setScrapForm({
+      productionOrderId: "",
+      quantity: "1",
+      reason: ""
+    });
+    setScrapFormError("");
+    window.toast && window.toast.good("Брак зафиксирован.");
+  };
   return (
-    <Placeholder
-      title="Production · Bills of materials"
-      headerActions={<>
+    <div className="page">
+      <div className="page-head">
+        <div><h1>Производство</h1></div>
+        <span className="sp"/>
         <Button variant="ghost" icon={<Icon.Download size={13}/>} onClick={handleExport} disabled={exporting}>
-          {exporting ? "Exporting..." : "Export"}
+          {exporting ? "Выгрузка..." : "Экспорт"}
         </Button>
-        <Button variant="primary" icon={<Icon.Plus size={13}/>} onClick={() => setCreateOpen(true)}>New</Button>
-      </>}
-      kpis={<>
-        <Kpi label="Active BOMs" value={String(boms.length)} delta={loading ? "Loading..." : "Live from backend"} trend="up"/>
-        <Kpi label="Output today" value={String(totalProduced)} unit="units"/>
-        <Kpi label="Scrap rate" value={scrapRate} delta={String(scrap.length)} deltaLabel="scrap records" trend="up"/>
-        <Kpi label="Open orders" value={String(orders.filter((order) => order.status !== "completed").length)} unit="orders"/>
-      </>}>
+        <Button variant="primary" icon={<Icon.Plus size={13}/>} onClick={() => setCreateOpen(true)}>Новая норма</Button>
+      </div>
+
+      <div className="grid grid-4 mb-16">
+        <Kpi label="Активные нормы" value={String(boms.length)} delta={loading ? "Загрузка..." : "Синхронизировано"} trend="up"/>
+        <Kpi label="Выпуск за сегодня" value={String(totalProduced)} unit="ед."/>
+        <Kpi label="Доля брака" value={scrapRate} delta={`${scrap.length} записей`} trend="up"/>
+        <Kpi label="Открытые заказы" value={String(orders.filter((o) => o.status !== "completed").length)} unit="заказа"/>
+      </div>
+
       {error && (
-        <Banner tone="warn" title="Live production unavailable">
-          {error}
-        </Banner>
+        <Banner tone="warn" title="Живые данные недоступны">{error}</Banner>
       )}
+
+      {/* Нормы BOM */}
       <div className="card card-pad-0">
         <div className="tbl-toolbar">
-          <div className="input-wrap" style={{width:240}}><span className="prefix"><Icon.Search size={13}/></span><input className="input with-prefix" placeholder="Search BOMs"/></div>
+          <div className="input-wrap" style={{width:240}}>
+            <span className="prefix"><Icon.Search size={13}/></span>
+            <input className="input with-prefix" placeholder="Поиск норм BOM"/>
+          </div>
           <span className="sp"/>
-          <Button size="sm" variant="ghost" icon={<Icon.Filter size={12}/>}>Filter</Button>
         </div>
         <table className="tbl">
-          <thead><tr><th>Code</th><th>Output SKU</th><th>Version</th><th>Materials</th><th>Status</th><th/></tr></thead>
+          <colgroup>
+            <col style={{width:"18%"}}/>
+            <col style={{width:"34%"}}/>
+            <col style={{width:"16%"}}/>
+            <col style={{width:"14%"}}/>
+            <col style={{width:"18%"}}/>
+          </colgroup>
+          <thead><tr><th>Код</th><th>SKU выпуска</th><th>Версия</th><th className="tr">Материалов</th><th>Статус</th></tr></thead>
           <tbody>
             {loading && boms.length === 0 && (
-              <tr><td colSpan="6" className="dim mono">Loading BOMs…</td></tr>
+              <tr><td colSpan="5" className="dim mono">Загрузка…</td></tr>
             )}
             {!loading && boms.length === 0 && (
-              <tr><td colSpan="6" className="dim mono">No BOMs found.</td></tr>
+              <tr><td colSpan="5" className="dim mono">Нормы BOM не найдены.</td></tr>
             )}
             {boms.map((b) => (
               <tr key={b.id}>
                 <td className="id">{b.code || formatEntityCode(b.id, "BOM")}</td>
-                <td style={{color:"var(--ink)", fontWeight:500}}>{b.outputSku || "—"}</td>
+                <td style={{fontWeight:500}}>{b.outputSku || "—"}</td>
                 <td className="mono">{b.version || "—"}</td>
                 <td className="num">{Array.isArray(b.materials) ? b.materials.length : "—"}</td>
-                <td><Pill tone="good">Live</Pill></td>
-                <td className="row-actions"><Icon.ChevRight size={13} className="muted"/></td>
+                <td><Pill tone="good">Активна</Pill></td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Создать заказ */}
+      <div className="card mt-12">
+        <div className="panel-title">Создать заказ</div>
+        <div className="card-body" style={{paddingTop:14}}>
+          <form onSubmit={submitCreateOrder}>
+            <div className="grid" style={{gridTemplateColumns:"minmax(280px, 1.8fr) minmax(160px, 0.8fr) auto", gap:12, alignItems:"end"}}>
+              <Field label="Норма BOM" required>
+                <select className="input" value={orderForm.bomId}
+                  onChange={(e) => setOrderForm((prev) => ({ ...prev, bomId: e.target.value }))}>
+                  <option value="">Выберите норму</option>
+                  {boms.map((bom) => (
+                    <option key={bom.id} value={bom.id}>
+                      {(bom.code || formatEntityCode(bom.id, "BOM"))} · {bom.outputSku || "Без SKU"}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Количество, ед." required>
+                <input className="input" type="number" min="1" step="1" value={orderForm.plannedUnits}
+                  onChange={(e) => setOrderForm((prev) => ({ ...prev, plannedUnits: e.target.value }))} placeholder="100"/>
+              </Field>
+              <div className="row" style={{justifyContent:"flex-end", paddingBottom:2}}>
+                <Button variant="primary" type="submit" icon={<Icon.Check size={12}/>} disabled={orderSaving || boms.length === 0}>
+                  {orderSaving ? "Создание..." : "Создать заказ"}
+                </Button>
+              </div>
+            </div>
+            {orderFormError && (
+              <div className="banner warn mt-10">
+                <span className="ico"><Icon.Alert size={15}/></span>
+                <div className="desc">{orderFormError}</div>
+              </div>
+            )}
+          </form>
+        </div>
+      </div>
+
+      {/* Заказы + Брак */}
       <div className="grid" style={{gridTemplateColumns:"1fr 1fr", gap:12, marginTop:12}}>
         <div className="card card-pad-0">
-          <div className="panel-title">Production orders</div>
+          <div className="panel-title">Производственные заказы</div>
           <table className="tbl">
-            <thead><tr><th>Order</th><th>BOM</th><th>Status</th><th className="tr">Planned</th><th className="tr">Produced</th></tr></thead>
+            <thead><tr><th>Заказ</th><th>BOM</th><th>Статус</th><th className="tr">План</th><th className="tr">Факт</th><th/></tr></thead>
             <tbody>
+              {orders.length === 0 && (
+                <tr><td colSpan="6" className="dim mono">Заказов пока нет.</td></tr>
+              )}
               {orders.map((order) => {
-                const bom = boms.find((candidate) => candidate.id === order.bomId);
+                const bom = boms.find((c) => c.id === order.bomId);
                 return (
-                <tr key={order.id}>
-                  <td className="id">{formatEntityCode(order.id, "PO")}</td>
-                  <td className="mono">{bom?.code || formatEntityCode(order.bomId, "BOM")}</td>
-                  <td><Pill tone={order.status === "completed" ? "good" : order.status === "in_progress" ? "ai" : order.status === "blocked" ? "bad" : "info"}>{order.status.replace(/_/g, " ")}</Pill></td>
-                  <td className="num">{order.plannedUnits}</td>
-                  <td className="num">{order.producedUnits}</td>
-                </tr>
-              )})}
+                  <tr key={order.id}>
+                    <td className="id">{formatEntityCode(order.id, "PO")}</td>
+                    <td className="mono">{bom?.code || formatEntityCode(order.bomId, "BOM")}</td>
+                    <td><Pill tone={statusTone(order.status)}>{translateOrderStatus(order.status)}</Pill></td>
+                    <td className="num">{order.plannedUnits}</td>
+                    <td className="num">{order.producedUnits}</td>
+                    <td className="tr">
+                      {String(order.id).startsWith("local-po-") && order.status !== "completed" ? (
+                        <Button size="sm" variant="ghost" onClick={() => markOrderCompleted(order.id)}>Завершить</Button>
+                      ) : (
+                        <span className="dim">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
+
         <div className="card card-pad-0">
-          <div className="panel-title">Scrap records</div>
+          <div className="panel-title">Учёт брака</div>
+          <div className="card-body hairline-b" style={{padding:"14px 14px 12px"}}>
+            <form onSubmit={submitScrapRecord}>
+              <div className="grid" style={{gridTemplateColumns:"minmax(170px, 1fr) minmax(130px, 0.7fr) minmax(170px, 1fr)", gap:10, alignItems:"end"}}>
+                <Field label="Заказ*">
+                  <select className="input" value={scrapForm.productionOrderId}
+                    onChange={(e) => setScrapForm((prev) => ({ ...prev, productionOrderId: e.target.value }))}>
+                    <option value="">Выберите заказ</option>
+                    {orders.map((o) => (
+                      <option key={o.id} value={o.id}>{formatEntityCode(o.id, "PO")}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Кол-во брака*">
+                  <input className="input" type="number" min="0" step="0.01" value={scrapForm.quantity}
+                    onChange={(e) => setScrapForm((prev) => ({ ...prev, quantity: e.target.value }))} placeholder="0"/>
+                </Field>
+                <Field label="Причина*">
+                  <input className="input" value={scrapForm.reason}
+                    onChange={(e) => setScrapForm((prev) => ({ ...prev, reason: e.target.value }))} placeholder="Например: дефект упаковки"/>
+                </Field>
+              </div>
+              <div className="row" style={{marginTop: 16}}>
+                <span className="sp"/>
+                <Button variant="primary" size="sm" type="submit" icon={<Icon.Check size={12}/>}>Зафиксировать брак</Button>
+              </div>
+            </form>
+            {scrapFormError && (
+              <div className="banner warn mt-10">
+                <span className="ico"><Icon.Alert size={15}/></span>
+                <div className="desc">{scrapFormError}</div>
+              </div>
+            )}
+          </div>
           {scrap.length === 0 ? (
-            <div className="empty" style={{minHeight:180}}>
+            <div className="empty" style={{minHeight:140}}>
               <Icon.Alert size={24}/>
-              <h3>No scrap recorded</h3>
-              <div>The backend has not recorded any scrap yet.</div>
+              <h3>Браков нет</h3>
+              <div>Записи появятся после фиксации.</div>
             </div>
           ) : (
             <table className="tbl">
-              <thead><tr><th>Reason</th><th>Order</th><th className="tr">Qty</th><th>Date</th></tr></thead>
+              <thead><tr><th>Причина</th><th>Заказ</th><th className="tr">Кол-во</th><th>Дата</th></tr></thead>
               <tbody>
                 {scrap.map((record) => (
                   <tr key={record.id}>
-                    <td style={{color:"var(--ink)", fontWeight:500}}>{record.reason}</td>
+                    <td style={{fontWeight:500}}>{record.reason}</td>
                     <td className="mono">{formatEntityCode(record.productionOrderId, "PO")}</td>
                     <td className="num">{record.quantity}</td>
                     <td className="dim mono">{record.recordedAt.slice(0, 10)}</td>
@@ -298,68 +571,101 @@ function ProductionBOMs() {
         </div>
       </div>
 
+      {/* План vs Факт */}
+      <div className="card card-pad-0 mt-12">
+        <div className="panel-title">План vs Факт по сырью</div>
+        {planFactRows.length === 0 ? (
+          <div className="empty" style={{minHeight:120}}>
+            <Icon.Doc size={24}/>
+            <h3>Нет данных для сравнения</h3>
+            <div>Создайте заказ и зафиксируйте выпуск, чтобы увидеть отклонения.</div>
+          </div>
+        ) : (
+          <div style={{overflowX:"auto"}}>
+            <table className="tbl compact">
+              <colgroup>
+                <col style={{width:"32%"}}/>
+                <col style={{width:"16%"}}/>
+                <col style={{width:"17%"}}/>
+                <col style={{width:"17%"}}/>
+                <col style={{width:"18%"}}/>
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>Сырьё</th>
+                  <th>Заказ</th>
+                  <th className="tr">План</th>
+                  <th className="tr">Факт</th>
+                  <th className="tr">Отклонение</th>
+                </tr>
+              </thead>
+              <tbody>
+                {planFactRows.map((row) => (
+                  <tr key={row.id}>
+                    <td className="mono" style={{maxWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}} title={row.materialSku}>{row.materialSku}</td>
+                    <td className="mono">{row.orderCode}</td>
+                    <td className="num mono" style={{whiteSpace:"nowrap"}}>{row.plannedQty.toFixed(3)} {row.unit}</td>
+                    <td className="num mono" style={{whiteSpace:"nowrap"}}>{row.actualQty.toFixed(3)} {row.unit}</td>
+                    <td className={`num mono ${row.delta > 0 ? "bad" : row.delta < 0 ? "good" : ""}`} style={{whiteSpace:"nowrap"}}>
+                      {row.delta > 0 ? "+" : ""}{row.delta.toFixed(3)} {row.unit}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Модалка создания BOM */}
       <Modal
         open={createOpen}
-        onClose={() => {
-          if (creating) return;
-          setCreateOpen(false);
-          resetCreateForm();
-        }}
-        title="Create BOM"
+        onClose={() => { if (creating) return; setCreateOpen(false); resetCreateForm(); }}
+        title="Новая норма BOM"
         size="md"
-        footer={
-          <>
-            <Button
-              variant="ghost"
-              type="button"
-              onClick={() => {
-                setCreateOpen(false);
-                resetCreateForm();
-              }}
-              disabled={creating}
-            >
-              Cancel
-            </Button>
-            <span className="sp" />
-            <Button variant="primary" type="submit" form="create-bom-form" icon={<Icon.Check size={13} />} disabled={creating}>
-              {creating ? "Saving..." : "Create BOM"}
-            </Button>
-          </>
-        }
+        footer={<>
+          <Button variant="ghost" type="button" onClick={() => { setCreateOpen(false); resetCreateForm(); }} disabled={creating}>
+            Отмена
+          </Button>
+          <span className="sp"/>
+          <Button variant="primary" type="submit" form="create-bom-form" icon={<Icon.Check size={13}/>} disabled={creating}>
+            {creating ? "Сохранение..." : "Создать"}
+          </Button>
+        </>}
       >
         <form id="create-bom-form" onSubmit={submitCreateBom}>
-          <div className="grid grid-2" style={{ gap: 12 }}>
-            <Field label="BOM code" required>
-              <input className="input" value={createForm.code} onChange={(e) => setCreateForm((prev) => ({ ...prev, code: e.target.value }))} placeholder="BOM-1102" />
+          <div className="grid grid-2" style={{gap:12}}>
+            <Field label="Код BOM" required>
+              <input className="input" value={createForm.code} onChange={(e) => setCreateForm((prev) => ({ ...prev, code: e.target.value }))} placeholder="BOM-1102"/>
             </Field>
-            <Field label="Output SKU" required>
-              <input className="input" value={createForm.outputSku} onChange={(e) => setCreateForm((prev) => ({ ...prev, outputSku: e.target.value }))} placeholder="SKU-COMP-002" />
+            <Field label="SKU выпуска" required>
+              <input className="input" value={createForm.outputSku} onChange={(e) => setCreateForm((prev) => ({ ...prev, outputSku: e.target.value }))} placeholder="SKU-COMP-002"/>
             </Field>
-            <Field label="Version" required>
-              <input className="input" value={createForm.version} onChange={(e) => setCreateForm((prev) => ({ ...prev, version: e.target.value }))} placeholder="v1" />
+            <Field label="Версия" required>
+              <input className="input" value={createForm.version} onChange={(e) => setCreateForm((prev) => ({ ...prev, version: e.target.value }))} placeholder="v1"/>
             </Field>
           </div>
           <div className="mt-12">
             <div className="row mb-8">
-              <div className="eyebrow">Materials</div>
-              <span className="sp" />
-              <Button variant="ghost" size="sm" type="button" icon={<Icon.Plus size={12} />} onClick={addMaterialRow}>Add material</Button>
+              <div className="eyebrow">Материалы (сырьё на 1 ед.)</div>
+              <span className="sp"/>
+              <Button variant="ghost" size="sm" type="button" icon={<Icon.Plus size={12}/>} onClick={addMaterialRow}>Добавить</Button>
             </div>
             <div className="col gap-8">
               {createForm.materials.map((material, index) => (
-                <div key={index} className="grid grid-3" style={{ gap: 8, alignItems: "end" }}>
-                  <Field label={index === 0 ? "SKU" : undefined} required>
-                    <input className="input" value={material.sku} onChange={(e) => updateMaterial(index, "sku", e.target.value)} placeholder="RM-BASE-001" />
+                <div key={index} className="grid grid-3" style={{gap:8, alignItems:"end"}}>
+                  <Field label={index === 0 ? "SKU сырья" : undefined} required>
+                    <input className="input" value={material.sku} onChange={(e) => updateMaterial(index, "sku", e.target.value)} placeholder="RM-BASE-001"/>
                   </Field>
-                  <Field label={index === 0 ? "Quantity" : undefined} required>
-                    <input className="input" type="number" min="0" step="0.01" value={material.quantity} onChange={(e) => updateMaterial(index, "quantity", e.target.value)} placeholder="1" />
+                  <Field label={index === 0 ? "Кол-во на 1 ед." : undefined} required>
+                    <input className="input" type="number" min="0" step="0.01" value={material.quantity} onChange={(e) => updateMaterial(index, "quantity", e.target.value)} placeholder="1"/>
                   </Field>
                   <div className="row gap-8">
-                    <Field label={index === 0 ? "Unit" : undefined} required>
-                      <input className="input" value={material.unit} onChange={(e) => updateMaterial(index, "unit", e.target.value)} placeholder="pcs" />
+                    <Field label={index === 0 ? "Ед. изм." : undefined} required>
+                      <input className="input" value={material.unit} onChange={(e) => updateMaterial(index, "unit", e.target.value)} placeholder="pcs"/>
                     </Field>
                     {createForm.materials.length > 1 && (
-                      <Button variant="ghost" size="sm" type="button" onClick={() => removeMaterialRow(index)} icon={<Icon.Trash size={12} />}>Remove</Button>
+                      <Button variant="ghost" size="sm" type="button" onClick={() => removeMaterialRow(index)} icon={<Icon.Trash size={12}/>}>Удалить</Button>
                     )}
                   </div>
                 </div>
@@ -368,13 +674,13 @@ function ProductionBOMs() {
           </div>
           {createError && (
             <div className="banner warn mt-12">
-              <span className="ico"><Icon.Alert size={16} /></span>
+              <span className="ico"><Icon.Alert size={16}/></span>
               <div className="desc">{createError}</div>
             </div>
           )}
         </form>
       </Modal>
-    </Placeholder>
+    </div>
   );
 }
 

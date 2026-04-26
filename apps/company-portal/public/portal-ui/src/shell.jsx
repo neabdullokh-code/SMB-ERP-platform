@@ -16,6 +16,7 @@ const SMB_NAV = [
     { path: "/smb/finance/ledger",   label: "General ledger", icon: "Ledger" },
     { path: "/smb/finance/invoices", label: "Invoices",       icon: "Doc" },
     { path: "/smb/finance/bills",    label: "Bills",          icon: "File" },
+    { path: "/smb/finance/payments", label: "Accounts & Payments", icon: "Coin" },
     { path: "/smb/finance/cash",     label: "Cash flow",      icon: "Chart" },
     { path: "/smb/reports",          label: "Reports",        icon: "Download" },
   ]},

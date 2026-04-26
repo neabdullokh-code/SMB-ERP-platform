@@ -456,6 +456,7 @@ const CLEAN_ROUTE_PATHS = {
   "/smb/finance/ledger": "/app/finance/ledger",
   "/smb/finance/invoices": "/app/finance/invoices",
   "/smb/finance/bills": "/app/finance/bills",
+  "/smb/finance/payments": "/app/finance/payments",
   "/smb/finance/cash": "/app/finance/cash",
   "/smb/reports": "/app/reports",
   "/smb/credit": "/app/credit",
@@ -475,7 +476,7 @@ const CLEAN_PATH_ROUTE_ALIASES = {
   "/app/finance/accounts": "/smb/finance/ledger",
   "/app/finance/reports": "/smb/reports",
   "/app/finance/counterparties": "/smb/finance/invoices",
-  "/app/finance/payments": "/smb/finance/bills",
+  "/app/finance/payments": "/smb/finance/payments",
 };
 
 const CLEAN_ROUTE_PATH_ALIASES = {
