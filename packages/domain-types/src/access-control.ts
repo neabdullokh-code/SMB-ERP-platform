@@ -8,6 +8,8 @@ export type PermissionGroupKey =
   | "inventory_operations"
   | "production_operations"
   | "service_operations"
+  | "executive_oversight"
+  | "auditor_readonly"
   | "bank_monitoring"
   | "credit_operations"
   | "audit_compliance";
@@ -51,85 +53,85 @@ export interface CompanyWorkspaceAccessPolicy {
 export const permissionDefinitions: Record<Permission, PermissionDefinition> = {
   "tenant.read": {
     key: "tenant.read",
-    label: "Tenant read",
-    description: "View tenant workspace metadata, users, and scoped operational context.",
+    label: "Просмотр тенанта",
+    description: "Просмотр метаданных рабочего пространства, пользователей и операционного контекста тенанта.",
     group: "tenant_governance",
     risk: "baseline"
   },
   "tenant.manage": {
     key: "tenant.manage",
-    label: "Tenant manage",
-    description: "Change tenant-level settings, workspace policy, and administrative controls.",
+    label: "Управление тенантом",
+    description: "Изменение настроек тенанта, политик рабочего пространства и административных параметров.",
     group: "tenant_governance",
     risk: "high"
   },
   "finance.read": {
     key: "finance.read",
-    label: "Finance read",
-    description: "View ledgers, invoices, bills, cash movement, and finance analytics.",
+    label: "Просмотр финансов",
+    description: "Просмотр бухгалтерских книг, счетов, затрат, движения денежных средств и финансовой аналитики.",
     group: "finance_operations",
     risk: "sensitive"
   },
   "finance.manage": {
     key: "finance.manage",
-    label: "Finance manage",
-    description: "Create, approve, or change finance records with downstream reporting impact.",
+    label: "Управление финансами",
+    description: "Создание, согласование и изменение финансовых записей, влияющих на отчетность.",
     group: "finance_operations",
     risk: "high"
   },
   "inventory.manage": {
     key: "inventory.manage",
-    label: "Inventory manage",
-    description: "Adjust stock, receive inventory, and mutate warehouse-controlled records.",
+    label: "Управление складом",
+    description: "Приемка, списание, перемещение и корректировка складских остатков.",
     group: "inventory_operations",
     risk: "sensitive"
   },
   "production.manage": {
     key: "production.manage",
-    label: "Production manage",
-    description: "Run production orders, BOM execution, and manufacturing state transitions.",
+    label: "Управление производством",
+    description: "Ведение производственных заказов, спецификаций и этапов производственного цикла.",
     group: "production_operations",
     risk: "sensitive"
   },
   "service_order.manage": {
     key: "service_order.manage",
-    label: "Service orders manage",
-    description: "Create and progress service workflows, approvals, and work orders.",
+    label: "Управление сервисными заказами",
+    description: "Создание и выполнение сервисных заказов, этапов обслуживания и связанных затрат.",
     group: "service_operations",
     risk: "sensitive"
   },
   "bank.monitor": {
     key: "bank.monitor",
-    label: "Bank monitoring",
-    description: "Review tenant portfolio posture, exposure, and bank-side risk signals.",
+    label: "Банковский мониторинг",
+    description: "Мониторинг портфеля тенантов, рисков и операционных индикаторов банка.",
     group: "bank_monitoring",
     risk: "high"
   },
   "credit.apply": {
     key: "credit.apply",
-    label: "Credit apply",
-    description: "Submit and manage loan applications on behalf of the tenant.",
+    label: "Подача кредитной заявки",
+    description: "Подача и ведение кредитных заявок от имени тенанта.",
     group: "credit_operations",
     risk: "sensitive"
   },
   "credit.review": {
     key: "credit.review",
-    label: "Credit review",
-    description: "View loan applications and risk scores as a bank analyst.",
+    label: "Рассмотрение кредита",
+    description: "Просмотр кредитных заявок, скорингов и риск-факторов на стороне банка.",
     group: "credit_operations",
     risk: "sensitive"
   },
   "credit.manage": {
     key: "credit.manage",
-    label: "Credit manage",
-    description: "Approve, reject, or escalate loan applications and override risk scores.",
+    label: "Управление кредитом",
+    description: "Принятие решения по заявке: одобрение, отклонение, эскалация и изменение условий.",
     group: "credit_operations",
     risk: "high"
   },
   "audit.read": {
     key: "audit.read",
-    label: "Audit read",
-    description: "Inspect immutable security, workflow, and operational audit events.",
+    label: "Просмотр аудита",
+    description: "Просмотр неизменяемых событий безопасности, операций и журналов аудита.",
     group: "audit_compliance",
     risk: "sensitive"
   }
@@ -138,58 +140,72 @@ export const permissionDefinitions: Record<Permission, PermissionDefinition> = {
 export const permissionGroupDefinitions: Record<PermissionGroupKey, PermissionGroupDefinition> = {
   tenant_governance: {
     key: "tenant_governance",
-    label: "Tenant governance",
-    summary: "Workspace ownership, organization settings, and administrative policy.",
-    uxGuidance: "Reserve destructive or policy-changing actions for clearly labeled admin surfaces with audit context.",
+    label: "Администрирование предприятия",
+    summary: "Управление структурой тенанта, сотрудниками, ролями и политиками доступа.",
+    uxGuidance: "Критичные административные действия выполняются только в явно выделенных интерфейсах с аудит-следом.",
     permissions: ["tenant.read", "tenant.manage"]
   },
   finance_operations: {
     key: "finance_operations",
-    label: "Finance operations",
-    summary: "Ledger visibility, accounting workflows, and money-movement controls.",
-    uxGuidance: "Separate read-only reporting from change-making actions, and show approval state next to financial actions.",
+    label: "Бухгалтерия и экономика",
+    summary: "Отчеты, себестоимость, движения денежных средств и финансовая аналитика.",
+    uxGuidance: "Отделяйте режим чтения от режимов изменения и отображайте статус согласования рядом с финансовыми действиями.",
     permissions: ["finance.read", "finance.manage"]
   },
   inventory_operations: {
     key: "inventory_operations",
-    label: "Inventory operations",
-    summary: "Stock handling, warehouse movement, and replenishment actions.",
-    uxGuidance: "Prefer explicit confirmations for quantity adjustments and show before/after values.",
+    label: "Складские операции",
+    summary: "Приход/расход, межскладские перемещения и инвентаризация.",
+    uxGuidance: "Для корректировок остатков используйте явные подтверждения и показывайте значения до/после.",
     permissions: ["inventory.manage"]
   },
   production_operations: {
     key: "production_operations",
-    label: "Production operations",
-    summary: "Manufacturing execution, BOM tracking, and production orchestration.",
-    uxGuidance: "Keep state transitions visible and irreversible actions contextualized near production metrics.",
+    label: "Производственные операции",
+    summary: "Заказы в производство, сырьевые требования, этапы выполнения и учет брака.",
+    uxGuidance: "Состояния производственного процесса должны быть прозрачны, а необратимые действия подтверждаться контекстно.",
     permissions: ["production.manage"]
   },
   service_operations: {
     key: "service_operations",
-    label: "Service operations",
-    summary: "Service queues, approvals, and work-order lifecycle management.",
-    uxGuidance: "Expose approval ownership and status inline so operators understand who can advance a job.",
+    label: "Сервисные операции",
+    summary: "Сервисные заявки, этапы выполнения и учет операционных затрат.",
+    uxGuidance: "Показывайте ответственного и текущий статус согласования прямо в карточке заявки.",
     permissions: ["service_order.manage"]
+  },
+  executive_oversight: {
+    key: "executive_oversight",
+    label: "Руководство и KPI",
+    summary: "Дашборды, KPI и документы на согласовании в режиме управленческого контроля.",
+    uxGuidance: "Для руководства показывайте только агрегированные показатели и маршруты согласования.",
+    permissions: ["tenant.read", "finance.read"]
+  },
+  auditor_readonly: {
+    key: "auditor_readonly",
+    label: "Аудиторский read-only",
+    summary: "Наблюдение и контроль без права изменения данных.",
+    uxGuidance: "Для аудитора все действия должны быть в режиме просмотра с сохранением трассировки.",
+    permissions: ["tenant.read", "finance.read", "audit.read"]
   },
   bank_monitoring: {
     key: "bank_monitoring",
-    label: "Bank monitoring",
-    summary: "Bank-side portfolio oversight and institution-scoped risk review.",
-    uxGuidance: "Visually separate bank controls from company controls to avoid cross-surface confusion.",
+    label: "Мониторинг банка",
+    summary: "Портфельный контроль всех тенантов, мониторинг лимитов и ключевых рисков.",
+    uxGuidance: "Явно разделяйте банковские и корпоративные элементы управления, чтобы исключить путаницу контекста.",
     permissions: ["bank.monitor"]
   },
   credit_operations: {
     key: "credit_operations",
-    label: "Credit operations",
-    summary: "Loan application lifecycle, risk scoring, and credit decision workflows.",
-    uxGuidance: "Separate applicant-facing apply flows from bank-officer review and decision surfaces.",
+    label: "Кредитные операции",
+    summary: "Жизненный цикл кредитной заявки: подача, скоринг, рассмотрение и принятие решения.",
+    uxGuidance: "Разделяйте клиентский поток подачи заявки и банковский поток анализа/решения.",
     permissions: ["credit.apply", "credit.review", "credit.manage"]
   },
   audit_compliance: {
     key: "audit_compliance",
-    label: "Audit and compliance",
-    summary: "Regulatory traceability, security review, and operational evidence.",
-    uxGuidance: "Show provenance, timestamps, and actor identity near every audit-heavy workflow.",
+    label: "Аудит и контроль",
+    summary: "Режим контроля и проверки: доступ к журналам и трассировке действий (только чтение).",
+    uxGuidance: "Для всех проверяемых действий показывайте источник, время и исполнителя.",
     permissions: ["audit.read"]
   }
 };
@@ -197,8 +213,8 @@ export const permissionGroupDefinitions: Record<PermissionGroupKey, PermissionGr
 export const roleAccessPolicies: Record<Role, RoleAccessPolicy> = {
   super_admin: {
     role: "super_admin",
-    label: "Super Admin",
-    summary: "Privileged bank platform operator with cross-tenant visibility and short-lived sessions.",
+    label: "Супер-админ",
+    summary: "Центральный технический администратор банка: глобальная конфигурация системы, все тенанты, классификаторы.",
     surface: "bank",
     defaultRedirectPath: "/bank/settings",
     loginIntent: "bank_staff",
@@ -213,8 +229,8 @@ export const roleAccessPolicies: Record<Role, RoleAccessPolicy> = {
   },
   bank_admin: {
     role: "bank_admin",
-    label: "Bank Admin",
-    summary: "Bank operations owner focused on tenant monitoring, credit decisions, and audit visibility.",
+    label: "Банк-админ",
+    summary: "Бизнес/операционный администратор банка: подключение новых компаний, мониторинг, лимиты и кредитные решения.",
     surface: "bank",
     defaultRedirectPath: "/bank/home",
     loginIntent: "bank_staff",
@@ -229,8 +245,8 @@ export const roleAccessPolicies: Record<Role, RoleAccessPolicy> = {
   },
   company_admin: {
     role: "company_admin",
-    label: "Company Admin",
-    summary: "Tenant owner with broad operating control across finance and operations.",
+    label: "Администратор предприятия",
+    summary: "Внутренний администратор компании: сотрудники, роли, локальные справочники и операционное управление.",
     surface: "company",
     defaultRedirectPath: "/smb/home",
     loginIntent: "smb_customer",
@@ -245,8 +261,8 @@ export const roleAccessPolicies: Record<Role, RoleAccessPolicy> = {
   },
   employee: {
     role: "employee",
-    label: "Employee",
-    summary: "Least-privilege operator with scoped access to day-to-day workflows.",
+    label: "Сотрудник",
+    summary: "Исполнитель с ограниченными правами для повседневных операций в рамках назначенных зон доступа.",
     surface: "company",
     defaultRedirectPath: "/smb/home",
     loginIntent: "smb_customer",
@@ -264,8 +280,8 @@ export const roleAccessPolicies: Record<Role, RoleAccessPolicy> = {
 export const companyWorkspaceAccessPolicies: Record<CompanyWorkspaceRole, CompanyWorkspaceAccessPolicy> = {
   owner: {
     role: "owner",
-    label: "Owner",
-    summary: "Workspace owner with full administrative, financial, and operational authority.",
+    label: "Руководитель",
+    summary: "Руководитель компании: дашборды, KPI и утверждение документов, требующих согласования.",
     authRole: "company_admin",
     defaultPermissionGroups: [
       "tenant_governance",
@@ -278,8 +294,8 @@ export const companyWorkspaceAccessPolicies: Record<CompanyWorkspaceRole, Compan
   },
   company_admin: {
     role: "company_admin",
-    label: "Company admin",
-    summary: "Delegated administrator with end-to-end control over tenant operations and team access.",
+    label: "Администратор предприятия",
+    summary: "Администратор компании: управление пользователями, ролями и локальными справочниками.",
     authRole: "company_admin",
     defaultPermissionGroups: [
       "tenant_governance",
@@ -292,8 +308,8 @@ export const companyWorkspaceAccessPolicies: Record<CompanyWorkspaceRole, Compan
   },
   manager: {
     role: "manager",
-    label: "Manager",
-    summary: "Cross-functional team lead with finance and operations authority, but no workspace governance.",
+    label: "Менеджер (legacy)",
+    summary: "Устаревшая роль для совместимости. Рекомендуется заменить на профильные роли новой модели.",
     authRole: "employee",
     defaultPermissionGroups: [
       "finance_operations",
@@ -304,14 +320,56 @@ export const companyWorkspaceAccessPolicies: Record<CompanyWorkspaceRole, Compan
   },
   operator: {
     role: "operator",
-    label: "Operator",
-    summary: "Frontline operator focused on day-to-day inventory, production, and service work.",
+    label: "Оператор (legacy)",
+    summary: "Устаревшая роль для совместимости. Рекомендуется заменить на профильные роли новой модели.",
     authRole: "employee",
     defaultPermissionGroups: [
       "inventory_operations",
       "production_operations",
       "service_operations"
     ]
+  },
+  warehouse_clerk: {
+    role: "warehouse_clerk",
+    label: "Кладовщик",
+    summary: "Кладовщик: приход/расход, межскладские перемещения и инвентаризация.",
+    authRole: "employee",
+    defaultPermissionGroups: ["inventory_operations"]
+  },
+  production_operator: {
+    role: "production_operator",
+    label: "Оператор производства / начальник цеха",
+    summary: "Производство: заказы, сырьевые требования, этапы операций и учет брака.",
+    authRole: "employee",
+    defaultPermissionGroups: ["production_operations"]
+  },
+  service_staff: {
+    role: "service_staff",
+    label: "Сотрудник сервиса",
+    summary: "Сервис: заявки на обслуживание, этапы выполнения и операционные затраты.",
+    authRole: "employee",
+    defaultPermissionGroups: ["service_operations"]
+  },
+  accountant_economist: {
+    role: "accountant_economist",
+    label: "Бухгалтер / экономист",
+    summary: "Финансы: отчеты, себестоимость и анализ затрат.",
+    authRole: "employee",
+    defaultPermissionGroups: ["finance_operations"]
+  },
+  executive: {
+    role: "executive",
+    label: "Руководитель",
+    summary: "Руководитель: дашборды, KPI и контроль согласований.",
+    authRole: "employee",
+    defaultPermissionGroups: ["executive_oversight", "audit_compliance"]
+  },
+  auditor: {
+    role: "auditor",
+    label: "Аудитор / контролер",
+    summary: "Только чтение: контрольные проверки и аудит-следы.",
+    authRole: "employee",
+    defaultPermissionGroups: ["auditor_readonly"]
   }
 };
 
@@ -334,7 +392,16 @@ export function permissionGroupsForRole(role: Role): PermissionGroupDefinition[]
 }
 
 export function isCompanyWorkspaceRole(role: string): role is CompanyWorkspaceRole {
-  return role === "owner" || role === "company_admin" || role === "manager" || role === "operator";
+  return role === "owner"
+    || role === "company_admin"
+    || role === "manager"
+    || role === "operator"
+    || role === "warehouse_clerk"
+    || role === "production_operator"
+    || role === "service_staff"
+    || role === "accountant_economist"
+    || role === "executive"
+    || role === "auditor";
 }
 
 export function companyWorkspaceAuthRole(role: CompanyWorkspaceRole): Extract<Role, "company_admin" | "employee"> {

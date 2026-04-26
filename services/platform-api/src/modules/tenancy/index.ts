@@ -31,12 +31,18 @@ function isValidEmail(value: string) {
 function normalizeWorkspaceRole(value: string): CompanyWorkspaceRole {
   const normalized = value.trim().toLowerCase().replace(/\s+/g, "_");
 
+  if (normalized === "warehouse_clerk" || normalized === "warehouse_manager" || normalized === "кладовщик") return "warehouse_clerk";
+  if (normalized === "production_operator" || normalized === "shop_chief" || normalized === "оператор_производства") return "production_operator";
+  if (normalized === "service_staff" || normalized === "service_operator" || normalized === "сотрудник_сервиса") return "service_staff";
+  if (normalized === "accountant_economist" || normalized === "accountant" || normalized === "economist" || normalized === "бухгалтер" || normalized === "экономист") return "accountant_economist";
+  if (normalized === "executive" || normalized === "rahbar" || normalized === "руководитель") return "executive";
+  if (normalized === "auditor" || normalized === "controller" || normalized === "auditor_controller" || normalized === "аудитор" || normalized === "контролер") return "auditor";
   if (normalized === "owner") return "owner";
   if (normalized === "company_admin" || normalized === "company") return "company_admin";
   if (normalized === "manager" || normalized === "accountant") return "manager";
   if (normalized === "operator" || normalized === "employee" || normalized === "warehouse_manager") return "operator";
 
-  return "operator";
+  return "warehouse_clerk";
 }
 
 export async function tenancyModule(app: FastifyInstance) {
@@ -112,7 +118,7 @@ export async function tenancyModule(app: FastifyInstance) {
       ? payload.invites
           .map((invite) => ({
             name: invite.name?.trim() ?? "",
-            role: normalizeWorkspaceRole(invite.role?.trim() ?? "operator"),
+            role: normalizeWorkspaceRole(invite.role?.trim() ?? "warehouse_clerk"),
             email: invite.email?.trim().toLowerCase() ?? "",
             permissionGroups: undefined as PermissionGroupKey[] | undefined
           }))
