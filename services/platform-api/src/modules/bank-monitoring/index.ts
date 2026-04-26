@@ -21,6 +21,14 @@ function generateAlerts(tenants: Array<{
   workflowBottlenecks: number;
 }>): PortfolioAlert[] {
   const alerts: PortfolioAlert[] = [];
+  const formatWorkflowBottleneckCount = (count: number) => {
+    const abs = Math.abs(count);
+    const mod10 = abs % 10;
+    const mod100 = abs % 100;
+    if (mod10 === 1 && mod100 !== 11) return "узкое место";
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "узких места";
+    return "узких мест";
+  };
 
   for (const tenant of tenants) {
     if (tenant.healthTrend === "down" && tenant.creditScore < 55) {
@@ -68,7 +76,7 @@ function generateAlerts(tenants: Array<{
           tenantName: tenant.tenantName,
           severity: "info",
           type: "workflow_bottleneck",
-          message: `${tenant.workflowBottlenecks} workflow bottlenecks affecting operational health.`,
+          message: `Обнаружено ${tenant.workflowBottlenecks} ${formatWorkflowBottleneckCount(tenant.workflowBottlenecks)} в процессах, влияющих на операционную устойчивость.`,
           triggeredAt: new Date().toISOString()
         });
       }

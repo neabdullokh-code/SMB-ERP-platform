@@ -1464,7 +1464,7 @@ function ReportsPage() {
         const { response, body } = await fetchPortalJson("/api/finance/overview");
         if (cancelled) return;
         if (!response.ok || !body.data) {
-          setError(body.error?.message || body.message || "Unable to load reports.");
+          setError(body.error?.message || body.message || "Не удалось загрузить отчеты.");
           setOverview(null);
           return;
         }
@@ -1472,7 +1472,7 @@ function ReportsPage() {
         setError("");
       } catch {
         if (!cancelled) {
-          setError("Unable to load reports.");
+          setError("Не удалось загрузить отчеты.");
           setOverview(null);
         }
       } finally {
@@ -1485,7 +1485,7 @@ function ReportsPage() {
   const refreshOverview = async () => {
     const { response, body } = await fetchPortalJson("/api/finance/overview");
     if (!response.ok || !body?.data) {
-      setError(body?.error?.message || body?.message || "Unable to load reports.");
+      setError(body?.error?.message || body?.message || "Не удалось загрузить отчеты.");
       return false;
     }
     setOverview(body.data);
@@ -1564,17 +1564,17 @@ function ReportsPage() {
   };
 
   const REPORTS = [
-    { slug: "trial-balance", n: "Trial balance", d: trialBalance ? (trialBalance.isBalanced ? "Balanced" : "Unbalanced") : "Monthly trial balance", i: "Ledger" },
-    { slug: "profit-and-loss", n: "Profit & Loss", d: profitAndLoss ? `Net income ${profitAndLoss.netIncome} UZS` : "Monthly P&L statement", i: "Chart" },
-    { slug: "balance-sheet", n: "Balance sheet", d: balanceSheet ? `Assets ${balanceSheet.totalAssets} UZS` : "Assets, liabilities, equity", i: "Coin" },
-    { slug: "cash-flow", n: "Cash flow statement", d: "Direct and indirect view", i: "Coin" },
-    { slug: "inventory", n: "Inventory report", d: "Valuation, turnover, aging", i: "Box" },
-    { slug: "tax-pack", n: "Tax return pack", d: "VAT, CIT · STI ready", i: "Shield" }
+    { slug: "trial-balance", n: "Оборотно-сальдовая ведомость", d: trialBalance ? (trialBalance.isBalanced ? "Сбалансировано" : "Не сбалансировано") : "Оборотно-сальдовая ведомость за месяц", i: "Ledger" },
+    { slug: "profit-and-loss", n: "Отчет о прибылях и убытках", d: profitAndLoss ? `Чистая прибыль ${profitAndLoss.netIncome} UZS` : "Ежемесячный отчет о прибылях и убытках", i: "Chart" },
+    { slug: "balance-sheet", n: "Бухгалтерский баланс", d: balanceSheet ? `Активы ${balanceSheet.totalAssets} UZS` : "Активы, обязательства, капитал", i: "Coin" },
+    { slug: "cash-flow", n: "Отчет о движении денежных средств", d: "Прямой и косвенный методы", i: "Coin" },
+    { slug: "inventory", n: "Отчет по запасам", d: "Оценка, оборачиваемость, сроки хранения", i: "Box" },
+    { slug: "tax-pack", n: "Пакет налоговой отчетности", d: "НДС, налог на прибыль · готово для ГНК", i: "Shield" }
   ];
 
   return (
     <Placeholder
-      title="Reports"
+      title="Отчеты"
       headerActions={<>
         <Button variant="ghost" icon={<Icon.Download size={13}/>} onClick={() => {
           setExporting(true);
@@ -1584,14 +1584,14 @@ function ReportsPage() {
             setExporting(false);
           }
         }} disabled={exporting}>
-          {exporting ? "Exporting..." : "Export"}
+          {exporting ? "Экспорт..." : "Экспорт"}
         </Button>
         <Button variant="primary" icon={<Icon.Plus size={13}/>} onClick={refreshOverview} disabled={loading}>
-          {loading ? "Loading..." : "Refresh"}
+          {loading ? "Загрузка..." : "Обновить"}
         </Button>
       </>}
     >
-      {error && <Banner tone="warn" title="Live reports unavailable">Showing current report data. {error}</Banner>}
+      {error && <Banner tone="warn" title="Онлайн-отчеты недоступны">Показаны текущие данные отчетов. {error}</Banner>}
       <div className="grid grid-3" style={{gap:12}}>
         {REPORTS.map((r, i) => {
           const IC = Icon[r.i];
@@ -1601,8 +1601,8 @@ function ReportsPage() {
               <div style={{fontSize:14, fontWeight:500, color:"var(--ink)", marginTop:8}}>{r.n}</div>
               <div className="muted mt-4" style={{fontSize:12}}>{r.d}</div>
               <div className="row mt-12">
-                <Button size="sm" variant="ghost" onClick={() => setPreview({ open: true, title: r.n, csv: rowsToCsv(getReportRows(r.slug)) })}>Preview</Button>
-                <Button size="sm" variant="primary" icon={<Icon.Download size={12}/>} onClick={() => downloadReport(r.slug)}>Generate</Button>
+                <Button size="sm" variant="ghost" onClick={() => setPreview({ open: true, title: r.n, csv: rowsToCsv(getReportRows(r.slug)) })}>Предпросмотр</Button>
+                <Button size="sm" variant="primary" icon={<Icon.Download size={12}/>} onClick={() => downloadReport(r.slug)}>Сформировать</Button>
               </div>
             </div>
           );

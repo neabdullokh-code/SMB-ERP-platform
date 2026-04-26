@@ -3,52 +3,52 @@ const { useState: useStateS, useEffect: useEffectS, useMemo: useMemoS } = React;
 
 /* ---------- Sidebars ---------- */
 const SMB_NAV = [
-  { section: "Overview", items: [
-    { path: "/smb/home",      label: "Dashboard",   icon: "Home" },
-    { path: "/smb/copilot",   label: "AI Copilot",  icon: "Sparkle", ai: true },
+  { section: "ОБЗОР", items: [
+    { path: "/smb/home",      label: "Панель управления",   icon: "Home" },
+    { path: "/smb/copilot",   label: "ИИ-ассистент",  icon: "Sparkle", ai: true },
   ]},
-  { section: "Operations", items: [
-    { path: "/smb/inventory", label: "Inventory",   icon: "Box" },
-    { path: "/smb/production",label: "Production",  icon: "Factory" },
-    { path: "/smb/services",  label: "Services",    icon: "Wrench" },
+  { section: "Операции", items: [
+    { path: "/smb/inventory", label: "Склад",   icon: "Box" },
+    { path: "/smb/production",label: "Производство",  icon: "Factory" },
+    { path: "/smb/services",  label: "Сервисы",    icon: "Wrench" },
   ]},
-  { section: "Finance", items: [
-    { path: "/smb/finance/ledger",   label: "General ledger", icon: "Ledger" },
-    { path: "/smb/finance/invoices", label: "Invoices",       icon: "Doc" },
-    { path: "/smb/finance/bills",    label: "Bills",          icon: "File" },
-    { path: "/smb/finance/cash",     label: "Cash flow",      icon: "Chart" },
-    { path: "/smb/reports",          label: "Reports",        icon: "Download" },
+  { section: "Финансы", items: [
+    { path: "/smb/finance/ledger",   label: "Главная книга", icon: "Ledger" },
+    { path: "/smb/finance/invoices", label: "Счета-фактуры",       icon: "Doc" },
+    { path: "/smb/finance/bills",    label: "Закупки",          icon: "File" },
+    { path: "/smb/finance/cash",     label: "Денежный поток",      icon: "Chart" },
+    { path: "/smb/reports",          label: "Отчёты",         icon: "Download" },
   ]},
-  { section: "Growth", items: [
-    { path: "/smb/credit",    label: "Credit & Financing", icon: "Handshake", ai: true },
+  { section: "Рост", items: [
+    { path: "/smb/credit",    label: "Кредитование и финансирование", icon: "Handshake", ai: true },
   ]},
-  { section: "Admin", items: [
-    { path: "/smb/team",      label: "Team",       icon: "Users" },
-    { path: "/smb/settings",  label: "Settings",   icon: "Gear" },
+  { section: "Администрирование", items: [
+    { path: "/smb/team",      label: "Команда",       icon: "Users" },
+    { path: "/smb/settings",  label: "Настройки",   icon: "Gear" },
   ]},
 ];
 
 const BANK_NAV = [
-  { section: "Overview", items: [
-    { path: "/bank/home",      label: "Portfolio",    icon: "Home" },
-    { path: "/bank/alerts",    label: "Alerts",       icon: "Alert" },
-    { path: "/bank/copilot",   label: "AI Copilot",   icon: "Sparkle", ai: true },
+  { section: "ОБЗОР", items: [
+    { path: "/bank/home",      label: "Портфель",    icon: "Home" },
+    { path: "/bank/alerts",    label: "Оповещения",       icon: "Alert" },
+    { path: "/bank/copilot",   label: "ИИ-ассистент",   icon: "Sparkle", ai: true },
   ]},
-  { section: "Tenants", items: [
-    { path: "/bank/tenants",   label: "All tenants",  icon: "Database" },
-    { path: "/bank/tenant-mgmt",label:"Tenant mgmt",  icon: "Layers" },
+  { section: "КЛИЕНТЫ", items: [
+    { path: "/bank/tenants",   label: "Все клиенты",  icon: "Database" },
+    { path: "/bank/tenant-mgmt",label:"Управление клиентами",  icon: "Layers" },
   ]},
-  { section: "Credit", items: [
-    { path: "/bank/credit-queue", label: "Credit queue", icon: "Inbox" },
-    { path: "/bank/cross-sell",   label: "Cross-sell",   icon: "Sparkle", ai: true },
+  { section: "КРЕДИТ", items: [
+    { path: "/bank/credit-queue", label: "Кредитная очередь", icon: "Inbox" },
+    { path: "/bank/cross-sell",   label: "Кросс-продажи",   icon: "Sparkle", ai: true },
   ]},
-  { section: "Analytics", items: [
-    { path: "/bank/reports",    label: "Reports",      icon: "Chart" },
+  { section: "АНАЛИТИКА", items: [
+    { path: "/bank/reports",    label: "Отчёты",       icon: "Chart" },
   ]},
-  { section: "Platform", items: [
-    { path: "/bank/team",       label: "Bank team",    icon: "Users" },
-    { path: "/bank/settings",   label: "Platform",     icon: "Gear" },
-    { path: "/bank/audit",      label: "Audit log",    icon: "Shield" },
+  { section: "ПЛАТФОРМА", items: [
+    { path: "/bank/team",       label: "Команда банка",    icon: "Users" },
+    { path: "/bank/settings",   label: "Платформа",     icon: "Gear" },
+    { path: "/bank/audit",      label: "Журнал аудита",    icon: "Shield" },
   ]},
 ];
 
@@ -99,7 +99,7 @@ function Sidebar({ surface, path, go, session }) {
         });
         const body = await response.json();
         if (!response.ok || !body?.data) {
-          throw new Error(body?.message || body?.error?.message || "Unable to load sidebar counts.");
+          throw new Error(body?.message || body?.error?.message || "Не удалось загрузить счётчики боковой панели.");
         }
 
         if (!cancelled) {
@@ -133,8 +133,8 @@ function Sidebar({ surface, path, go, session }) {
   const actorName = sessionActor && sessionActor.name ? sessionActor.name : surface === "smb" ? "Jasur Azimov" : "Malika Karimova";
   const actorRole = sessionActor && (sessionActor.workspaceRole || sessionActor.role)
     ? String(sessionActor.workspaceRole || sessionActor.role).replace(/_/g, " ").toUpperCase()
-    : surface === "smb" ? "OWNER" : "CREDIT OFFICER";
-  const actorTenant = surface === "smb" ? "WORKSPACE" : "SQB";
+    : surface === "smb" ? "ВЛАДЕЛЕЦ" : "КРЕДИТНЫЙ ОФИЦЕР";
+  const actorTenant = surface === "smb" ? "РАБОЧЕЕ ПРОСТРАНСТВО" : "SQB";
   const actorInitials = actorName.split(" ").filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "SQ";
 
   return (
@@ -147,7 +147,7 @@ function Sidebar({ surface, path, go, session }) {
       </div>
       <div className="surface-switch" aria-hidden="true" style={{ gridTemplateColumns: "1fr" }}>
         <button className={surface === "smb" ? "active" : ""} disabled>
-          {surface === "smb" ? "SMB workspace" : "Bank workspace"}
+          {surface === "smb" ? "Рабочее пространство SMB" : "Рабочее пространство банка"}
         </button>
       </div>
       <nav className="nav">
@@ -169,7 +169,7 @@ function Sidebar({ surface, path, go, session }) {
                   <span className="ico"><IconC size={15}/></span>
                   <span>{it.label}</span>
                   {resolvedCount != null && <span className="count mono">{resolvedCount}</span>}
-                  {it.ai && <span className="dot-ai" title="AI-powered"/>}
+                  {it.ai && <span className="dot-ai" title="С поддержкой ИИ"/>}
                 </div>
               );
             })}
@@ -181,7 +181,7 @@ function Sidebar({ surface, path, go, session }) {
           className="row"
           style={{ flex: 1, minWidth: 0, gap: 10, alignItems: "center", cursor: "pointer" }}
           onClick={() => go(surface === "smb" ? "/smb/profile" : "/bank/profile")}
-          title="Open profile"
+          title="Открыть профиль"
         >
           {surface === "smb" ? (
             <>
@@ -201,7 +201,7 @@ function Sidebar({ surface, path, go, session }) {
             </>
           )}
         </div>
-        <button className="icon-btn" title="Sign out" onClick={() => window.AuthRuntime.logout().finally(() => go("/login"))}><Icon.Logout size={14}/></button>
+        <button className="icon-btn" title="Выйти" onClick={() => window.AuthRuntime.logout().finally(() => go("/login"))}><Icon.Logout size={14}/></button>
       </div>
     </aside>
   );
@@ -222,14 +222,14 @@ function Topbar({ crumbs, onNotif, onSearch }) {
       <div className="topbar-spacer"/>
       <button className="search" onClick={onSearch} style={{cursor:"pointer"}}>
         <Icon.Search size={13}/>
-        <span style={{flex:1, color:"var(--muted)"}}>Search tenants, SKUs, invoices...</span>
+        <span style={{flex:1, color:"var(--muted)"}}>Поиск клиентов, артикулов, счетов...</span>
         <span className="kbd">Ctrl+K</span>
       </button>
-      <button className="icon-btn" onClick={onNotif} title="Notifications">
+      <button className="icon-btn" onClick={onNotif} title="Уведомления">
         <Icon.Bell size={15}/>
         <span className="unread"/>
       </button>
-      <button className="icon-btn" title="Help"><Icon.Help size={15}/></button>
+      <button className="icon-btn" title="Помощь"><Icon.Help size={15}/></button>
     </header>
   );
 }
@@ -237,10 +237,10 @@ function Topbar({ crumbs, onNotif, onSearch }) {
 /* ---------- Notifications drawer ---------- */
 function NotifDrawer({ open, onClose }) {
   return (
-    <Drawer open={open} onClose={onClose} title="Notifications"
-      footer={<><Button variant="ghost" size="sm">Mark all read</Button><Button variant="ghost" size="sm">Settings</Button></>}>
+    <Drawer open={open} onClose={onClose} title="Уведомления"
+      footer={<><Button variant="ghost" size="sm">Отметить все как прочитанные</Button><Button variant="ghost" size="sm">Настройки</Button></>}>
       <div className="col gap-8">
-        <Banner tone="ai" title="AI Copilot ready">Your weekly cash-flow summary is available.</Banner>
+        <Banner tone="ai" title="ИИ-ассистент готов">Ваш еженедельный свод по денежному потоку доступен.</Banner>
         {NOTIFS.map((n, i) => (
           <div key={i} className="row hairline" style={{padding:"10px 12px", borderRadius:6, alignItems:"flex-start", gap:10}}>
             <span className={`pill ${n.tone}`} style={{minWidth:44, justifyContent:"center"}}>{n.t}</span>

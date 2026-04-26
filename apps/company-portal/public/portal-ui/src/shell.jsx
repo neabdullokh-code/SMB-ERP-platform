@@ -3,9 +3,9 @@ const { useState: useStateS, useEffect: useEffectS, useMemo: useMemoS } = React;
 
 /* ---------- Sidebars ---------- */
 const SMB_NAV = [
-  { section: "Обзор", items: [
+  { section: "ОБЗОР", items: [
     { path: "/smb/home",      label: "Панель управления",   icon: "Home" },
-    { path: "/smb/copilot",   label: "AI Copilot",  icon: "Sparkle", ai: true },
+    { path: "/smb/copilot",   label: "ИИ-ассистент",  icon: "Sparkle", ai: true },
   ]},
   { section: "Операции", items: [
     { path: "/smb/inventory", label: "Склад",   icon: "Box" },
@@ -30,25 +30,25 @@ const SMB_NAV = [
 ];
 
 const BANK_NAV = [
-  { section: "Обзор", items: [
-    { path: "/bank/home",      label: "Portfolio",    icon: "Home" },
-    { path: "/bank/alerts",    label: "Alerts",       icon: "Alert" },
+  { section: "ОБЗОР", items: [
+    { path: "/bank/home",      label: "Портфель",    icon: "Home" },
+    { path: "/bank/alerts",    label: "Оповещения",       icon: "Alert" },
   ]},
-  { section: "Tenants", items: [
-    { path: "/bank/tenants",   label: "All tenants",  icon: "Database" },
-    { path: "/bank/tenant-mgmt",label:"Tenant mgmt",  icon: "Layers" },
+  { section: "КЛИЕНТЫ", items: [
+    { path: "/bank/tenants",   label: "Все клиенты",  icon: "Database" },
+    { path: "/bank/tenant-mgmt",label:"Управление клиентами",  icon: "Layers" },
   ]},
-  { section: "Credit", items: [
-    { path: "/bank/credit-queue", label: "Credit queue", icon: "Inbox" },
-    { path: "/bank/cross-sell",   label: "Cross-sell",   icon: "Sparkle", ai: true },
+  { section: "КРЕДИТ", items: [
+    { path: "/bank/credit-queue", label: "Кредитная очередь", icon: "Inbox" },
+    { path: "/bank/cross-sell",   label: "Кросс-продажи",   icon: "Sparkle", ai: true },
   ]},
-  { section: "Analytics", items: [
-    { path: "/bank/reports",    label: "Reports",      icon: "Chart" },
+  { section: "АНАЛИТИКА", items: [
+    { path: "/bank/reports",    label: "Отчёты",      icon: "Chart" },
   ]},
-  { section: "Platform", items: [
-    { path: "/bank/team",       label: "Bank team",    icon: "Users" },
-    { path: "/bank/settings",   label: "Platform",     icon: "Gear" },
-    { path: "/bank/audit",      label: "Audit log",    icon: "Shield" },
+  { section: "ПЛАТФОРМА", items: [
+    { path: "/bank/team",       label: "Команда банка",    icon: "Users" },
+    { path: "/bank/settings",   label: "Платформа",     icon: "Gear" },
+    { path: "/bank/audit",      label: "Журнал аудита",    icon: "Shield" },
   ]},
 ];
 
@@ -147,7 +147,7 @@ function Sidebar({ surface, path, go, session }) {
       </div>
       <div className="surface-switch" aria-hidden="true" style={{ gridTemplateColumns: "1fr" }}>
         <button className={surface === "smb" ? "active" : ""} disabled>
-          {surface === "smb" ? "SMB workspace" : "Bank workspace"}
+          {surface === "smb" ? "Рабочее пространство SMB" : "Рабочее пространство банка"}
         </button>
       </div>
       <nav className="nav">
@@ -169,7 +169,7 @@ function Sidebar({ surface, path, go, session }) {
                   <span className="ico"><IconC size={15}/></span>
                   <span>{it.label}</span>
                   {resolvedCount != null && <span className="count mono">{resolvedCount}</span>}
-                  {it.ai && <span className="dot-ai" title="AI-powered"/>}
+                  {it.ai && <span className="dot-ai" title="С поддержкой ИИ"/>}
                 </div>
               );
             })}
@@ -181,7 +181,7 @@ function Sidebar({ surface, path, go, session }) {
           className="row"
           style={{ flex: 1, minWidth: 0, gap: 10, alignItems: "center", cursor: "pointer" }}
           onClick={() => go(surface === "smb" ? "/smb/profile" : "/bank/profile")}
-          title="Open profile"
+          title="Открыть профиль"
         >
           {surface === "smb" ? (
             <>
@@ -201,7 +201,7 @@ function Sidebar({ surface, path, go, session }) {
             </>
           )}
         </div>
-        <button className="icon-btn" title="Sign out" onClick={() => window.AuthRuntime.logout().finally(() => go("/login"))}><Icon.Logout size={14}/></button>
+        <button className="icon-btn" title="Выйти" onClick={() => window.AuthRuntime.logout().finally(() => go("/login"))}><Icon.Logout size={14}/></button>
       </div>
     </aside>
   );
@@ -240,8 +240,8 @@ function NotifDrawer({ open, onClose }) {
     if (text === "Oriental Trade paid invoice INV-1482 · 14 500 000 UZS") {
       return "Oriental Trade оплатил счёт INV-1482 · 14 500 000 UZS";
     }
-    if (text === "AI Copilot: cash-flow report ready") {
-      return "AI Copilot: отчёт по денежному потоку готов";
+    if (text === "ИИ-ассистент: cash-flow report ready") {
+      return "ИИ-ассистент: отчёт по денежному потоку готов";
     }
     if (text === "Stock alert: Sugar refined 50kg below min") {
       return "Оповещение по складу: Sugar refined 50kg ниже минимума";
@@ -258,7 +258,7 @@ function NotifDrawer({ open, onClose }) {
     <Drawer open={open} onClose={onClose} title="Уведомления"
       footer={<><Button variant="ghost" size="sm">Отметить все как прочитанные</Button><Button variant="ghost" size="sm">Настройки</Button></>}>
       <div className="col gap-8">
-        <Banner tone="ai" title="AI Copilot готов">Ваш еженедельный свод по денежному потоку доступен.</Banner>
+        <Banner tone="ai" title="ИИ-ассистент готов">Ваш еженедельный свод по денежному потоку доступен.</Banner>
         {NOTIFS.map((n, i) => (
           <div key={i} className="row hairline" style={{padding:"10px 12px", borderRadius:6, alignItems:"flex-start", gap:10}}>
             <span className={`pill ${n.tone}`} style={{minWidth:44, justifyContent:"center"}}>{translateNotifTime(n.t)}</span>
@@ -274,10 +274,10 @@ function NotifDrawer({ open, onClose }) {
 function SearchPalette({ open, onClose, go }) {
   const [q, setQ] = useStateS("");
   const items = [
-    { group:"SMBs",       items:["Kamolot Savdo","Oriental Trade","Zamon Foods","Nur Auto Parts","Silk Road Textiles","Bukhara Pharma"] },
-    { group:"Invoices",   items:["INV-1482 | Oriental Trade","INV-1481 | Zamon Foods","INV-1477 | Retail Centre"] },
-    { group:"Loan apps",  items:["LA-2398 | Kamolot | 180M","LA-2396 | Silk Road | 240M","LA-2395 | Nur Auto | 95M"] },
-    { group:"Actions",    items:["Create invoice","Scan waybill","Apply for loan","Switch to Bank console"] },
+    { group:"SMB",       items:["Kamolot Savdo","Oriental Trade","Zamon Foods","Nur Auto Parts","Оптовый текстиль","Bukhara Pharma"] },
+    { group:"Счета",   items:["INV-1482 | Oriental Trade","INV-1481 | Zamon Foods","INV-1477 | Retail Centre"] },
+    { group:"Кредитные заявки",  items:["LA-2398 | Kamolot | 180M","LA-2396 | Silk Road | 240M","LA-2395 | Nur Auto | 95M"] },
+    { group:"Действия",    items:["Создать счёт","Сканировать накладную","Подать заявку на кредит","Переключиться в банковскую консоль"] },
   ];
   const filt = (arr) => !q ? arr : arr.filter(x => x.toLowerCase().includes(q.toLowerCase()));
   if (!open) return null;
@@ -289,7 +289,7 @@ function SearchPalette({ open, onClose, go }) {
           <div className="row" style={{flex:1, padding:"12px 14px"}}>
             <Icon.Search size={15}/>
             <input autoFocus className="input" style={{border:0, boxShadow:"none"}}
-              placeholder="Search everything..." value={q} onChange={(e)=>setQ(e.target.value)}/>
+              placeholder="Поиск по всему..." value={q} onChange={(e)=>setQ(e.target.value)}/>
             <span className="kbd">esc</span>
           </div>
         </div>

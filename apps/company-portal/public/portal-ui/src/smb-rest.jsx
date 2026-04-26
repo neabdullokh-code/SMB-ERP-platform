@@ -2656,7 +2656,7 @@ function TeamPage() {
         </div>
         {error && <div className="muted" style={{fontSize:12, color:"var(--bad)", padding:"0 12px 12px"}}>{errorStatus === 403 ? "У вас нет доступа к рабочему пространству команды." : error}</div>}
         <table className="tbl">
-          <thead><tr><th>Имя</th><th>Role</th><th>Email</th><th>Последняя активность</th><th/></tr></thead>
+          <thead><tr><th>Имя</th><th>Роль</th><th>Эл. почта</th><th>Последняя активность</th><th/></tr></thead>
           <tbody>
             {loading && (
               <tr><td colSpan="5" className="dim mono">Загрузка участников команды…</td></tr>
@@ -2691,7 +2691,7 @@ function TeamPage() {
         <div className="card card-pad-0 mt-16">
           <div className="panel-title">Ожидающие приглашения <span className="sp"/><span className="mono muted" style={{fontSize:10}}>{pendingInvites.length}</span></div>
           <table className="tbl">
-            <thead><tr><th>Имя</th><th>Role</th><th>Email</th><th>Приглашён</th><th/></tr></thead>
+            <thead><tr><th>Имя</th><th>Роль</th><th>Эл. почта</th><th>Приглашён</th><th/></tr></thead>
             <tbody>{pendingInvites.map((invite, index) => (
               <tr key={invite.id}>
                 <td>
@@ -2727,9 +2727,9 @@ function TeamPage() {
         }
       >
         <div className="col gap-12">
-          <Field label="Full name"><input className="input" value={inviteForm.name} onChange={(e) => setInviteForm({ ...inviteForm, name:e.target.value })}/></Field>
-          <Field label="Email"><input className="input mono" value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email:e.target.value })}/></Field>
-          <Field label="Role">
+          <Field label="ФИО"><input className="input" value={inviteForm.name} onChange={(e) => setInviteForm({ ...inviteForm, name:e.target.value })}/></Field>
+          <Field label="Эл. почта"><input className="input mono" value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email:e.target.value })}/></Field>
+          <Field label="Роль">
             <select className="select" value={inviteForm.role} onChange={(e) => setInviteForm({ ...inviteForm, role:e.target.value, permissionGroups: defaultsForRole(e.target.value) })}>
               {roles.map((role) => <option key={role.role} value={role.role}>{role.label}</option>)}
             </select>

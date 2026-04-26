@@ -95,37 +95,37 @@ function BankDashboard({ go }) {
     <div className="page">
       <div className="page-head">
         <div>
-          <div className="eyebrow mb-4">SQB Bank · Business OS Platform</div>
-          <h1>Portfolio overview</h1>
+          <div className="eyebrow mb-4">SQB Банк · Бизнес-ОС платформа</div>
+          <h1>Обзор портфеля</h1>
           <div className="sub">
-            {loading ? "Loading live portfolio..." : analytics?.lastRefreshedAt ? `Live view across all SMB tenants · refreshed ${new Date(analytics.lastRefreshedAt).toLocaleString()}` : "Live data unavailable"}
+            {loading ? "Загрузка живого портфеля..." : analytics?.lastRefreshedAt ? `Данные по всем SMB-клиентам в реальном времени · обновлено ${new Date(analytics.lastRefreshedAt).toLocaleString()}` : "Нет доступа к данным в реальном времени"}
           </div>
         </div>
         <span className="sp"/>
-        <Button variant="ghost" icon={<Icon.Refresh size={13}/>} onClick={load}>Refresh</Button>
+        <Button variant="ghost" icon={<Icon.Refresh size={13}/>} onClick={load}>Обновить</Button>
       </div>
 
       {error && (
-        <Banner tone="warn" title="Bank dashboard unavailable">{error}</Banner>
+        <Banner tone="warn" title="Панель банка недоступна">{error}</Banner>
       )}
 
       <div className="grid grid-4 mb-16">
-        <Kpi label="Active SMB tenants" value={String(analytics?.totalTenants || portfolio.length)} delta={analytics ? `${analytics.highRiskCount} high risk` : "—"} trend="up"
+        <Kpi label="Активные SMB-клиенты" value={String(analytics?.totalTenants || portfolio.length)} delta={analytics ? `${analytics.highRiskCount} высокий риск` : "—"} trend="up"
           spark={<Sparkline data={scoreSeries.length ? scoreSeries : [0, 0]} width={68} height={22}/>}/>
-        <Kpi label="Average credit score" value={String(analytics?.averageCreditScore || 0)} unit="/100" delta={analytics ? `${analytics.recommendationCounts?.approve || 0} approve recs` : "—"} trend="up"
+        <Kpi label="Средний кредитный рейтинг" value={String(analytics?.averageCreditScore || 0)} unit="/100" delta={analytics ? `${analytics.recommendationCounts?.approve || 0} рекомендовано к одобрению` : "—"} trend="up"
           spark={<Sparkline data={scoreSeries.length ? scoreSeries : [0, 0]} width={68} height={22}/>}/>
-        <Kpi label="SLA health" value={`${analytics?.slaHealthPercent || 0}%`} delta={`${analytics?.recommendationCounts?.review || 0} in review`} trend="up"
+        <Kpi label="Состояние SLA" value={`${analytics?.slaHealthPercent || 0}%`} delta={`${analytics?.recommendationCounts?.review || 0} на проверке`} trend="up"
           spark={<Sparkline data={[60, 72, 80, Number(analytics?.slaHealthPercent || 0)]} width={68} height={22}/>}/>
-        <Kpi label="Alerts · attention" value={String(alerts.length)} delta={`${alerts.filter((alert) => alert.severity === "critical").length} critical`} trend={alerts.length > 0 ? "down" : "up"}
+        <Kpi label="Оповещения · внимание" value={String(alerts.length)} delta={`${alerts.filter((alert) => alert.severity === "critical").length} крит.`} trend={alerts.length > 0 ? "down" : "up"}
           spark={<div className="sparkbars">{alerts.slice(0, 12).map((alert, i)=><span key={i} style={{height:`${10 + (alert.severity === "critical" ? 12 : alert.severity === "warn" ? 8 : 5)}px`, background: alert.severity === "critical" ? "var(--bad)" : alert.severity === "warn" ? "var(--warn)" : "var(--info)"}}/>)}</div>}/>
       </div>
 
       <div className="grid" style={{gridTemplateColumns:"2fr 1fr", gap:12}}>
         <div className="card card-pad-0">
           <div className="panel-title">
-            Credit score distribution
+            Распределение кредитного рейтинга
             <span className="sp"/>
-            <div className="chip">Live</div>
+            <div className="chip">Онлайн</div>
           </div>
           <div style={{padding:8}}>
             {scoreSeries.length >= 2 ? (
@@ -137,21 +137,21 @@ function BankDashboard({ go }) {
             ) : (
               <div className="empty" style={{minHeight:220}}>
                 <Icon.Chart size={24}/>
-                <h3>{loading ? "Loading portfolio trend..." : "No portfolio data"}</h3>
-                <div>{loading ? "Fetching live bank metrics." : "No tenant scores available yet."}</div>
+                <h3>{loading ? "Загрузка динамики портфеля..." : "Нет данных портфеля"}</h3>
+                <div>{loading ? "Загружаем оперативные банковские метрики." : "Пока нет данных по рейтингам клиентов."}</div>
               </div>
             )}
           </div>
         </div>
 
         <div className="card card-pad-0">
-          <div className="panel-title">Industry mix</div>
+          <div className="panel-title">Отраслевая структура</div>
           <div style={{padding:12}}>
             {topIndustries.length === 0 ? (
               <div className="empty" style={{minHeight:180}}>
                 <Icon.Database size={22}/>
-                <h3>{loading ? "Loading industry mix..." : "No industry data"}</h3>
-                <div>{loading ? "Aggregating tenant industries." : "No active tenants found."}</div>
+                <h3>{loading ? "Загрузка отраслевой структуры..." : "Нет отраслевых данных"}</h3>
+                <div>{loading ? "Агрегируем отрасли клиентов." : "Активные клиенты не найдены."}</div>
               </div>
             ) : (
               <div className="row" style={{gap:16}}>
@@ -174,7 +174,7 @@ function BankDashboard({ go }) {
 
       <div className="grid mt-16" style={{gridTemplateColumns:"1.2fr 1fr", gap:12}}>
         <div className="card card-pad-0">
-          <div className="panel-title">Geographic distribution · Uzbekistan</div>
+          <div className="panel-title">Географическое распределение · Узбекистан</div>
           <div style={{padding:14, display:"grid", gridTemplateColumns:"1.4fr 1fr", gap:14}}>
             <svg viewBox="0 0 360 140" style={{width:"100%", height:"auto", background:"var(--surface-2)", borderRadius:4}}>
               <path d={UZ_MAP} fill="var(--line-2)" stroke="var(--line)"/>
@@ -193,7 +193,7 @@ function BankDashboard({ go }) {
               })}
             </svg>
             <div>
-              <div className="eyebrow mb-8">Top regions</div>
+              <div className="eyebrow mb-8">Топ регионов</div>
               {topRegions.map((region, i) => (
                 <div key={i} className="row hairline-b" style={{padding:"6px 0", fontSize:12, borderBottom: i===topRegions.length-1 ? "0":undefined}}>
                   <span>{region[0]}</span><span className="sp"/>
@@ -206,13 +206,13 @@ function BankDashboard({ go }) {
         </div>
 
         <div className="card card-pad-0">
-          <div className="panel-title">Requires attention <span className="sp"/><Pill tone="bad" dot={false}>{alerts.length}</Pill></div>
+          <div className="panel-title">Требует внимания <span className="sp"/><Pill tone="bad" dot={false}>{alerts.length}</Pill></div>
           <div>
             {alerts.length === 0 ? (
               <div className="empty" style={{minHeight:220}}>
                 <Icon.Check size={22}/>
-                <h3>{loading ? "Loading alerts..." : "No active alerts"}</h3>
-                <div>{loading ? "Scanning portfolio anomalies." : "No anomalies need attention now."}</div>
+                <h3>{loading ? "Загрузка оповещений..." : "Нет активных оповещений"}</h3>
+                <div>{loading ? "Проверяем аномалии портфеля." : "Сейчас нет аномалий, требующих внимания."}</div>
               </div>
             ) : alerts.slice(0,5).map((alert, i) => (
               <div key={i} className="hairline-b" style={{padding:"10px 14px", display:"grid", gridTemplateColumns:"auto 1fr auto", gap:10, alignItems:"flex-start", cursor:"pointer"}}
@@ -246,14 +246,14 @@ function BankTenants({ go }) {
         const { response, body } = await bankJson("/api/bank/portfolio");
         if (cancelled) return;
         if (!response.ok || !Array.isArray(body?.data?.tenants)) {
-          throw new Error(body?.message || "Unable to load tenants.");
+          throw new Error(body?.message || "Не удалось загрузить клиентов.");
         }
         setTenants(body.data.tenants);
         setError("");
       } catch (loadError) {
         if (!cancelled) {
           setTenants([]);
-          setError(loadError instanceof Error ? loadError.message : "Unable to load tenants.");
+          setError(loadError instanceof Error ? loadError.message : "Не удалось загрузить клиентов.");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -262,20 +262,20 @@ function BankTenants({ go }) {
     return () => { cancelled = true; };
   }, []);
 
-  const industries = ["All", ...new Set(tenants.map((tenant) => tenant.industry || "Other"))];
-  const rows = tenants.filter((tenant) => (ind === "All" || tenant.industry === ind) && (q === "" || tenant.tenantName.toLowerCase().includes(q.toLowerCase())));
+  const industries = ["Все", ...new Set(tenants.map((tenant) => tenant.industry || "Другое"))];
+  const rows = tenants.filter((tenant) => (ind === "Все" || tenant.industry === ind) && (q === "" || tenant.tenantName.toLowerCase().includes(q.toLowerCase())));
 
   return (
     <div className="page">
       <div className="page-head">
-        <div><h1>All tenants</h1><div className="sub">Live tenant portfolio from bank monitoring</div></div>
+        <div><h1>Все клиенты</h1><div className="sub">Портфель клиентов в реальном времени из банковского мониторинга</div></div>
         <span className="sp"/>
-        <Button variant="ghost" icon={<Icon.Download size={13}/>}>Export</Button>
+        <Button variant="ghost" icon={<Icon.Download size={13}/>}>Экспорт</Button>
       </div>
-      {error && <Banner tone="warn" title="Tenants unavailable">{error}</Banner>}
+      {error && <Banner tone="warn" title="Клиенты недоступны">{error}</Banner>}
       <div className="card card-pad-0">
         <div className="tbl-toolbar">
-          <div className="input-wrap" style={{width:260}}><span className="prefix"><Icon.Search size={13}/></span><input className="input with-prefix" placeholder="Search company" value={q} onChange={e=>setQ(e.target.value)}/></div>
+          <div className="input-wrap" style={{width:260}}><span className="prefix"><Icon.Search size={13}/></span><input className="input with-prefix" placeholder="Поиск компании" value={q} onChange={e=>setQ(e.target.value)}/></div>
           <div className="row gap-4">
             {industries.slice(0,5).map((category) => (
               <button key={category} className="chip" onClick={() => setInd(category)}
@@ -283,16 +283,16 @@ function BankTenants({ go }) {
             ))}
           </div>
           <span className="sp"/>
-          <div className="mono muted" style={{fontSize:11}}>{rows.length} of {tenants.length}</div>
+          <div className="mono muted" style={{fontSize:11}}>{rows.length} из {tenants.length}</div>
         </div>
         <table className="tbl">
           <thead><tr>
-            <th>Company</th><th>Industry</th><th>Region</th>
-            <th style={{width:100}}>Score trend</th>
-            <th>Credit score</th><th>Trend</th><th>Action</th><th>Updated</th><th/>
+            <th>КОМПАНИЯ</th><th>ОТРАСЛЬ</th><th>РЕГИОН</th>
+            <th style={{width:100}}>ДИНАМИКА ОЦЕНКИ</th>
+            <th>КРЕДИТНЫЙ РЕЙТИНГ</th><th>ТРЕНД</th><th>ДЕЙСТВИЕ</th><th>ОБНОВЛЕНО</th><th/>
           </tr></thead>
           <tbody>
-            {loading && <tr><td colSpan="9" className="dim mono">Loading tenants…</td></tr>}
+            {loading && <tr><td colSpan="9" className="dim mono">Загрузка клиентов…</td></tr>}
             {!loading && rows.map((tenant) =>
               <tr key={tenant.tenantId} onClick={() => { try { window.sessionStorage.setItem("bank:selectedTenantId", tenant.tenantId); } catch {} go("/bank/tenant"); }} style={{cursor:"pointer"}}>
                 <td>
@@ -308,12 +308,12 @@ function BankTenants({ go }) {
                 <td className="dim">{tenant.region}</td>
                 <td><Sparkline data={scoreToSeries(tenant.creditScore)} width={80} height={22}/></td>
                 <td><ScorePill value={tenant.creditScore} trend={tenant.healthTrend === "up" ? "+" : tenant.healthTrend === "down" ? "−" : "~"}/></td>
-                <td><Pill tone={trendTone(tenant.healthTrend)} dot={false}>{tenant.healthTrend}</Pill></td>
-                <td><Pill tone={tenant.recommendedAction === "approve" ? "good" : tenant.recommendedAction === "review" ? "warn" : "bad"} dot={false}>{tenant.recommendedAction}</Pill></td>
+                <td><Pill tone={trendTone(tenant.healthTrend)} dot={false}>{tenant.healthTrend === "up" ? "рост" : tenant.healthTrend === "down" ? "снижение" : "стабильно"}</Pill></td>
+                <td><Pill tone={tenant.recommendedAction === "approve" ? "good" : tenant.recommendedAction === "review" ? "warn" : "bad"} dot={false}>{tenant.recommendedAction === "approve" ? "одобрить" : tenant.recommendedAction === "review" ? "проверить" : "отклонить"}</Pill></td>
                 <td className="dim mono" style={{fontSize:11}}>{new Date(tenant.refreshedAt).toLocaleString()}</td>
                 <td className="row-actions"><Icon.ChevRight size={13} className="muted"/></td>
               </tr>)}
-            {!loading && rows.length === 0 && <tr><td colSpan="9" className="dim mono">No tenants found.</td></tr>}
+            {!loading && rows.length === 0 && <tr><td colSpan="9" className="dim mono">Клиенты не найдены.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -339,7 +339,7 @@ function TenantDetail({ go }) {
     (async () => {
       if (!selectedTenantId) {
         setLoading(false);
-        setError("No tenant selected. Open a tenant from the tenants list.");
+        setError("Клиент не выбран. Откройте клиента из списка.");
         return;
       }
       try {
@@ -367,7 +367,7 @@ function TenantDetail({ go }) {
   return (
     <div className="page">
       <div className="row mb-8" style={{fontSize:12, color:"var(--muted)"}}>
-        <a style={{cursor:"pointer"}} onClick={() => go("/bank/tenants")}>All tenants</a>
+        <a style={{cursor:"pointer"}} onClick={() => go("/bank/tenants")}>Все клиенты</a>
         <span>/</span><span>{tenant?.tenantName || "Tenant"}</span>
       </div>
       <div className="page-head">
@@ -409,11 +409,11 @@ function TenantDetail({ go }) {
             <h2>Monitoring summary</h2>
             {tenant ? (
               <div className="col gap-8 mt-8">
-                <div className="row"><span className="muted">Inventory risk</span><span className="sp"/><Pill tone={tenant.inventoryRisk === "high" ? "bad" : tenant.inventoryRisk === "moderate" ? "warn" : "good"} dot={false}>{tenant.inventoryRisk}</Pill></div>
+                <div className="row"><span className="muted">Риск запасов</span><span className="sp"/><Pill tone={tenant.inventoryRisk === "high" ? "bad" : tenant.inventoryRisk === "moderate" ? "warn" : "good"} dot={false}>{tenant.inventoryRisk === "high" ? "высокий" : tenant.inventoryRisk === "moderate" ? "умеренный" : "низкий"}</Pill></div>
                 <div className="row"><span className="muted">Bottlenecks</span><span className="sp"/><span className="mono">{tenant.workflowBottlenecks}</span></div>
                 <div className="row"><span className="muted">Overdue orders</span><span className="sp"/><span className="mono">{tenant.overdueServiceOrders}</span></div>
-                <div className="row"><span className="muted">Default risk</span><span className="sp"/><span className="mono">{tenant.defaultRiskPercent}%</span></div>
-                <div className="row"><span className="muted">Expected return</span><span className="sp"/><span className="mono">{tenant.expectedReturnPercent}%</span></div>
+                <div className="row"><span className="muted">Риск дефолта</span><span className="sp"/><span className="mono">{tenant.defaultRiskPercent}%</span></div>
+                <div className="row"><span className="muted">Ожидаемая доходность</span><span className="sp"/><span className="mono">{tenant.expectedReturnPercent}%</span></div>
               </div>
             ) : (
               <div className="muted mt-8">No summary available.</div>
@@ -423,7 +423,7 @@ function TenantDetail({ go }) {
             <h2>Recommended action</h2>
             {tenant ? (
               <div className="row mt-8">
-                <Pill tone={tenant.recommendedAction === "approve" ? "good" : tenant.recommendedAction === "review" ? "warn" : "bad"} dot={false}>{tenant.recommendedAction}</Pill>
+                <Pill tone={tenant.recommendedAction === "approve" ? "good" : tenant.recommendedAction === "review" ? "warn" : "bad"} dot={false}>{tenant.recommendedAction === "approve" ? "одобрить" : tenant.recommendedAction === "review" ? "проверить" : "отклонить"}</Pill>
                 <span className="sp"/>
                 <span className="mono muted" style={{fontSize:11}}>{new Date(tenant.refreshedAt).toLocaleString()}</span>
               </div>
