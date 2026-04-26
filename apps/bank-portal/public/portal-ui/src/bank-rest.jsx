@@ -1149,6 +1149,24 @@ async function bankCopilotStream({ messages, context, locale, signal, onToken, o
   }
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_EMBEDDED_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+const UUID_KEYS = new Set(["tenantId", "id", "alertId", "userId", "assignedBankUserId", "assignedBankUserid"]);
+
+function sanitizeForAI(obj) {
+  if (Array.isArray(obj)) return obj.map(sanitizeForAI);
+  if (obj && typeof obj === "object") {
+    const out = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (UUID_KEYS.has(k)) continue;
+      if (typeof v === "string" && UUID_EMBEDDED_RE.test(v)) continue;
+      out[k] = sanitizeForAI(v);
+    }
+    return out;
+  }
+  return obj;
+}
+
 async function fetchBankCopilotContext() {
   try {
     const [analyticsRes, alertsRes] = await Promise.all([
@@ -1159,11 +1177,11 @@ async function fetchBankCopilotContext() {
       analyticsRes.ok ? analyticsRes.json() : Promise.resolve(null),
       alertsRes.ok ? alertsRes.json() : Promise.resolve(null),
     ]);
-    return {
+    return sanitizeForAI({
       analytics: analyticsBody?.data?.analytics ?? null,
       alerts: alertsBody?.data?.alerts?.slice(0, 20) ?? [],
       alertsSummary: alertsBody?.data?.summary ?? null,
-    };
+    });
   } catch {
     return null;
   }
