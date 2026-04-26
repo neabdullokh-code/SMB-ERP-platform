@@ -334,6 +334,33 @@ function Kpi({ label, value, unit, delta, deltaLabel, spark, trend="up" }) {
   );
 }
 
+function KpiAnimated({ label, value, unit, delta, deltaLabel, trend="up", spark }) {
+  return <Kpi label={label} value={value} unit={unit} delta={delta} deltaLabel={deltaLabel} trend={trend} spark={spark}/>;
+}
+
+function ArcGauge({ value, max=100, size=88, thickness=9, color="var(--ai)", trackColor="var(--line)" }) {
+  const r = (size - thickness) / 2;
+  const cx = size / 2, cy = size / 2;
+  const toXY = (deg) => {
+    const rad = (deg * Math.PI) / 180;
+    return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
+  };
+  const arcD = (startDeg, sweepDeg) => {
+    const [x1, y1] = toXY(startDeg);
+    const [x2, y2] = toXY(startDeg + sweepDeg);
+    const large = sweepDeg > 180 ? 1 : 0;
+    return `M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`;
+  };
+  const start = 150, total = 240;
+  const filled = Math.min(Math.max(value / max, 0), 1) * total;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <path d={arcD(start, total)} fill="none" stroke={trackColor} strokeWidth={thickness} strokeLinecap="round"/>
+      {filled > 0 && <path d={arcD(start, filled)} fill="none" stroke={color} strokeWidth={thickness} strokeLinecap="round"/>}
+    </svg>
+  );
+}
+
 /* ---------------- Modal / Drawer ---------------- */
 function Modal({ open, onClose, title, footer, children, size }) {
   useEffect(() => {
@@ -612,7 +639,7 @@ function useHashRoute() {
 Object.assign(window, {
   I, Icon, fmtUZS, fmtShort,
   Button, Pill, ScorePill, AIChip, Toggle, Field, Banner,
-  Sparkline, LineChart, BarChart, StackedBar, Donut, Kpi,
+  Sparkline, LineChart, BarChart, StackedBar, Donut, Kpi, KpiAnimated, ArcGauge,
   Modal, Drawer, Tabs, useHashRoute,
   PortalUIRouter: {
     appHostsBankSurface,
