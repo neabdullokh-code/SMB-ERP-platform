@@ -3,16 +3,16 @@ const { useState: useStateS, useEffect: useEffectS, useMemo: useMemoS } = React;
 
 /* ---------- Sidebars ---------- */
 const SMB_NAV = [
-  { section: "Overview", items: [
-    { path: "/smb/home",      label: "Dashboard",   icon: "Home" },
+  { section: "Обзор", items: [
+    { path: "/smb/home",      label: "Панель управления",   icon: "Home" },
     { path: "/smb/copilot",   label: "AI Copilot",  icon: "Sparkle", ai: true },
   ]},
-  { section: "Operations", items: [
-    { path: "/smb/inventory", label: "Inventory",   icon: "Box" },
-    { path: "/smb/production",label: "Production",  icon: "Factory" },
+  { section: "Операции", items: [
+    { path: "/smb/inventory", label: "Склад",   icon: "Box" },
+    { path: "/smb/production",label: "Производство",  icon: "Factory" },
     { path: "/smb/services",  label: "Сервисы",     icon: "Wrench" },
   ]},
-  { section: "Finance", items: [
+  { section: "Финансы", items: [
     { path: "/smb/finance/bills",    label: "Закупка",        icon: "File" },
     { path: "/smb/finance/invoices", label: "Продажи",        icon: "Doc" },
     { path: "/smb/finance/payments", label: "Счета и Платежи", icon: "Coin" },
@@ -20,17 +20,17 @@ const SMB_NAV = [
     { path: "/smb/finance/ledger",   label: "Главная книга",  icon: "Ledger" },
     { path: "/smb/reports",          label: "Отчёты",         icon: "Download" },
   ]},
-  { section: "Growth", items: [
-    { path: "/smb/credit",    label: "Credit & Financing", icon: "Handshake", ai: true },
+  { section: "Рост", items: [
+    { path: "/smb/credit",    label: "Кредитование и финансирование", icon: "Handshake", ai: true },
   ]},
-  { section: "Admin", items: [
-    { path: "/smb/team",      label: "Team",       icon: "Users" },
-    { path: "/smb/settings",  label: "Settings",   icon: "Gear" },
+  { section: "Администрирование", items: [
+    { path: "/smb/team",      label: "Команда",       icon: "Users" },
+    { path: "/smb/settings",  label: "Настройки",   icon: "Gear" },
   ]},
 ];
 
 const BANK_NAV = [
-  { section: "Overview", items: [
+  { section: "Обзор", items: [
     { path: "/bank/home",      label: "Portfolio",    icon: "Home" },
     { path: "/bank/alerts",    label: "Alerts",       icon: "Alert" },
   ]},
@@ -133,8 +133,8 @@ function Sidebar({ surface, path, go, session }) {
   const actorName = sessionActor && sessionActor.name ? sessionActor.name : surface === "smb" ? "Jasur Azimov" : "Malika Karimova";
   const actorRole = sessionActor && (sessionActor.workspaceRole || sessionActor.role)
     ? String(sessionActor.workspaceRole || sessionActor.role).replace(/_/g, " ").toUpperCase()
-    : surface === "smb" ? "OWNER" : "CREDIT OFFICER";
-  const actorTenant = surface === "smb" ? "WORKSPACE" : "SQB";
+    : surface === "smb" ? "ВЛАДЕЛЕЦ" : "КРЕДИТНЫЙ ОФИЦЕР";
+  const actorTenant = surface === "smb" ? "РАБОЧЕЕ ПРОСТРАНСТВО" : "SQB";
   const actorInitials = actorName.split(" ").filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "SQ";
 
   return (
@@ -225,26 +225,44 @@ function Topbar({ crumbs, onNotif, onSearch }) {
         <span style={{flex:1, color:"var(--muted)"}}>Поиск арендаторов, SKU, счетов...</span>
         <span className="kbd">Ctrl+K</span>
       </button>
-      <button className="icon-btn" onClick={onNotif} title="Notifications">
+      <button className="icon-btn" onClick={onNotif} title="Уведомления">
         <Icon.Bell size={15}/>
         <span className="unread"/>
       </button>
-      <button className="icon-btn" title="Help"><Icon.Help size={15}/></button>
+      <button className="icon-btn" title="Помощь"><Icon.Help size={15}/></button>
     </header>
   );
 }
 
 /* ---------- Notifications drawer ---------- */
 function NotifDrawer({ open, onClose }) {
+  const translateNotifText = (text) => {
+    if (text === "Oriental Trade paid invoice INV-1482 · 14 500 000 UZS") {
+      return "Oriental Trade оплатил счёт INV-1482 · 14 500 000 UZS";
+    }
+    if (text === "AI Copilot: cash-flow report ready") {
+      return "AI Copilot: отчёт по денежному потоку готов";
+    }
+    if (text === "Stock alert: Sugar refined 50kg below min") {
+      return "Оповещение по складу: Sugar refined 50kg ниже минимума";
+    }
+    return text;
+  };
+
+  const translateNotifTime = (timeLabel) => {
+    if (typeof timeLabel !== "string") return timeLabel;
+    return timeLabel.replace(/m$/, "м").replace(/h$/, "ч");
+  };
+
   return (
-    <Drawer open={open} onClose={onClose} title="Notifications"
-      footer={<><Button variant="ghost" size="sm">Mark all read</Button><Button variant="ghost" size="sm">Settings</Button></>}>
+    <Drawer open={open} onClose={onClose} title="Уведомления"
+      footer={<><Button variant="ghost" size="sm">Отметить все как прочитанные</Button><Button variant="ghost" size="sm">Настройки</Button></>}>
       <div className="col gap-8">
-        <Banner tone="ai" title="AI Copilot ready">Your weekly cash-flow summary is available.</Banner>
+        <Banner tone="ai" title="AI Copilot готов">Ваш еженедельный свод по денежному потоку доступен.</Banner>
         {NOTIFS.map((n, i) => (
           <div key={i} className="row hairline" style={{padding:"10px 12px", borderRadius:6, alignItems:"flex-start", gap:10}}>
-            <span className={`pill ${n.tone}`} style={{minWidth:44, justifyContent:"center"}}>{n.t}</span>
-            <div style={{flex:1}}>{n.text}</div>
+            <span className={`pill ${n.tone}`} style={{minWidth:44, justifyContent:"center"}}>{translateNotifTime(n.t)}</span>
+            <div style={{flex:1}}>{translateNotifText(n.text)}</div>
           </div>
         ))}
       </div>

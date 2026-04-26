@@ -1100,14 +1100,14 @@ function FinancePage({ kind }) {
   const [reconCounterparty, setReconCounterparty] = useStateS("");
 
   const [invoiceForm, setInvoiceForm] = useStateS({
-    counterpartyName: "",
+    counterpartyИмя: "",
     dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
     description: "Goods supplied",
     quantity: "1",
     unitPrice: "1000000"
   });
   const [billForm, setBillForm] = useStateS({
-    counterpartyName: "",
+    counterpartyИмя: "",
     dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
     description: "Supplier invoice",
     quantity: "1",
@@ -1193,25 +1193,25 @@ function FinancePage({ kind }) {
   const resolveInvoiceState = (invoice) => {
     const dueDate = (invoice.dueDate || "").slice(0, 10);
     const outstanding = parseMoney(invoice.outstandingTotal);
-    if (invoice.status === "voided") return { label: "voided", tone: "warn", overdue: false, paid: false };
-    if (invoice.status === "draft") return { label: "draft", tone: "info", overdue: false, paid: false };
-    if (invoice.status === "paid" || outstanding <= 0) return { label: "paid", tone: "good", overdue: false, paid: true };
+    if (invoice.status === "voided") return { label: "Аннулирован", tone: "warn", overdue: false, paid: false };
+    if (invoice.status === "draft") return { label: "Черновик", tone: "info", overdue: false, paid: false };
+    if (invoice.status === "paid" || outstanding <= 0) return { label: "Оплачен", tone: "good", overdue: false, paid: true };
     const overdue = Boolean(dueDate) && dueDate < todayIso;
-    if (overdue) return { label: "overdue", tone: "bad", overdue: true, paid: false };
-    if (invoice.status === "partially_paid" || outstanding < parseMoney(invoice.total)) return { label: "partially paid", tone: "warn", overdue: false, paid: false };
-    return { label: "sent", tone: "info", overdue: false, paid: false };
+    if (overdue) return { label: "Просрочен", tone: "bad", overdue: true, paid: false };
+    if (invoice.status === "partially_paid" || outstanding < parseMoney(invoice.total)) return { label: "Частично оплачен", tone: "warn", overdue: false, paid: false };
+    return { label: "Отправлен", tone: "info", overdue: false, paid: false };
   };
 
   const resolveBillState = (bill) => {
     const dueDate = (bill.dueDate || "").slice(0, 10);
     const outstanding = parseMoney(bill.outstandingTotal);
-    if (bill.status === "voided") return { label: "voided", tone: "warn", overdue: false, paid: false };
-    if (bill.status === "draft") return { label: "draft", tone: "info", overdue: false, paid: false };
-    if (bill.status === "paid" || outstanding <= 0) return { label: "paid", tone: "good", overdue: false, paid: true };
+    if (bill.status === "voided") return { label: "Аннулирован", tone: "warn", overdue: false, paid: false };
+    if (bill.status === "draft") return { label: "Черновик", tone: "info", overdue: false, paid: false };
+    if (bill.status === "paid" || outstanding <= 0) return { label: "Оплачен", tone: "good", overdue: false, paid: true };
     const overdue = Boolean(dueDate) && dueDate < todayIso;
-    if (overdue) return { label: "overdue", tone: "warn", overdue: true, paid: false };
-    if (bill.status === "partially_paid" || outstanding < parseMoney(bill.total)) return { label: "partially paid", tone: "info", overdue: false, paid: false };
-    return { label: "due", tone: "warn", overdue: false, paid: false };
+    if (overdue) return { label: "Просрочен", tone: "warn", overdue: true, paid: false };
+    if (bill.status === "partially_paid" || outstanding < parseMoney(bill.total)) return { label: "Частично оплачен", tone: "info", overdue: false, paid: false };
+    return { label: "К оплате", tone: "warn", overdue: false, paid: false };
   };
 
   const invoiceRows = invoices.map((invoice) => ({ ...invoice, uiState: resolveInvoiceState(invoice) }));
@@ -1220,7 +1220,7 @@ function FinancePage({ kind }) {
   const incomingRows = billRows.map((bill) => ({
     id: bill.id,
     number: bill.number,
-    counterpartyName: bill.counterpartyName,
+    counterpartyИмя: bill.counterpartyИмя,
     amount: parseMoney(bill.total),
     outstandingAmount: parseMoney(bill.outstandingTotal),
     dueDate: (bill.dueDate || "").slice(0, 10),
@@ -1229,7 +1229,7 @@ function FinancePage({ kind }) {
   const outgoingRows = invoiceRows.map((invoice) => ({
     id: invoice.id,
     number: invoice.number,
-    counterpartyName: invoice.counterpartyName,
+    counterpartyИмя: invoice.counterpartyИмя,
     amount: parseMoney(invoice.total),
     outstandingAmount: parseMoney(invoice.outstandingTotal),
     dueDate: (invoice.dueDate || "").slice(0, 10),
@@ -1237,8 +1237,8 @@ function FinancePage({ kind }) {
   }));
   const docsForPayment = paymentForm.direction === "outgoing" ? incomingRows : outgoingRows;
   const counterparties = Array.from(new Set([
-    ...incomingRows.map((row) => row.counterpartyName).filter(Boolean),
-    ...outgoingRows.map((row) => row.counterpartyName).filter(Boolean)
+    ...incomingRows.map((row) => row.counterpartyИмя).filter(Boolean),
+    ...outgoingRows.map((row) => row.counterpartyИмя).filter(Boolean)
   ])).sort((left, right) => left.localeCompare(right));
 
   const hasLiveCashBuckets = cashFlow.some((bucket) => parseMoney(bucket.inflow) !== 0 || parseMoney(bucket.outflow) !== 0 || parseMoney(bucket.net) !== 0);
@@ -1253,8 +1253,8 @@ function FinancePage({ kind }) {
       monthKeys.push(key);
       byMonth.set(key, {
         periodStart: `${key}-01`,
-        periodLabel: date.toLocaleString("en-US", { month: "short" }),
-        periodLongLabel: date.toLocaleString("en-US", { month: "long" }),
+        periodLabel: date.toLocaleString("ru-RU", { month: "short" }),
+        periodLongLabel: date.toLocaleString("ru-RU", { month: "long" }),
         inflow: 0,
         outflow: 0,
         net: 0
@@ -1327,14 +1327,14 @@ function FinancePage({ kind }) {
 
   const openReminder = (invoice) => {
     const subject = encodeURIComponent(`Payment reminder: ${invoice.number}`);
-    const body = encodeURIComponent(`Dear ${invoice.counterpartyName || "customer"},\n\nThis is a reminder that invoice ${invoice.number} is due on ${(invoice.dueDate || "").slice(0, 10)}.\nOutstanding amount: ${fmtUZS(parseMoney(invoice.outstandingTotal))} UZS.\n\nThank you.`);
+    const body = encodeURIComponent(`Dear ${invoice.counterpartyИмя || "customer"},\n\nThis is a reminder that invoice ${invoice.number} is due on ${(invoice.dueDate || "").slice(0, 10)}.\nOutstanding amount: ${fmtUZS(parseMoney(invoice.outstandingTotal))} UZS.\n\nThank you.`);
     const email = encodeURIComponent(invoice.counterpartyEmail || "");
     window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
   };
 
   const submitInvoiceCreate = async (event) => {
     event.preventDefault();
-    if (!invoiceForm.counterpartyName.trim() || !invoiceForm.dueDate || parseMoney(invoiceForm.quantity) <= 0 || parseMoney(invoiceForm.unitPrice) <= 0) {
+    if (!invoiceForm.counterpartyИмя.trim() || !invoiceForm.dueDate || parseMoney(invoiceForm.quantity) <= 0 || parseMoney(invoiceForm.unitPrice) <= 0) {
       setActionMessage("Invoice form is incomplete.");
       return;
     }
@@ -1346,7 +1346,7 @@ function FinancePage({ kind }) {
         credentials: "include",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          counterpartyName: invoiceForm.counterpartyName.trim(),
+          counterpartyИмя: invoiceForm.counterpartyИмя.trim(),
           dueDate: invoiceForm.dueDate,
           lines: [{
             description: invoiceForm.description.trim() || "Goods supplied",
@@ -1361,7 +1361,7 @@ function FinancePage({ kind }) {
       }
       setInvoiceModalOpen(false);
       setInvoiceForm({
-        counterpartyName: "",
+        counterpartyИмя: "",
         dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
         description: "Goods supplied",
         quantity: "1",
@@ -1377,7 +1377,7 @@ function FinancePage({ kind }) {
 
   const submitBillCreate = async (event) => {
     event.preventDefault();
-    if (!billForm.counterpartyName.trim() || !billForm.dueDate || parseMoney(billForm.quantity) <= 0 || parseMoney(billForm.unitPrice) <= 0) {
+    if (!billForm.counterpartyИмя.trim() || !billForm.dueDate || parseMoney(billForm.quantity) <= 0 || parseMoney(billForm.unitPrice) <= 0) {
       setActionMessage("Bill form is incomplete.");
       return;
     }
@@ -1389,7 +1389,7 @@ function FinancePage({ kind }) {
         credentials: "include",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          counterpartyName: billForm.counterpartyName.trim(),
+          counterpartyИмя: billForm.counterpartyИмя.trim(),
           dueDate: billForm.dueDate,
           lines: [{
             description: billForm.description.trim() || "Supplier invoice",
@@ -1404,7 +1404,7 @@ function FinancePage({ kind }) {
       }
       setBillModalOpen(false);
       setBillForm({
-        counterpartyName: "",
+        counterpartyИмя: "",
         dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
         description: "Supplier invoice",
         quantity: "1",
@@ -1421,7 +1421,7 @@ function FinancePage({ kind }) {
   const submitManualJournal = async (event) => {
     event.preventDefault();
     if (!journalForm.effectiveDate || !journalForm.debitAccountId || !journalForm.creditAccountId || journalForm.debitAccountId === journalForm.creditAccountId || parseMoney(journalForm.amount) <= 0) {
-      setActionMessage("Journal form is incomplete.");
+      setActionMessage("Форма журнала заполнена не полностью.");
       return;
     }
     setSubmitting(true);
@@ -1443,12 +1443,12 @@ function FinancePage({ kind }) {
       });
       const body = await response.json();
       if (!response.ok || !body.data) {
-        throw new Error(body?.error?.message || body?.message || "Unable to create manual journal.");
+        throw new Error(body?.error?.message || body?.message || "Не удалось создать ручную проводку.");
       }
       setJournalModalOpen(false);
       await refreshOverview();
     } catch (createError) {
-      setActionMessage(createError instanceof Error ? createError.message : "Unable to create manual journal.");
+      setActionMessage(createError instanceof Error ? createError.message : "Не удалось создать ручную проводку.");
     } finally {
       setSubmitting(false);
     }
@@ -1510,21 +1510,21 @@ function FinancePage({ kind }) {
     const date = new Date(`${dueDate}T00:00:00`);
     const now = new Date(`${todayIso}T00:00:00`);
     const diff = Math.round((date.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
-    if (diff > 0) return { text: `in ${diff} d`, tone: "good" };
-    if (diff === 0) return { text: "due today", tone: "warn" };
-    return { text: `${Math.abs(diff)} d overdue`, tone: "bad" };
+    if (diff > 0) return { text: `через ${diff} д.`, tone: "good" };
+    if (diff === 0) return { text: "срок сегодня", tone: "warn" };
+    return { text: `просрочка ${Math.abs(diff)} д.`, tone: "bad" };
   };
 
   const toPaymentStatus = (row) => {
-    if (row.outstandingAmount <= 0) return { label: "paid", tone: "good" };
-    if (row.outstandingAmount < row.amount) return { label: "partially paid", tone: "warn" };
-    return { label: "unpaid", tone: "bad" };
+    if (row.outstandingAmount <= 0) return { label: "Оплачен", tone: "good" };
+    if (row.outstandingAmount < row.amount) return { label: "Частично оплачен", tone: "warn" };
+    return { label: "Не оплачен", tone: "bad" };
   };
 
   const registerPayment = async (event) => {
     event.preventDefault();
     if (!paymentForm.docId || parseMoney(paymentForm.amount) <= 0 || !paymentForm.paymentDate) {
-      setActionMessage("Select document, amount, and payment date.");
+      setActionMessage("Выберите документ, сумму и дату платежа.");
       return;
     }
     setSubmitting(true);
@@ -1535,7 +1535,7 @@ function FinancePage({ kind }) {
         docId: paymentForm.docId,
         amount: parseMoney(paymentForm.amount),
         paymentDate: paymentForm.paymentDate,
-        reference: paymentForm.reference.trim() || "Manual payment",
+        reference: paymentForm.reference.trim() || "Ручной платеж",
         sourceType: paymentForm.sourceType,
         sourceAccountId: paymentForm.sourceAccountId || undefined
       });
@@ -1546,9 +1546,9 @@ function FinancePage({ kind }) {
         amount: "",
         reference: ""
       }));
-      setActionMessage("Payment has been registered.");
+      setActionMessage("Платеж зарегистрирован.");
     } catch (paymentError) {
-      setActionMessage(paymentError instanceof Error ? paymentError.message : "Unable to register payment.");
+      setActionMessage(paymentError instanceof Error ? paymentError.message : "Не удалось зарегистрировать платеж.");
     } finally {
       setSubmitting(false);
     }
@@ -1556,19 +1556,19 @@ function FinancePage({ kind }) {
 
   const analyzeBankStatement = () => {
     if (!ocrFile) {
-      setActionMessage("Upload PDF bank statement first.");
+      setActionMessage("Сначала загрузите PDF банковской выписки.");
       return;
     }
     const openDocs = docsForPayment.filter((doc) => doc.outstandingAmount > 0);
     const allocations = openDocs.slice(0, 4).map((doc, index) => ({
       docId: doc.id,
       number: doc.number,
-      counterpartyName: doc.counterpartyName,
+      counterpartyИмя: doc.counterpartyИмя,
       amount: Math.max(1, Math.round(doc.outstandingAmount * (index === 0 ? 1 : 0.5))),
       paymentDate: todayIso
     }));
     setOcrAllocations(allocations);
-    setActionMessage(`OCR parsed ${ocrFile.name} and prepared ${allocations.length} allocations.`);
+    setActionMessage(`OCR обработал ${ocrFile.name} и подготовил ${allocations.length} распределений.`);
   };
 
   const applyOcrAllocations = async () => {
@@ -1582,17 +1582,17 @@ function FinancePage({ kind }) {
           docId: allocation.docId,
           amount: allocation.amount,
           paymentDate: allocation.paymentDate,
-          reference: `OCR: ${ocrFile ? ocrFile.name : "bank statement"}`,
+          reference: `OCR: ${ocrFile ? ocrFile.name : "банковская выписка"}`,
           sourceType: paymentForm.sourceType,
           sourceAccountId: paymentForm.sourceAccountId || undefined
         });
       }
       await refreshOverview();
-      setActionMessage("OCR allocations have been posted.");
+      setActionMessage("OCR-распределения проведены.");
       setOcrAllocations([]);
       setOcrFile(null);
     } catch (ocrError) {
-      setActionMessage(ocrError instanceof Error ? ocrError.message : "Unable to apply OCR allocations.");
+      setActionMessage(ocrError instanceof Error ? ocrError.message : "Не удалось применить OCR-распределения.");
     } finally {
       setOcrApplying(false);
     }
@@ -1606,7 +1606,7 @@ function FinancePage({ kind }) {
           ["invoice", "customer", "issue_date", "due_date", "total", "outstanding", "status"],
           ...invoiceRows.map((invoice) => [
             invoice.number,
-            invoice.counterpartyName,
+            invoice.counterpartyИмя,
             (invoice.issueDate || invoice.createdAt || "").slice(0, 10),
             (invoice.dueDate || "").slice(0, 10),
             parseMoney(invoice.total),
@@ -1622,7 +1622,7 @@ function FinancePage({ kind }) {
           ["bill", "vendor", "issue_date", "due_date", "total", "outstanding", "status"],
           ...billRows.map((bill) => [
             bill.number,
-            bill.counterpartyName,
+            bill.counterpartyИмя,
             (bill.issueDate || bill.createdAt || "").slice(0, 10),
             (bill.dueDate || "").slice(0, 10),
             parseMoney(bill.total),
@@ -1652,7 +1652,7 @@ function FinancePage({ kind }) {
       ];
       downloadCsv("finance-ledger.csv", rows);
     } catch {
-      setActionMessage("Unable to export finance data.");
+      setActionMessage("Не удалось экспортировать финансовые данные.");
     } finally {
       setExporting(false);
     }
@@ -1663,7 +1663,7 @@ function FinancePage({ kind }) {
     const selectedCounterpartyRows = [
       ...incomingRows.map((row) => ({ ...row, direction: "incoming" })),
       ...outgoingRows.map((row) => ({ ...row, direction: "outgoing" }))
-    ].filter((row) => !reconCounterparty || row.counterpartyName === reconCounterparty);
+    ].filter((row) => !reconCounterparty || row.counterpartyИмя === reconCounterparty);
     const totalIncoming = selectedCounterpartyRows
       .filter((row) => row.direction === "incoming")
       .reduce((sum, row) => sum + row.amount, 0);
@@ -1675,43 +1675,43 @@ function FinancePage({ kind }) {
 
     return (
       <Placeholder
-        title="Accounts & Payments"
+        title="Счета и платежи"
         headerActions={<>
           <Button variant="ghost" icon={<Icon.Download size={13}/>} onClick={() => handleExport(paymentsTab === "incoming" ? "bills" : "invoices")} disabled={exporting}>
-            {exporting ? "Exporting..." : "Export"}
+            {exporting ? "Экспорт..." : "Экспорт"}
           </Button>
           <Button variant="primary" icon={<Icon.Check size={13}/>} onClick={refreshOverview} disabled={loading}>
-            {loading ? "Loading..." : "Refresh"}
+            {loading ? "Загрузка..." : "Обновить"}
           </Button>
         </>}
         kpis={<>
-          <Kpi label="Incoming" value={String(incomingRows.length)} delta="We owe suppliers"/>
-          <Kpi label="Outgoing" value={String(outgoingRows.length)} delta="Customers owe us"/>
-          <Kpi label="Open documents" value={String([...incomingRows, ...outgoingRows].filter((row) => row.outstandingAmount > 0).length)} delta="Need attention"/>
-          <Kpi label="Outstanding total" value={fmtUZS(totalOutstanding)} unit="UZS"/>
+          <Kpi label="Входящие" value={String(incomingRows.length)} delta="Мы должны поставщикам"/>
+          <Kpi label="Исходящие" value={String(outgoingRows.length)} delta="Клиенты должны нам"/>
+          <Kpi label="Открытые документы" value={String([...incomingRows, ...outgoingRows].filter((row) => row.outstandingAmount > 0).length)} delta="Требуют внимания"/>
+          <Kpi label="Общая задолженность" value={fmtUZS(totalOutstanding)} unit="UZS"/>
         </>}
       >
-        {error && <Banner tone="warn" title="Live payments data unavailable">Showing current finance data. {error}</Banner>}
-        {actionMessage && <Banner tone="warn" title="Payments notice">{actionMessage}</Banner>}
+        {error && <Banner tone="warn" title="Онлайн-данные по платежам недоступны">Показаны текущие финансовые данные. {error}</Banner>}
+        {actionMessage && <Banner tone="warn" title="Уведомление по платежам">{actionMessage}</Banner>}
 
         <div className="card card-pad-0">
           <div className="tbl-toolbar">
             <span className={`chip ${paymentsTab === "incoming" ? "active" : ""}`} onClick={() => {
               setPaymentsTab("incoming");
               setPaymentForm((prev) => ({ ...prev, direction: "outgoing", docId: "", amount: "" }));
-            }}>Incoming (payables)</span>
+            }}>Входящие (к оплате поставщикам)</span>
             <span className={`chip ${paymentsTab === "outgoing" ? "active" : ""}`} onClick={() => {
               setPaymentsTab("outgoing");
               setPaymentForm((prev) => ({ ...prev, direction: "incoming", docId: "", amount: "" }));
-            }}>Outgoing (receivables)</span>
+            }}>Исходящие (к получению от клиентов)</span>
             <span className="sp"/>
-            <span className="mono muted" style={{fontSize:11}}>{rows.length} docs</span>
+            <span className="mono muted" style={{fontSize:11}}>{rows.length} док.</span>
           </div>
           <table className="tbl">
-            <thead><tr><th>Document</th><th>Counterparty</th><th className="tr">Amount</th><th>Due</th><th>Timing</th><th>Status</th></tr></thead>
+            <thead><tr><th>Документ</th><th>Контрагент</th><th className="tr">Сумма</th><th>Срок</th><th>Срок оплаты</th><th>Статус</th></tr></thead>
             <tbody>
               {rows.length === 0 ? (
-                <tr><td colSpan="6" className="dim mono">No documents found.</td></tr>
+                <tr><td colSpan="6" className="dim mono">Документы не найдены.</td></tr>
               ) : null}
               {rows.map((row) => {
                 const dueInfo = calcDueInfo(row.dueDate);
@@ -1719,10 +1719,10 @@ function FinancePage({ kind }) {
                 return (
                   <tr key={row.id}>
                     <td className="id">{row.number}</td>
-                    <td style={{fontWeight:500, color:"var(--ink)"}}>{row.counterpartyName || "—"}</td>
+                    <td style={{fontWeight:500, color:"var(--ink)"}}>{row.counterpartyИмя || "—"}</td>
                     <td className="num">
                       <div>{fmtUZS(row.amount)}</div>
-                      <div className="dim mono" style={{fontSize:11}}>open {fmtUZS(row.outstandingAmount)}</div>
+                      <div className="dim mono" style={{fontSize:11}}>остаток {fmtUZS(row.outstandingAmount)}</div>
                     </td>
                     <td className="dim mono">{row.dueDate || "—"}</td>
                     <td><Pill tone={dueInfo.tone}>{dueInfo.text}</Pill></td>
@@ -1734,18 +1734,18 @@ function FinancePage({ kind }) {
           </table>
         </div>
 
-        <div className="grid" style={{gridTemplateColumns:"1.3fr .7fr", gap:12, marginTop:12}}>
-          <div className="card">
-            <div className="panel-title">Register payment</div>
-            <form onSubmit={registerPayment}>
-              <div className="grid grid-2 mt-12" style={{gap:12}}>
-                <Field label="Direction">
+        <div className="grid" style={{gridTemplateColumns:"1.3fr .7fr", gap:14, marginTop:14}}>
+          <div className="card" style={{padding:14}}>
+            <div className="panel-title">Регистрация платежа</div>
+            <form onSubmit={registerPayment} style={{display:"grid", rowGap:14, marginTop:14}}>
+              <div className="grid grid-2" style={{columnGap:14, rowGap:14}}>
+                <Field label="Направление">
                   <select className="input" value={paymentForm.direction} onChange={(e) => setPaymentForm((prev) => ({ ...prev, direction: e.target.value, docId: "", amount: "" }))}>
-                    <option value="outgoing">Outgoing payment (to supplier)</option>
-                    <option value="incoming">Incoming payment (from customer)</option>
+                    <option value="outgoing">Исходящий платеж (поставщику)</option>
+                    <option value="incoming">Входящий платеж (от клиента)</option>
                   </select>
                 </Field>
-                <Field label="Document" required>
+                <Field label="Документ" required>
                   <select className="input" value={paymentForm.docId} onChange={(e) => {
                     const nextId = e.target.value;
                     const selected = docsForPayment.find((doc) => doc.id === nextId);
@@ -1753,63 +1753,63 @@ function FinancePage({ kind }) {
                       ...prev,
                       docId: nextId,
                       amount: selected ? String(selected.outstandingAmount || selected.amount || "") : "",
-                      reference: selected ? `Payment for ${selected.number}` : prev.reference
+                      reference: selected ? `Оплата по документу ${selected.number}` : prev.reference
                     }));
                   }}>
-                    <option value="">Select document</option>
+                    <option value="">Выберите документ</option>
                     {docsForPayment.map((doc) => (
                       <option key={doc.id} value={doc.id}>
-                        {doc.number} · {doc.counterpartyName} · open {fmtUZS(doc.outstandingAmount)}
+                        {doc.number} · {doc.counterpartyИмя} · остаток {fmtUZS(doc.outstandingAmount)}
                       </option>
                     ))}
                   </select>
                 </Field>
-                <Field label="Amount" required>
+                <Field label="Сумма" required>
                   <input className="input" value={paymentForm.amount} onChange={(e) => setPaymentForm((prev) => ({ ...prev, amount: e.target.value }))} placeholder="1000000"/>
                 </Field>
-                <Field label="Payment date" required>
+                <Field label="Дата платежа" required>
                   <input className="input" type="date" value={paymentForm.paymentDate} onChange={(e) => setPaymentForm((prev) => ({ ...prev, paymentDate: e.target.value }))}/>
                 </Field>
-                <Field label="Source type">
+                <Field label="Тип источника">
                   <select className="input" value={paymentForm.sourceType} onChange={(e) => setPaymentForm((prev) => ({ ...prev, sourceType: e.target.value }))}>
-                    <option value="bank_account">Bank account</option>
-                    <option value="cashbox">Cashbox</option>
+                    <option value="bank_account">Банковский счёт</option>
+                    <option value="cashbox">Касса</option>
                   </select>
                 </Field>
-                <Field label="Bank account / cash ledger">
+                <Field label="Банковский счёт / кассовый счёт">
                   <select className="input" value={paymentForm.sourceAccountId} onChange={(e) => setPaymentForm((prev) => ({ ...prev, sourceAccountId: e.target.value }))}>
-                    <option value="">Select source</option>
+                    <option value="">Выберите источник</option>
                     {paymentSources.map((account) => (
                       <option key={`source-${account.id}`} value={account.id}>{account.code} · {account.name}</option>
                     ))}
                   </select>
                 </Field>
-                <Field label="Reference">
-                  <input className="input" value={paymentForm.reference} onChange={(e) => setPaymentForm((prev) => ({ ...prev, reference: e.target.value }))} placeholder="Payment order / note"/>
+                <Field label="Назначение">
+                  <input className="input" value={paymentForm.reference} onChange={(e) => setPaymentForm((prev) => ({ ...prev, reference: e.target.value }))} placeholder="Платёжное поручение / заметка"/>
                 </Field>
               </div>
-              <div className="row mt-12">
+              <div className="row">
                 <span className="sp"/>
                 <Button variant="primary" type="submit" icon={<Icon.Check size={12}/>} disabled={submitting}>
-                  {submitting ? "Saving..." : "Register payment"}
+                  {submitting ? "Сохранение..." : "Зарегистрировать платеж"}
                 </Button>
               </div>
             </form>
           </div>
 
-          <div className="card">
-            <div className="panel-title">OCR bank statement (PDF)</div>
-            <div className="mt-12 col gap-10">
-              <Field label="Upload PDF">
+          <div className="card" style={{padding:14}}>
+            <div className="panel-title">OCR банковской выписки (PDF)</div>
+            <div className="mt-12 col gap-10" style={{marginTop:14}}>
+              <Field label="Загрузите PDF">
                 <input className="input" type="file" accept="application/pdf" onChange={(e) => setOcrFile((e.target.files && e.target.files[0]) || null)}/>
               </Field>
               <Button variant="ghost" icon={<Icon.Search size={12}/>} onClick={analyzeBankStatement} disabled={!ocrFile}>
-                Analyze statement
+                Анализировать выписку
               </Button>
               {ocrAllocations.length > 0 && (
                 <>
                   <div className="hairline" style={{padding:10, borderRadius:8}}>
-                    <div className="mono muted" style={{fontSize:11, marginBottom:6}}>Prepared allocations</div>
+                    <div className="mono muted" style={{fontSize:11, marginBottom:6}}>Подготовленные распределения</div>
                     <div className="col gap-6">
                       {ocrAllocations.map((allocation) => (
                         <div key={`ocr-${allocation.docId}`} className="row">
@@ -1821,7 +1821,7 @@ function FinancePage({ kind }) {
                     </div>
                   </div>
                   <Button variant="primary" icon={<Icon.Check size={12}/>} onClick={applyOcrAllocations} disabled={ocrApplying}>
-                    {ocrApplying ? "Posting..." : "Post OCR allocations"}
+                    {ocrApplying ? "Проведение..." : "Провести OCR-распределения"}
                   </Button>
                 </>
               )}
@@ -1831,33 +1831,33 @@ function FinancePage({ kind }) {
 
         <div className="card card-pad-0 mt-12">
           <div className="panel-title">
-            Auto reconciliation statement
+            Автоматическая сверка
             <span className="sp"/>
             <select className="input" style={{width:260}} value={reconCounterparty} onChange={(e) => setReconCounterparty(e.target.value)}>
-              <option value="">All counterparties</option>
+              <option value="">Все контрагенты</option>
               {counterparties.map((counterparty) => (
                 <option key={`cp-${counterparty}`} value={counterparty}>{counterparty}</option>
               ))}
             </select>
           </div>
           <div className="grid grid-3" style={{gap:12, padding:"0 12px 12px"}}>
-            <Kpi label="Payables total" value={fmtUZS(totalIncoming)} unit="UZS"/>
-            <Kpi label="Receivables total" value={fmtUZS(totalOutgoing)} unit="UZS"/>
-            <Kpi label="Outstanding" value={fmtUZS(totalOutstanding)} unit="UZS"/>
+            <Kpi label="Итого к оплате" value={fmtUZS(totalIncoming)} unit="UZS"/>
+            <Kpi label="Итого к получению" value={fmtUZS(totalOutgoing)} unit="UZS"/>
+            <Kpi label="Остаток" value={fmtUZS(totalOutstanding)} unit="UZS"/>
           </div>
           <table className="tbl">
-            <thead><tr><th>Type</th><th>Document</th><th>Counterparty</th><th className="tr">Total</th><th className="tr">Open</th><th>Status</th></tr></thead>
+            <thead><tr><th>Тип</th><th>Документ</th><th>Контрагент</th><th className="tr">Итого</th><th className="tr">Остаток</th><th>Статус</th></tr></thead>
             <tbody>
               {selectedCounterpartyRows.length === 0 ? (
-                <tr><td colSpan="6" className="dim mono">No reconciliation rows for selected counterparty.</td></tr>
+                <tr><td colSpan="6" className="dim mono">Для выбранного контрагента нет строк сверки.</td></tr>
               ) : null}
               {selectedCounterpartyRows.map((row) => {
                 const status = toPaymentStatus(row);
                 return (
                   <tr key={`recon-${row.direction}-${row.id}`}>
-                    <td><Pill tone={row.direction === "incoming" ? "warn" : "good"}>{row.direction === "incoming" ? "payable" : "receivable"}</Pill></td>
+                    <td><Pill tone={row.direction === "incoming" ? "warn" : "good"}>{row.direction === "incoming" ? "к оплате" : "к получению"}</Pill></td>
                     <td className="id">{row.number}</td>
-                    <td>{row.counterpartyName || "—"}</td>
+                    <td>{row.counterpartyИмя || "—"}</td>
                     <td className="num">{fmtUZS(row.amount)}</td>
                     <td className="num">{fmtUZS(row.outstandingAmount)}</td>
                     <td><Pill tone={status.tone}>{status.label}</Pill></td>
@@ -1874,31 +1874,31 @@ function FinancePage({ kind }) {
   if (kind === "cash") {
     return (
       <Placeholder
-        title="Cash flow"
+        title="Денежный поток"
         headerActions={<>
           <Button variant="ghost" icon={<Icon.Download size={13}/>} onClick={() => handleExport("cash")} disabled={exporting}>
-            {exporting ? "Exporting..." : "Export"}
+            {exporting ? "Экспорт..." : "Экспорт"}
           </Button>
-          <Button variant="primary" icon={<Icon.Plus size={13}/>} onClick={() => setJournalModalOpen(true)}>New</Button>
+          <Button variant="primary" icon={<Icon.Plus size={13}/>} onClick={() => setJournalModalOpen(true)}>Новая</Button>
         </>}
         kpis={<>
-          <Kpi label="Inflow" value={fmtUZS(Math.round(inflowTotal / 1_000_000))} unit="M UZS" delta={loading ? "Loading..." : "Live from backend"} trend="up"/>
-          <Kpi label="Outflow" value={fmtUZS(Math.round(outflowTotal / 1_000_000))} unit="M UZS" delta="Live from backend" trend="down"/>
-          <Kpi label="Net" value={fmtUZS(Math.round(netTotal / 1_000_000))} unit="M UZS" delta="Live from backend" trend="up"/>
-          <Kpi label="Buckets" value={String(effectiveCashFlow.length)} delta="Monthly buckets" trend="up"/>
+          <Kpi label="Приток" value={fmtUZS(Math.round(inflowTotal / 1_000_000))} unit="М UZS" delta={loading ? "Загрузка..." : "Данные из backend"} trend="up"/>
+          <Kpi label="Отток" value={fmtUZS(Math.round(outflowTotal / 1_000_000))} unit="М UZS" delta="Данные из backend" trend="down"/>
+          <Kpi label="Чистый поток" value={fmtUZS(Math.round(netTotal / 1_000_000))} unit="М UZS" delta="Данные из backend" trend="up"/>
+          <Kpi label="Периоды" value={String(effectiveCashFlow.length)} delta="Помесячные периоды" trend="up"/>
         </>}>
-        {error && <Banner tone="warn" title="Live cash flow unavailable">Showing current cash flow data. {error}</Banner>}
-        {actionMessage && <Banner tone="warn" title="Finance action notice">{actionMessage}</Banner>}
+        {error && <Banner tone="warn" title="Онлайн-данные по денежному потоку недоступны">Показаны текущие данные по денежному потоку. {error}</Banner>}
+        {actionMessage && <Banner tone="warn" title="Уведомление по финансовому действию">{actionMessage}</Banner>}
         <div className="card card-pad-0">
-          <div className="panel-title">Monthly net cash flow · last 6 months</div>
+          <div className="panel-title">Ежемесячный чистый денежный поток · за последние 6 месяцев</div>
           <div style={{padding:8}}>
             <StackedBar width={900} height={240}
               data={effectiveCashFlow.map((bucket) => [parseMoney(bucket.inflow), parseMoney(bucket.outflow)])}
               categories={effectiveCashFlow.map((bucket) => bucket.periodLabel)}
               colors={["var(--ink)","var(--ai)"]}/>
             <div className="row gap-16 mono muted" style={{fontSize:10, padding:"6px 16px"}}>
-              <span><span style={{display:"inline-block", width:8, height:8, background:"var(--ink)", marginRight:6}}/>Inflow</span>
-              <span><span style={{display:"inline-block", width:8, height:8, background:"var(--ai)", marginRight:6}}/>Outflow</span>
+              <span><span style={{display:"inline-block", width:8, height:8, background:"var(--ink)", marginRight:6}}/>Приток</span>
+              <span><span style={{display:"inline-block", width:8, height:8, background:"var(--ai)", marginRight:6}}/>Отток</span>
             </div>
           </div>
         </div>
@@ -1910,39 +1910,39 @@ function FinancePage({ kind }) {
               setActionMessage("");
             }
           }}
-          title="New manual journal"
+          title="Новая ручная проводка"
           size="sm"
           footer={
             <>
-              <Button variant="ghost" type="button" onClick={() => setJournalModalOpen(false)} disabled={submitting}>Cancel</Button>
+              <Button variant="ghost" type="button" onClick={() => setJournalModalOpen(false)} disabled={submitting}>Отмена</Button>
               <span className="sp" />
               <Button variant="primary" type="submit" form="finance-manual-journal-form" icon={<Icon.Check size={13} />} disabled={submitting}>
-                {submitting ? "Saving..." : "Create journal"}
+                {submitting ? "Сохранение..." : "Создать проводку"}
               </Button>
             </>
           }
         >
           <form id="finance-manual-journal-form" onSubmit={submitManualJournal}>
             <div className="grid grid-2" style={{ gap: 12 }}>
-              <Field label="Effective date" required>
+              <Field label="Дата проводки" required>
                 <input className="input" type="date" value={journalForm.effectiveDate} onChange={(e) => setJournalForm((prev) => ({ ...prev, effectiveDate: e.target.value }))} />
               </Field>
-              <Field label="Amount" required>
+              <Field label="Сумма" required>
                 <input className="input" value={journalForm.amount} onChange={(e) => setJournalForm((prev) => ({ ...prev, amount: e.target.value }))} />
               </Field>
-              <Field label="Debit account" required>
+              <Field label="Дебетовый счёт" required>
                 <select className="input" value={journalForm.debitAccountId} onChange={(e) => setJournalForm((prev) => ({ ...prev, debitAccountId: e.target.value }))}>
-                  <option value="">Select account</option>
+                  <option value="">Выберите счёт</option>
                   {ledgerAccounts.map((account) => <option key={`debit-${account.id}`} value={account.id}>{account.code} · {account.name}</option>)}
                 </select>
               </Field>
-              <Field label="Credit account" required>
+              <Field label="Кредитовый счёт" required>
                 <select className="input" value={journalForm.creditAccountId} onChange={(e) => setJournalForm((prev) => ({ ...prev, creditAccountId: e.target.value }))}>
-                  <option value="">Select account</option>
+                  <option value="">Выберите счёт</option>
                   {ledgerAccounts.map((account) => <option key={`credit-${account.id}`} value={account.id}>{account.code} · {account.name}</option>)}
                 </select>
               </Field>
-              <Field label="Memo">
+              <Field label="Комментарий">
                 <input className="input" value={journalForm.memo} onChange={(e) => setJournalForm((prev) => ({ ...prev, memo: e.target.value }))} />
               </Field>
             </div>
@@ -1955,34 +1955,34 @@ function FinancePage({ kind }) {
   if (kind === "invoices") {
     return (
       <Placeholder
-        title="Invoices · Receivables"
+        title="Счета · Дебиторская задолженность"
         headerActions={<>
           <Button variant="ghost" icon={<Icon.Download size={13}/>} onClick={() => handleExport("invoices")} disabled={exporting}>
-            {exporting ? "Exporting..." : "Export"}
+            {exporting ? "Экспорт..." : "Экспорт"}
           </Button>
-          <Button variant="primary" icon={<Icon.Plus size={13}/>} onClick={() => setInvoiceModalOpen(true)}>New</Button>
+          <Button variant="primary" icon={<Icon.Plus size={13}/>} onClick={() => setInvoiceModalOpen(true)}>Новый</Button>
         </>}
       >
-        {error && <Banner tone="warn" title="Live invoices unavailable">Showing current invoice data. {error}</Banner>}
-        {actionMessage && <Banner tone="warn" title="Finance action notice">{actionMessage}</Banner>}
+        {error && <Banner tone="warn" title="Онлайн-данные по счетам недоступны">Показаны текущие данные по счетам. {error}</Banner>}
+        {actionMessage && <Banner tone="warn" title="Уведомление по финансовому действию">{actionMessage}</Banner>}
         <div className="card card-pad-0">
           <div className="tbl-toolbar">
-            <span className="chip" style={{background:"var(--ink)", color:"var(--surface)", borderColor:"var(--ink)"}}>All <span className="mono" style={{opacity:0.7, marginLeft:4}}>{invoiceRows.length}</span></span>
-            <span className="chip">Sent <span className="mono" style={{marginLeft:4}}>{invoiceRows.filter((invoice) => invoice.uiState.label === "sent").length}</span></span>
-            <span className="chip">Overdue <span className="mono" style={{marginLeft:4, color:"var(--bad)"}}>{invoiceRows.filter((invoice) => invoice.uiState.overdue).length}</span></span>
-            <span className="chip">Paid <span className="mono" style={{marginLeft:4}}>{invoiceRows.filter((invoice) => invoice.uiState.paid).length}</span></span>
+            <span className="chip" style={{background:"var(--ink)", color:"var(--surface)", borderColor:"var(--ink)"}}>Все <span className="mono" style={{opacity:0.7, marginLeft:4}}>{invoiceRows.length}</span></span>
+            <span className="chip">Отправлены <span className="mono" style={{marginLeft:4}}>{invoiceRows.filter((invoice) => invoice.uiState.label === "Отправлен").length}</span></span>
+            <span className="chip">Просрочены <span className="mono" style={{marginLeft:4, color:"var(--bad)"}}>{invoiceRows.filter((invoice) => invoice.uiState.overdue).length}</span></span>
+            <span className="chip">Оплачены <span className="mono" style={{marginLeft:4}}>{invoiceRows.filter((invoice) => invoice.uiState.paid).length}</span></span>
           </div>
           <table className="tbl">
-            <thead><tr><th>Invoice</th><th>Customer</th><th>Date</th><th>Due</th><th className="tr">Amount</th><th>Status</th><th/></tr></thead>
+            <thead><tr><th>Счёт</th><th>Клиент</th><th>Дата</th><th>Срок</th><th className="tr">Сумма</th><th>Статус</th><th/></tr></thead>
             <tbody>{invoiceRows.map((invoice) =>
               <tr key={invoice.id}>
                 <td className="id">{invoice.number}</td>
-                <td style={{fontWeight:500, color:"var(--ink)"}}>{invoice.counterpartyName}</td>
+                <td style={{fontWeight:500, color:"var(--ink)"}}>{invoice.counterpartyИмя}</td>
                 <td className="dim mono">{(invoice.issueDate || invoice.createdAt || "").slice(0, 10) || "—"}</td>
                 <td className="dim mono">{(invoice.dueDate || "").slice(0, 10) || "—"}</td>
                 <td className="num">{fmtUZS(parseMoney(invoice.total))}</td>
                 <td><Pill tone={invoice.uiState.tone}>{invoice.uiState.label}</Pill></td>
-                <td className="row-actions">{!invoice.uiState.paid && <Button size="sm" variant="ghost" onClick={() => openReminder(invoice)}>Send reminder</Button>}</td>
+                <td className="row-actions">{!invoice.uiState.paid && <Button size="sm" variant="ghost" onClick={() => openReminder(invoice)}>Отправить напоминание</Button>}</td>
               </tr>)}</tbody>
           </table>
         </div>
@@ -1998,7 +1998,7 @@ function FinancePage({ kind }) {
           size="sm"
           footer={
             <>
-              <Button variant="ghost" type="button" onClick={() => setInvoiceModalOpen(false)} disabled={submitting}>Cancel</Button>
+              <Button variant="ghost" type="button" onClick={() => setInvoiceModalOpen(false)} disabled={submitting}>Отмена</Button>
               <span className="sp" />
               <Button variant="primary" type="submit" form="finance-create-invoice-form" icon={<Icon.Check size={13} />} disabled={submitting}>
                 {submitting ? "Saving..." : "Create invoice"}
@@ -2009,7 +2009,7 @@ function FinancePage({ kind }) {
           <form id="finance-create-invoice-form" onSubmit={submitInvoiceCreate}>
             <div className="grid grid-2" style={{ gap: 12 }}>
               <Field label="Customer" required>
-                <input className="input" value={invoiceForm.counterpartyName} onChange={(e) => setInvoiceForm((prev) => ({ ...prev, counterpartyName: e.target.value }))} placeholder="Oriental Trade LLC" />
+                <input className="input" value={invoiceForm.counterpartyИмя} onChange={(e) => setInvoiceForm((prev) => ({ ...prev, counterpartyИмя: e.target.value }))} placeholder="Oriental Trade LLC" />
               </Field>
               <Field label="Due date" required>
                 <input className="input" type="date" value={invoiceForm.dueDate} onChange={(e) => setInvoiceForm((prev) => ({ ...prev, dueDate: e.target.value }))} />
@@ -2033,23 +2033,23 @@ function FinancePage({ kind }) {
   if (kind === "bills") {
     return (
       <Placeholder
-        title="Bills · Payables"
+        title="Счета поставщиков · Кредиторская задолженность"
         headerActions={<>
           <Button variant="ghost" icon={<Icon.Download size={13}/>} onClick={() => handleExport("bills")} disabled={exporting}>
-            {exporting ? "Exporting..." : "Export"}
+            {exporting ? "Экспорт..." : "Экспорт"}
           </Button>
-          <Button variant="primary" icon={<Icon.Plus size={13}/>} onClick={() => setBillModalOpen(true)}>New</Button>
+          <Button variant="primary" icon={<Icon.Plus size={13}/>} onClick={() => setBillModalOpen(true)}>Новый</Button>
         </>}
       >
-        {error && <Banner tone="warn" title="Live bills unavailable">Showing current bill data. {error}</Banner>}
-        {actionMessage && <Banner tone="warn" title="Finance action notice">{actionMessage}</Banner>}
+        {error && <Banner tone="warn" title="Онлайн-данные по счетам поставщиков недоступны">Показаны текущие данные по счетам поставщиков. {error}</Banner>}
+        {actionMessage && <Banner tone="warn" title="Уведомление по финансовому действию">{actionMessage}</Banner>}
         <div className="card card-pad-0">
           <table className="tbl">
-            <thead><tr><th>Bill</th><th>Vendor</th><th>Date</th><th>Due</th><th className="tr">Amount</th><th>Status</th><th/></tr></thead>
+            <thead><tr><th>Счёт</th><th>Поставщик</th><th>Дата</th><th>Срок</th><th className="tr">Сумма</th><th>Статус</th><th/></tr></thead>
             <tbody>{billRows.map((bill) =>
               <tr key={bill.id}>
                 <td className="id">{bill.number}</td>
-                <td style={{fontWeight:500, color:"var(--ink)"}}>{bill.counterpartyName}</td>
+                <td style={{fontWeight:500, color:"var(--ink)"}}>{bill.counterpartyИмя}</td>
                 <td className="dim mono">{(bill.issueDate || bill.createdAt || "").slice(0, 10) || "—"}</td>
                 <td className="dim mono">{(bill.dueDate || "").slice(0, 10) || "—"}</td>
                 <td className="num">{fmtUZS(parseMoney(bill.total))}</td>
@@ -2057,7 +2057,7 @@ function FinancePage({ kind }) {
                 <td className="row-actions">
                   {!bill.uiState.paid && (
                     <Button size="sm" variant="primary" onClick={() => handleMarkBillPaid(bill)} disabled={payingBillId === bill.id}>
-                      {payingBillId === bill.id ? "Saving..." : "Mark paid"}
+                      {payingBillId === bill.id ? "Сохранение..." : "Отметить как оплаченный"}
                     </Button>
                   )}
                 </td>
@@ -2076,7 +2076,7 @@ function FinancePage({ kind }) {
           size="sm"
           footer={
             <>
-              <Button variant="ghost" type="button" onClick={() => setBillModalOpen(false)} disabled={submitting}>Cancel</Button>
+              <Button variant="ghost" type="button" onClick={() => setBillModalOpen(false)} disabled={submitting}>Отмена</Button>
               <span className="sp" />
               <Button variant="primary" type="submit" form="finance-create-bill-form" icon={<Icon.Check size={13} />} disabled={submitting}>
                 {submitting ? "Saving..." : "Create bill"}
@@ -2087,7 +2087,7 @@ function FinancePage({ kind }) {
           <form id="finance-create-bill-form" onSubmit={submitBillCreate}>
             <div className="grid grid-2" style={{ gap: 12 }}>
               <Field label="Vendor" required>
-                <input className="input" value={billForm.counterpartyName} onChange={(e) => setBillForm((prev) => ({ ...prev, counterpartyName: e.target.value }))} placeholder="Samarkand Oil Co." />
+                <input className="input" value={billForm.counterpartyИмя} onChange={(e) => setBillForm((prev) => ({ ...prev, counterpartyИмя: e.target.value }))} placeholder="Samarkand Oil Co." />
               </Field>
               <Field label="Due date" required>
                 <input className="input" type="date" value={billForm.dueDate} onChange={(e) => setBillForm((prev) => ({ ...prev, dueDate: e.target.value }))} />
@@ -2110,25 +2110,25 @@ function FinancePage({ kind }) {
 
   return (
     <Placeholder
-      title="General ledger"
+      title="Главная книга"
       headerActions={<>
         <Button variant="ghost" icon={<Icon.Download size={13}/>} onClick={() => handleExport("ledger")} disabled={exporting}>
-          {exporting ? "Exporting..." : "Export"}
+          {exporting ? "Экспорт..." : "Экспорт"}
         </Button>
-        <Button variant="primary" icon={<Icon.Plus size={13}/>} onClick={() => setJournalModalOpen(true)}>New</Button>
+        <Button variant="primary" icon={<Icon.Plus size={13}/>} onClick={() => setJournalModalOpen(true)}>Новая</Button>
       </>}
     >
-      {error && <Banner tone="warn" title="Live ledger unavailable">Showing current ledger data. {error}</Banner>}
-      {actionMessage && <Banner tone="warn" title="Finance action notice">{actionMessage}</Banner>}
+      {error && <Banner tone="warn" title="Онлайн-данные главной книги недоступны">Показаны текущие данные главной книги. {error}</Banner>}
+      {actionMessage && <Banner tone="warn" title="Уведомление по финансовому действию">{actionMessage}</Banner>}
       <div className="card card-pad-0">
         <table className="tbl">
-          <thead><tr><th>Code</th><th>Account</th><th className="tr">Balance</th></tr></thead>
+          <thead><tr><th>Код</th><th>Счёт</th><th className="tr">Сальдо</th></tr></thead>
           <tbody>
             {loading && ACCT.length === 0 ? (
-              <tr><td colSpan="3" className="dim mono">Loading ledger accounts…</td></tr>
+              <tr><td colSpan="3" className="dim mono">Загрузка счетов главной книги…</td></tr>
             ) : null}
             {!loading && ACCT.length === 0 ? (
-              <tr><td colSpan="3" className="dim mono">No ledger accounts available.</td></tr>
+              <tr><td colSpan="3" className="dim mono">Счета главной книги недоступны.</td></tr>
             ) : null}
             {ACCT.map((a) => (
               <tr key={a.c}>
@@ -2141,21 +2141,21 @@ function FinancePage({ kind }) {
         </table>
       </div>
       <div className="card card-pad-0" style={{marginTop:12}}>
-        <div className="panel-title">Recent ledger entries</div>
+        <div className="panel-title">Последние проводки</div>
         <table className="tbl">
-          <thead><tr><th>Account</th><th>Memo</th><th>Side</th><th className="tr">Amount</th></tr></thead>
+          <thead><tr><th>Счёт</th><th>Комментарий</th><th>Сторона</th><th className="tr">Сумма</th></tr></thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan="4" className="dim mono">Loading ledger entries…</td></tr>
+              <tr><td colSpan="4" className="dim mono">Загрузка проводок…</td></tr>
             ) : null}
             {!loading && (!ledgerRows.slice || ledgerRows.length === 0) ? (
-              <tr><td colSpan="4" className="dim mono">No ledger entries available.</td></tr>
+              <tr><td colSpan="4" className="dim mono">Проводки отсутствуют.</td></tr>
             ) : null}
             {(ledgerRows.slice ? ledgerRows.slice(0, 8) : []).map((line) => (
               <tr key={line.id}>
                 <td className="id">{line.accountCode}</td>
-                <td>{line.memo || accountById.get(line.accountId)?.name || line.accountName}</td>
-                <td><Pill tone={line.entrySide === "debit" ? "good" : "warn"}>{line.entrySide}</Pill></td>
+                <td>{line.memo || accountById.get(line.accountId)?.name || line.accountИмя}</td>
+                <td><Pill tone={line.entrySide === "debit" ? "good" : "warn"}>{line.entrySide === "debit" ? "дебет" : "кредит"}</Pill></td>
                 <td className="num">{fmtUZS(parseMoney(line.amount))}</td>
               </tr>
             ))}
@@ -2170,39 +2170,39 @@ function FinancePage({ kind }) {
             setActionMessage("");
           }
         }}
-        title="New manual journal"
+        title="Новая ручная проводка"
         size="sm"
         footer={
           <>
-            <Button variant="ghost" type="button" onClick={() => setJournalModalOpen(false)} disabled={submitting}>Cancel</Button>
+            <Button variant="ghost" type="button" onClick={() => setJournalModalOpen(false)} disabled={submitting}>Отмена</Button>
             <span className="sp" />
             <Button variant="primary" type="submit" form="finance-manual-journal-form" icon={<Icon.Check size={13} />} disabled={submitting}>
-              {submitting ? "Saving..." : "Create journal"}
+              {submitting ? "Сохранение..." : "Создать проводку"}
             </Button>
           </>
         }
       >
         <form id="finance-manual-journal-form" onSubmit={submitManualJournal}>
           <div className="grid grid-2" style={{ gap: 12 }}>
-            <Field label="Effective date" required>
+            <Field label="Дата проводки" required>
               <input className="input" type="date" value={journalForm.effectiveDate} onChange={(e) => setJournalForm((prev) => ({ ...prev, effectiveDate: e.target.value }))} />
             </Field>
-            <Field label="Amount" required>
+            <Field label="Сумма" required>
               <input className="input" value={journalForm.amount} onChange={(e) => setJournalForm((prev) => ({ ...prev, amount: e.target.value }))} />
             </Field>
-            <Field label="Debit account" required>
+            <Field label="Дебетовый счёт" required>
               <select className="input" value={journalForm.debitAccountId} onChange={(e) => setJournalForm((prev) => ({ ...prev, debitAccountId: e.target.value }))}>
-                <option value="">Select account</option>
+                <option value="">Выберите счёт</option>
                 {ledgerAccounts.map((account) => <option key={`ledger-debit-${account.id}`} value={account.id}>{account.code} · {account.name}</option>)}
               </select>
             </Field>
-            <Field label="Credit account" required>
+            <Field label="Кредитовый счёт" required>
               <select className="input" value={journalForm.creditAccountId} onChange={(e) => setJournalForm((prev) => ({ ...prev, creditAccountId: e.target.value }))}>
-                <option value="">Select account</option>
+                <option value="">Выберите счёт</option>
                 {ledgerAccounts.map((account) => <option key={`ledger-credit-${account.id}`} value={account.id}>{account.code} · {account.name}</option>)}
               </select>
             </Field>
-            <Field label="Memo">
+            <Field label="Комментарий">
               <input className="input" value={journalForm.memo} onChange={(e) => setJournalForm((prev) => ({ ...prev, memo: e.target.value }))} />
             </Field>
           </div>
@@ -2237,7 +2237,7 @@ function ReportsPage() {
         const { response, body } = await fetchPortalJson("/api/finance/overview");
         if (cancelled) return;
         if (!response.ok || !body.data) {
-          setError(body.error?.message || body.message || "Unable to load reports.");
+          setError(body.error?.message || body.message || "Не удалось загрузить отчёты.");
           setOverview(null);
           return;
         }
@@ -2245,7 +2245,7 @@ function ReportsPage() {
         setError("");
       } catch {
         if (!cancelled) {
-          setError("Unable to load reports.");
+          setError("Не удалось загрузить отчёты.");
           setOverview(null);
         }
       } finally {
@@ -2258,7 +2258,7 @@ function ReportsPage() {
   const refreshOverview = async () => {
     const { response, body } = await fetchPortalJson("/api/finance/overview");
     if (!response.ok || !body?.data) {
-      setError(body?.error?.message || body?.message || "Unable to load reports.");
+      setError(body?.error?.message || body?.message || "Не удалось загрузить отчёты.");
       return false;
     }
     setOverview(body.data);
@@ -2277,23 +2277,23 @@ function ReportsPage() {
     if (slug === "trial-balance") {
       return [
         ["account_code", "account_name", "debit", "credit", "balance"],
-        ...((trialBalance?.rows || []).map((row) => [row.accountCode, row.accountName, parseMoney(row.totalDebit), parseMoney(row.totalCredit), parseMoney(row.balance)]))
+        ...((trialBalance?.rows || []).map((row) => [row.accountCode, row.accountИмя, parseMoney(row.totalDebit), parseMoney(row.totalCredit), parseMoney(row.balance)]))
       ];
     }
     if (slug === "profit-and-loss") {
       return [
         ["section", "account_code", "account_name", "amount"],
-        ...((profitAndLoss?.revenueAccounts || []).map((row) => ["revenue", row.accountCode, row.accountName, parseMoney(row.amount)])),
-        ...((profitAndLoss?.expenseAccounts || []).map((row) => ["expense", row.accountCode, row.accountName, parseMoney(row.amount)])),
+        ...((profitAndLoss?.revenueAccounts || []).map((row) => ["revenue", row.accountCode, row.accountИмя, parseMoney(row.amount)])),
+        ...((profitAndLoss?.expenseAccounts || []).map((row) => ["expense", row.accountCode, row.accountИмя, parseMoney(row.amount)])),
         ["summary", "", "net_income", parseMoney(profitAndLoss?.netIncome)]
       ];
     }
     if (slug === "balance-sheet") {
       return [
         ["section", "account_code", "account_name", "balance"],
-        ...((balanceSheet?.assets || []).map((row) => ["asset", row.accountCode, row.accountName, parseMoney(row.balance)])),
-        ...((balanceSheet?.liabilities || []).map((row) => ["liability", row.accountCode, row.accountName, parseMoney(row.balance)])),
-        ...((balanceSheet?.equity || []).map((row) => ["equity", row.accountCode, row.accountName, parseMoney(row.balance)])),
+        ...((balanceSheet?.assets || []).map((row) => ["asset", row.accountCode, row.accountИмя, parseMoney(row.balance)])),
+        ...((balanceSheet?.liabilities || []).map((row) => ["liability", row.accountCode, row.accountИмя, parseMoney(row.balance)])),
+        ...((balanceSheet?.equity || []).map((row) => ["equity", row.accountCode, row.accountИмя, parseMoney(row.balance)])),
         ["summary", "", "total_assets", parseMoney(balanceSheet?.totalAssets)],
         ["summary", "", "total_liabilities", parseMoney(balanceSheet?.totalLiabilities)],
         ["summary", "", "total_equity", parseMoney(balanceSheet?.totalEquity)]
@@ -2308,8 +2308,8 @@ function ReportsPage() {
     if (slug === "inventory") {
       return [
         ["type", "code", "name", "amount"],
-        ...invoices.map((invoice) => ["invoice", invoice.number, invoice.counterpartyName, parseMoney(invoice.total)]),
-        ...bills.map((bill) => ["bill", bill.number, bill.counterpartyName, parseMoney(bill.total)])
+        ...invoices.map((invoice) => ["invoice", invoice.number, invoice.counterpartyИмя, parseMoney(invoice.total)]),
+        ...bills.map((bill) => ["bill", bill.number, bill.counterpartyИмя, parseMoney(bill.total)])
       ];
     }
     return [
@@ -2337,17 +2337,17 @@ function ReportsPage() {
   };
 
   const REPORTS = [
-    { slug: "trial-balance", n: "Trial balance", d: trialBalance ? (trialBalance.isBalanced ? "Balanced" : "Unbalanced") : "Monthly trial balance", i: "Ledger" },
-    { slug: "profit-and-loss", n: "Profit & Loss", d: profitAndLoss ? `Net income ${profitAndLoss.netIncome} UZS` : "Monthly P&L statement", i: "Chart" },
-    { slug: "balance-sheet", n: "Balance sheet", d: balanceSheet ? `Assets ${balanceSheet.totalAssets} UZS` : "Assets, liabilities, equity", i: "Coin" },
-    { slug: "cash-flow", n: "Cash flow statement", d: "Direct and indirect view", i: "Coin" },
-    { slug: "inventory", n: "Inventory report", d: "Valuation, turnover, aging", i: "Box" },
-    { slug: "tax-pack", n: "Tax return pack", d: "VAT, CIT · STI ready", i: "Shield" }
+    { slug: "trial-balance", n: "Оборотно-сальдовая ведомость", d: trialBalance ? (trialBalance.isBalanced ? "Сбалансировано" : "Несбалансировано") : "Ежемесячная оборотно-сальдовая ведомость", i: "Ledger" },
+    { slug: "profit-and-loss", n: "Отчёт о прибылях и убытках", d: profitAndLoss ? `Чистая прибыль ${profitAndLoss.netIncome} UZS` : "Ежемесячный отчёт о прибылях и убытках", i: "Chart" },
+    { slug: "balance-sheet", n: "Бухгалтерский баланс", d: balanceSheet ? `Активы ${balanceSheet.totalAssets} UZS` : "Активы, обязательства, капитал", i: "Coin" },
+    { slug: "cash-flow", n: "Отчёт о движении денежных средств", d: "Прямой и косвенный метод", i: "Coin" },
+    { slug: "inventory", n: "Отчёт по запасам", d: "Оценка, оборачиваемость, срок хранения", i: "Box" },
+    { slug: "tax-pack", n: "Налоговый пакет", d: "НДС, налог на прибыль · готово к сдаче", i: "Shield" }
   ];
 
   return (
     <Placeholder
-      title="Reports"
+      title="Отчёты"
       headerActions={<>
         <Button variant="ghost" icon={<Icon.Download size={13}/>} onClick={() => {
           setExporting(true);
@@ -2357,14 +2357,14 @@ function ReportsPage() {
             setExporting(false);
           }
         }} disabled={exporting}>
-          {exporting ? "Exporting..." : "Export"}
+          {exporting ? "Экспорт..." : "Экспорт"}
         </Button>
         <Button variant="primary" icon={<Icon.Plus size={13}/>} onClick={refreshOverview} disabled={loading}>
-          {loading ? "Loading..." : "Refresh"}
+          {loading ? "Загрузка..." : "Обновить"}
         </Button>
       </>}
     >
-      {error && <Banner tone="warn" title="Live reports unavailable">Showing current report data. {error}</Banner>}
+      {error && <Banner tone="warn" title="Онлайн-данные отчётов недоступны">Показаны текущие данные отчётов. {error}</Banner>}
       <div className="grid grid-3" style={{gap:12}}>
         {REPORTS.map((r, i) => {
           const IC = Icon[r.i];
@@ -2374,8 +2374,8 @@ function ReportsPage() {
               <div style={{fontSize:14, fontWeight:500, color:"var(--ink)", marginTop:8}}>{r.n}</div>
               <div className="muted mt-4" style={{fontSize:12}}>{r.d}</div>
               <div className="row mt-12">
-                <Button size="sm" variant="ghost" onClick={() => setPreview({ open: true, title: r.n, csv: rowsToCsv(getReportRows(r.slug)) })}>Preview</Button>
-                <Button size="sm" variant="primary" icon={<Icon.Download size={12}/>} onClick={() => downloadReport(r.slug)}>Generate</Button>
+                <Button size="sm" variant="ghost" onClick={() => setPreview({ open: true, title: r.n, csv: rowsToCsv(getReportRows(r.slug)) })}>Предпросмотр</Button>
+                <Button size="sm" variant="primary" icon={<Icon.Download size={12}/>} onClick={() => downloadReport(r.slug)}>Сформировать</Button>
               </div>
             </div>
           );
@@ -2383,14 +2383,14 @@ function ReportsPage() {
       </div>
       {trialBalance && (
         <div className="card card-pad-0" style={{marginTop:12}}>
-          <div className="panel-title">Trial balance snapshot</div>
+          <div className="panel-title">Снимок оборотно-сальдовой ведомости</div>
           <table className="tbl compact">
-            <thead><tr><th>Account</th><th>Name</th><th className="tr">Balance</th></tr></thead>
+            <thead><tr><th>Счёт</th><th>Наименование</th><th className="tr">Сальдо</th></tr></thead>
             <tbody>
               {trialBalance.rows.slice(0, 8).map((row) => (
                 <tr key={row.accountId}>
                   <td className="id">{row.accountCode}</td>
-                  <td>{row.accountName}</td>
+                  <td>{row.accountИмя}</td>
                   <td className="num">{fmtUZS(parseMoney(row.balance))} UZS</td>
                 </tr>
               ))}
@@ -2400,17 +2400,17 @@ function ReportsPage() {
       )}
       {balanceSheet && (
         <div className="grid grid-3" style={{gap:12, marginTop:12}}>
-          <Kpi label="Total assets" value={fmtUZS(Math.round(parseMoney(balanceSheet.totalAssets) / 1_000_000))} unit="M UZS"/>
-          <Kpi label="Total liabilities" value={fmtUZS(Math.round(parseMoney(balanceSheet.totalLiabilities) / 1_000_000))} unit="M UZS"/>
-          <Kpi label="Total equity" value={fmtUZS(Math.round(parseMoney(balanceSheet.totalEquity) / 1_000_000))} unit="M UZS"/>
+          <Kpi label="Итого активы" value={fmtUZS(Math.round(parseMoney(balanceSheet.totalAssets) / 1_000_000))} unit="М UZS"/>
+          <Kpi label="Итого обязательства" value={fmtUZS(Math.round(parseMoney(balanceSheet.totalLiabilities) / 1_000_000))} unit="М UZS"/>
+          <Kpi label="Итого капитал" value={fmtUZS(Math.round(parseMoney(balanceSheet.totalEquity) / 1_000_000))} unit="М UZS"/>
         </div>
       )}
       <Modal
         open={preview.open}
         onClose={() => setPreview({ open: false, title: "", csv: "" })}
-        title={`Preview · ${preview.title}`}
+        title={`Предпросмотр · ${preview.title}`}
         size="md"
-        footer={<Button variant="ghost" onClick={() => setPreview({ open: false, title: "", csv: "" })}>Close</Button>}
+        footer={<Button variant="ghost" onClick={() => setPreview({ open: false, title: "", csv: "" })}>Закрыть</Button>}
       >
         <pre style={{ maxHeight: 380, overflow: "auto", margin: 0, whiteSpace: "pre-wrap" }}>{preview.csv}</pre>
       </Modal>
@@ -2462,7 +2462,10 @@ function TeamPage() {
 
   const roleLabel = (role) => {
     const match = roles.find((entry) => entry.role === role);
-    return match ? match.label : String(role || "").replace(/_/g, " ");
+    if (match) return match.label;
+    const normalized = String(role || "").toLowerCase();
+    if (normalized === "employee") return "Сотрудник";
+    return String(role || "").replace(/_/g, " ");
   };
 
   const defaultsForRole = (role) => {
@@ -2486,12 +2489,12 @@ function TeamPage() {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 
   const relativeTime = (value) => {
-    if (!value) return "never";
+    if (!value) return "никогда";
     const diff = Date.now() - new Date(value).getTime();
-    if (!Number.isFinite(diff) || diff < 60 * 1000) return "now";
-    if (diff < 60 * 60 * 1000) return `${Math.floor(diff / (60 * 1000))}m ago`;
-    if (diff < 24 * 60 * 60 * 1000) return `${Math.floor(diff / (60 * 60 * 1000))}h ago`;
-    return `${Math.floor(diff / (24 * 60 * 60 * 1000))}d ago`;
+    if (!Number.isFinite(diff) || diff < 60 * 1000) return "сейчас";
+    if (diff < 60 * 60 * 1000) return `${Math.floor(diff / (60 * 1000))} мин назад`;
+    if (diff < 24 * 60 * 60 * 1000) return `${Math.floor(diff / (60 * 60 * 1000))} ч назад`;
+    return `${Math.floor(diff / (24 * 60 * 60 * 1000))} дн назад`;
   };
 
   const applyWorkspacePayload = (body) => {
@@ -2510,7 +2513,7 @@ function TeamPage() {
     setLoading(false);
     if (!result.ok) {
       setErrorStatus(result.status);
-      setError((result.body && result.body.message) || "Unable to load team workspace.");
+      setError((result.body && result.body.message) || "Не удалось загрузить рабочее пространство команды.");
       return;
     }
     setErrorStatus(null);
@@ -2539,7 +2542,7 @@ function TeamPage() {
     const result = await tenantRequest("/invites", inviteForm, "POST");
     setSaving(false);
     if (!result.ok) {
-      setError((result.body && result.body.message) || "Unable to create invite.");
+      setError((result.body && result.body.message) || "Не удалось создать приглашение.");
       return;
     }
     setError("");
@@ -2564,7 +2567,7 @@ function TeamPage() {
     const result = await tenantRequest(`/members/${selectedMember.id}`, memberForm, "PATCH");
     setSaving(false);
     if (!result.ok) {
-      setError((result.body && result.body.message) || "Unable to update team member.");
+      setError((result.body && result.body.message) || "Не удалось обновить участника команды.");
       return;
     }
     setError("");
@@ -2578,7 +2581,7 @@ function TeamPage() {
     const result = await tenantRequest(`/invites/${inviteId}/revoke`, {}, "POST");
     setSaving(false);
     if (!result.ok) {
-      setError((result.body && result.body.message) || "Unable to revoke invite.");
+      setError((result.body && result.body.message) || "Не удалось отозвать приглашение.");
       return;
     }
     setError("");
@@ -2635,14 +2638,14 @@ function TeamPage() {
 
   return (
     <Placeholder
-      title="Team"
+      title="Команда"
       headerActions={
         <>
           <Button variant="ghost" icon={<Icon.Download size={13}/>} onClick={exportWorkspace} disabled={loading || exporting || !!errorStatus}>
-            {exporting ? "Exporting..." : "Export"}
+            {exporting ? "Экспорт..." : "Экспорт"}
           </Button>
           <Button variant="primary" icon={<Icon.UserPlus size={13}/>} onClick={openInvite} disabled={!canManageTeam}>
-            Invite member
+            Пригласить участника
           </Button>
         </>
       }
@@ -2651,15 +2654,15 @@ function TeamPage() {
         <div className="tbl-toolbar">
           <span className="sp"/>
         </div>
-        {error && <div className="muted" style={{fontSize:12, color:"var(--bad)", padding:"0 12px 12px"}}>{errorStatus === 403 ? "You do not have access to the Team workspace." : error}</div>}
+        {error && <div className="muted" style={{fontSize:12, color:"var(--bad)", padding:"0 12px 12px"}}>{errorStatus === 403 ? "У вас нет доступа к рабочему пространству команды." : error}</div>}
         <table className="tbl">
-          <thead><tr><th>Name</th><th>Role</th><th>Email</th><th>Last active</th><th/></tr></thead>
+          <thead><tr><th>Имя</th><th>Role</th><th>Email</th><th>Последняя активность</th><th/></tr></thead>
           <tbody>
             {loading && (
-              <tr><td colSpan="5" className="dim mono">Loading team members…</td></tr>
+              <tr><td colSpan="5" className="dim mono">Загрузка участников команды…</td></tr>
             )}
             {!loading && errorStatus === 403 && (
-              <tr><td colSpan="5" className="dim mono">Access denied.</td></tr>
+              <tr><td colSpan="5" className="dim mono">Доступ запрещён.</td></tr>
             )}
             {!loading && activeUsers.map((member, index) => (
               <tr key={member.id}>
@@ -2673,12 +2676,12 @@ function TeamPage() {
                 <td className="dim mono">{member.email || "—"}</td>
                 <td className="dim mono">{relativeTime(member.lastActiveAt)}</td>
                 <td className="row-actions">
-                  {canManageTeam && <Button size="sm" variant="ghost" onClick={() => openManage(member)}>Manage</Button>}
+                  {canManageTeam && <Button size="sm" variant="ghost" onClick={() => openManage(member)}>Управлять</Button>}
                 </td>
               </tr>
             ))}
             {!loading && !errorStatus && activeUsers.length === 0 && (
-              <tr><td colSpan="5" className="dim mono">No team members found.</td></tr>
+              <tr><td colSpan="5" className="dim mono">Участники команды не найдены.</td></tr>
             )}
           </tbody>
         </table>
@@ -2686,9 +2689,9 @@ function TeamPage() {
 
       {errorStatus !== 403 && pendingInvites.length > 0 && (
         <div className="card card-pad-0 mt-16">
-          <div className="panel-title">Pending invites <span className="sp"/><span className="mono muted" style={{fontSize:10}}>{pendingInvites.length}</span></div>
+          <div className="panel-title">Ожидающие приглашения <span className="sp"/><span className="mono muted" style={{fontSize:10}}>{pendingInvites.length}</span></div>
           <table className="tbl">
-            <thead><tr><th>Name</th><th>Role</th><th>Email</th><th>Invited</th><th/></tr></thead>
+            <thead><tr><th>Имя</th><th>Role</th><th>Email</th><th>Приглашён</th><th/></tr></thead>
             <tbody>{pendingInvites.map((invite, index) => (
               <tr key={invite.id}>
                 <td>
@@ -2701,7 +2704,7 @@ function TeamPage() {
                 <td className="dim mono">{invite.email}</td>
                 <td className="dim mono">{relativeTime(invite.invitedAt)}</td>
                 <td className="row-actions">
-                  {canManageTeam && <Button size="sm" variant="ghost" onClick={() => revokeInvite(invite.id)}>Revoke</Button>}
+                  {canManageTeam && <Button size="sm" variant="ghost" onClick={() => revokeInvite(invite.id)}>Отозвать</Button>}
                 </td>
               </tr>
             ))}</tbody>
@@ -2712,13 +2715,13 @@ function TeamPage() {
       <Modal
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}
-        title="Invite member"
+        title="Пригласить участника"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setInviteOpen(false)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setInviteOpen(false)}>Отмена</Button>
             <span className="sp"/>
             <Button variant="primary" onClick={submitInvite} disabled={saving || !inviteForm.name || !inviteForm.email}>
-              {saving ? "Sending…" : "Send invite"}
+              {saving ? "Отправка…" : "Отправить приглашение"}
             </Button>
           </>
         }
@@ -2731,7 +2734,7 @@ function TeamPage() {
               {roles.map((role) => <option key={role.role} value={role.role}>{role.label}</option>)}
             </select>
           </Field>
-          <div className="label">Permission groups</div>
+          <div className="label">Группы прав</div>
           <div className="col gap-8">
             {permissionGroups.map((group) => (
               <label key={group.key} className="row hairline" style={{padding:10, borderRadius:6, cursor:"pointer", alignItems:"flex-start", gap:10}}>
@@ -2753,13 +2756,13 @@ function TeamPage() {
       <Drawer
         open={manageOpen}
         onClose={() => { setManageOpen(false); setSelectedMember(null); }}
-        title={selectedMember ? `Manage ${selectedMember.name}` : "Manage member"}
+        title={selectedMember ? `Управление: ${selectedMember.name}` : "Управление участником"}
         footer={
           <>
-            <Button variant="ghost" onClick={() => { setManageOpen(false); setSelectedMember(null); }}>Cancel</Button>
+            <Button variant="ghost" onClick={() => { setManageOpen(false); setSelectedMember(null); }}>Отмена</Button>
             <span className="sp"/>
             <Button variant="primary" onClick={submitMemberUpdate} disabled={saving || !selectedMember}>
-              {saving ? "Saving…" : "Save changes"}
+              {saving ? "Сохранение…" : "Сохранить изменения"}
             </Button>
           </>
         }
@@ -2768,7 +2771,7 @@ function TeamPage() {
           <div className="col gap-12">
             <div className="hairline" style={{padding:10, borderRadius:6}}>
               <div style={{fontWeight:500, color:"var(--ink)"}}>{selectedMember.name}</div>
-              <div className="muted mono" style={{fontSize:11, marginTop:3}}>{selectedMember.email || "No email"}</div>
+              <div className="muted mono" style={{fontSize:11, marginTop:3}}>{selectedMember.email || "Нет email"}</div>
             </div>
             <Field label="Role">
               <select className="select" value={memberForm.role} onChange={(e) => setMemberForm({ ...memberForm, role:e.target.value, permissionGroups: defaultsForRole(e.target.value) })}>
@@ -2776,9 +2779,9 @@ function TeamPage() {
               </select>
             </Field>
             <div className="row">
-              <div className="label">Permission groups</div>
+              <div className="label">Группы прав</div>
               <span className="sp"/>
-              <Button size="sm" variant="ghost" onClick={() => setMemberForm({ ...memberForm, permissionGroups: defaultsForRole(memberForm.role) })}>Reset defaults</Button>
+              <Button size="sm" variant="ghost" onClick={() => setMemberForm({ ...memberForm, permissionGroups: defaultsForRole(memberForm.role) })}>Сбросить по умолчанию</Button>
             </div>
             <div className="col gap-8">
               {permissionGroups.map((group) => (
@@ -2811,30 +2814,30 @@ function TeamPage() {
 
 function SmbSettings() {
   return (
-    <Placeholder title="Settings">
+    <Placeholder title="Настройки">
       <div className="grid" style={{gridTemplateColumns:"1fr 1fr", gap:12}}>
         <div className="card"><div className="card-body">
-          <h2>Company profile</h2>
+          <h2>Профиль компании</h2>
           <div className="col gap-8 mt-8">
-            <Field label="Company name"><input className="input" defaultValue="Kamolot Savdo LLC"/></Field>
-            <Field label="TIN"><input className="input mono" defaultValue="301 452 776"/></Field>
-            <Field label="Address"><input className="input" defaultValue="Mirobod district, Tashkent 100170"/></Field>
-            <Field label="Phone"><input className="input mono" defaultValue="+998 71 200 44 82"/></Field>
+            <Field label="Название компании"><input className="input" defaultValue="Kamolot Savdo LLC"/></Field>
+            <Field label="ИНН"><input className="input mono" defaultValue="301 452 776"/></Field>
+            <Field label="Адрес"><input className="input" defaultValue="Mirobod district, Tashkent 100170"/></Field>
+            <Field label="Телефон"><input className="input mono" defaultValue="+998 71 200 44 82"/></Field>
           </div>
         </div></div>
         <div className="card"><div className="card-body">
-          <h2>Bank account</h2>
+          <h2>Банковский счёт</h2>
           <div className="col gap-8 mt-8">
-            <Field label="Primary account"><input className="input mono" defaultValue="20208 000 100 100 001 · SQB"/></Field>
-            <Field label="Currency"><select className="select"><option>UZS</option><option>USD</option><option>EUR</option></select></Field>
+            <Field label="Основной счёт"><input className="input mono" defaultValue="20208 000 100 100 001 · SQB"/></Field>
+            <Field label="Валюта"><select className="select"><option>UZS</option><option>USD</option><option>EUR</option></select></Field>
           </div>
           <div className="divider"/>
-          <h2>Locale & notifications</h2>
+          <h2>Язык и уведомления</h2>
           <div className="col gap-8 mt-8">
-            <div className="row"><span>Language</span><span className="sp"/><select className="select" style={{width:120}}><option>English</option><option>O'zbek</option><option>Русский</option></select></div>
-            <div className="row"><span>Email alerts</span><span className="sp"/><Toggle on={true} onChange={()=>{}}/></div>
-            <div className="row"><span>SMS alerts</span><span className="sp"/><Toggle on={false} onChange={()=>{}}/></div>
-            <div className="row"><span>AI Copilot suggestions</span><span className="sp"/><Toggle on={true} onChange={()=>{}}/></div>
+            <div className="row"><span>Язык</span><span className="sp"/><select className="select" style={{width:120}}><option>Русский</option><option>O'zbek</option><option>English</option></select></div>
+            <div className="row"><span>Email-уведомления</span><span className="sp"/><Toggle on={true} onChange={()=>{}}/></div>
+            <div className="row"><span>SMS-уведомления</span><span className="sp"/><Toggle on={false} onChange={()=>{}}/></div>
+            <div className="row"><span>Рекомендации AI Copilot</span><span className="sp"/><Toggle on={true} onChange={()=>{}}/></div>
           </div>
         </div></div>
       </div>
